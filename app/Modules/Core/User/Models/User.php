@@ -1,6 +1,9 @@
 <?php
 
-namespace App\Models;
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Ng Kiat Siong
+
+namespace App\Modules\Core\User\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -10,7 +13,7 @@ use Illuminate\Support\Str;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<\App\Modules\Core\User\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -59,3 +62,4 @@ class User extends Authenticatable
             ->implode('');
     }
 }
+
