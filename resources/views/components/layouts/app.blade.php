@@ -18,14 +18,15 @@
     <div class="drawer lg:drawer-open">
         <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
 
-        <!-- Mobile Header -->
+        <!-- Mobile Header and Content -->
         <div class="drawer-content flex flex-col lg:hidden">
-            <div class="navbar bg-base-100 border-b border-base-300 dark:border-base-700">
+            <div class="navbar bg-base-100 border-b border-base-300 dark:border-base-700 px-4 min-h-0">
                 <label for="sidebar-drawer" class="btn btn-square btn-ghost drawer-button">
-                    <x-icon name="heroicon-o-bars-3" class="w-6 h-6" />
+                    <x-icon name="heroicon-o-bars-3" class="w-6 h-6 hamburger-icon" />
                 </label>
-                <div class="flex-1"></div>
-                <x-ui.user-menu :user="auth()->user()" />
+            </div>
+            <div class="flex-1 overflow-y-auto bg-base-100 dark:bg-zinc-900 p-6">
+                {{ $slot }}
             </div>
         </div>
 
@@ -41,15 +42,6 @@
         <div class="drawer-side lg:hidden">
             <label for="sidebar-drawer" class="drawer-overlay"></label>
             <x-layouts.app.sidebar-component />
-        </div>
-
-        <!-- Mobile Content (when drawer is closed) -->
-        <div class="drawer-content flex flex-col lg:hidden">
-            <div class="flex-1 overflow-y-auto bg-base-100 dark:bg-zinc-900">
-                <div class="p-6">
-                    {{ $slot }}
-                </div>
-            </div>
         </div>
     </div>
 </body>

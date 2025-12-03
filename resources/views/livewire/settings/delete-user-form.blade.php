@@ -30,7 +30,7 @@ new class extends Component {
     </div>
 
     <x-mary-button wire:click="$set('showDeleteModal', true)" class="btn-error" data-test="delete-user-button">
-        {{ __('Delete account') }}
+            {{ __('Delete account') }}
     </x-mary-button>
 
     <x-mary-modal wire:model="showDeleteModal" class="max-w-lg">
