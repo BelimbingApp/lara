@@ -1,132 +1,238 @@
+<?php
+// SPDX-License-Identifier: AGPL-3.0-only
+// Copyright (c) 2025 Ng Kiat Siong
+?>
+
+@props(['title' => null])
+
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
-    <head>
-        @include('partials.head')
-    </head>
-    <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky stashable class="border-e border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
+<head>
+    @include('partials.head')
+    @if($title)
+        <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
+    @endif
+</head>
+<body class="min-h-screen bg-base-100 dark:bg-zinc-900">
+    <!-- Mobile Drawer -->
+    <div class="drawer lg:drawer-open">
+        <input id="sidebar-drawer" type="checkbox" class="drawer-toggle" />
 
-            <a href="{{ route('dashboard') }}" class="me-5 flex items-center space-x-2 rtl:space-x-reverse" wire:navigate>
-                <x-app-logo />
-            </a>
+        <!-- Mobile Header -->
+        <div class="drawer-content flex flex-col lg:hidden">
+            <div class="navbar bg-base-100 border-b border-base-300 dark:border-base-700">
+                <label for="sidebar-drawer" class="btn btn-square btn-ghost drawer-button">
+                    <x-icon name="heroicon-o-bars-3" class="w-6 h-6" />
+                </label>
+                <div class="flex-1"></div>
+                <x-ui.user-menu :user="auth()->user()" />
+            </div>
+        </div>
 
-            <flux:navlist variant="outline">
-                <flux:navlist.group :heading="__('Platform')" class="grid">
-                    <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>{{ __('Dashboard') }}</flux:navlist.item>
-                </flux:navlist.group>
-            </flux:navlist>
+        <!-- Desktop Layout -->
+        <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
+            <!-- Sidebar -->
+            <aside class="w-64 min-h-full bg-base-200 dark:bg-zinc-800 border-r border-base-300 dark:border-base-700 flex flex-col sidebar-container">
+                <!-- Logo/Branding -->
+                <div class="p-4 border-b border-base-300 dark:border-base-700">
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
+                        <x-app-logo />
+                    </a>
+                </div>
 
-            <flux:spacer />
+                <!-- Navigation -->
+                <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+                    <!-- Primary Navigation -->
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a
+                                href="{{ route('dashboard') }}"
+                                wire:navigate
+                                class="{{ request()->routeIs('dashboard') ? 'active' : '' }} nav-link"
+                            >
+                                <x-icon name="heroicon-o-home" class="w-5 h-5" />
+                                <span>{{ __('Dashboard') }}</span>
+                            </a>
+                        </li>
+                    </ul>
 
-            <flux:navlist variant="outline">
-                <flux:navlist.item icon="folder-git-2" href="https://github.com/laravel/livewire-starter-kit" target="_blank">
-                {{ __('Repository') }}
-                </flux:navlist.item>
+                    <!-- Divider -->
+                    <div class="divider my-2"></div>
 
-                <flux:navlist.item icon="book-open-text" href="https://laravel.com/docs/starter-kits#livewire" target="_blank">
-                {{ __('Documentation') }}
-                </flux:navlist.item>
-            </flux:navlist>
+                    <!-- Secondary Navigation -->
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a
+                                href="https://github.com/laravel/livewire-starter-kit"
+                                target="_blank"
+                                class="nav-link"
+                            >
+                                <x-icon name="heroicon-o-folder" class="w-5 h-5" />
+                                <span>{{ __('Repository') }}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://laravel.com/docs/starter-kits#livewire"
+                                target="_blank"
+                                class="nav-link"
+                            >
+                                <x-icon name="heroicon-o-book-open" class="w-5 h-5" />
+                                <span>{{ __('Documentation') }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
 
-            <!-- Desktop User Menu -->
-            <flux:dropdown class="hidden lg:block" position="bottom" align="start">
-                <flux:profile
-                    :name="auth()->user()->name"
-                    :initials="auth()->user()->initials()"
-                    icon:trailing="chevrons-up-down"
-                />
-
-                <flux:menu class="w-[220px]">
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
-                                    >
-                                        {{ auth()->user()->initials() }}
-                                    </span>
-                                </span>
-
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                    <span class="truncate text-xs">{{ auth()->user()->email }}</span>
-                                </div>
+                <!-- User Profile Section (Sticky Bottom) -->
+                <div class="p-4 border-t border-base-300 dark:border-base-700 bg-base-200 dark:bg-zinc-800">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm font-semibold text-neutral-800 dark:text-white">
+                                {{ auth()->user()->initials() }}
+                            </span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                                {{ auth()->user()->name }}
+                            </div>
+                            <div class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                                {{ auth()->user()->email }}
                             </div>
                         </div>
-                    </flux:menu.radio.group>
+                    </div>
 
-                    <flux:menu.separator />
+                    <div class="divider my-2"></div>
 
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
-                    </flux:menu.radio.group>
+                    <!-- Settings and Logout -->
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a href="{{ route('profile.edit') }}" wire:navigate class="nav-link">
+                                <x-icon name="heroicon-o-cog-6-tooth" class="w-5 h-5" />
+                                <span>{{ __('Settings') }}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="w-full text-left nav-link" data-test="logout-button">
+                                    <x-icon name="heroicon-o-arrow-right-on-rectangle" class="w-5 h-5" />
+                                    <span>{{ __('Log Out') }}</span>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
 
-                    <flux:menu.separator />
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto">
+                {{ $slot }}
+            </div>
+        </div>
 
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full" data-test="logout-button">
-                            {{ __('Log Out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
-        </flux:sidebar>
+        <!-- Mobile Drawer Side -->
+        <div class="drawer-side lg:hidden">
+            <label for="sidebar-drawer" class="drawer-overlay"></label>
+            <aside class="w-64 min-h-full bg-base-200 dark:bg-zinc-800 border-r border-base-300 dark:border-base-700 flex flex-col">
+                <!-- Logo -->
+                <div class="p-4 border-b border-base-300 dark:border-base-700">
+                    <label for="sidebar-drawer" class="btn btn-square btn-ghost mb-4">
+                        <x-icon name="heroicon-o-x-mark" class="w-6 h-6" />
+                    </label>
+                    <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
+                        <x-app-logo />
+                    </a>
+                </div>
 
-        <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
-            <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
+                <!-- Navigation -->
+                <nav class="flex-1 overflow-y-auto p-4 space-y-1">
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a
+                                href="{{ route('dashboard') }}"
+                                wire:navigate
+                                class="{{ request()->routeIs('dashboard') ? 'active' : '' }} nav-link"
+                            >
+                                <x-icon name="heroicon-o-home" class="w-5 h-5" />
+                                <span>{{ __('Dashboard') }}</span>
+                            </a>
+                        </li>
+                    </ul>
 
-            <flux:spacer />
+                    <div class="divider my-2"></div>
 
-            <flux:dropdown position="top" align="end">
-                <flux:profile
-                    :initials="auth()->user()->initials()"
-                    icon-trailing="chevron-down"
-                />
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a
+                                href="https://github.com/laravel/livewire-starter-kit"
+                                target="_blank"
+                                class="nav-link"
+                            >
+                                <x-icon name="heroicon-o-folder" class="w-5 h-5" />
+                                <span>{{ __('Repository') }}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <a
+                                href="https://laravel.com/docs/starter-kits#livewire"
+                                target="_blank"
+                                class="nav-link"
+                            >
+                                <x-icon name="heroicon-o-book-open" class="w-5 h-5" />
+                                <span>{{ __('Documentation') }}</span>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
 
-                <flux:menu>
-                    <flux:menu.radio.group>
-                        <div class="p-0 text-sm font-normal">
-                            <div class="flex items-center gap-2 px-1 py-1.5 text-start text-sm">
-                                <span class="relative flex h-8 w-8 shrink-0 overflow-hidden rounded-lg">
-                                    <span
-                                        class="flex h-full w-full items-center justify-center rounded-lg bg-neutral-200 text-black dark:bg-neutral-700 dark:text-white"
-                                    >
-                                        {{ auth()->user()->initials() }}
-                                    </span>
-                                </span>
-
-                                <div class="grid flex-1 text-start text-sm leading-tight">
-                                    <span class="truncate font-semibold">{{ auth()->user()->name }}</span>
-                                    <span class="truncate text-xs">{{ auth()->user()->email }}</span>
-                                </div>
+                <!-- User Profile -->
+                <div class="p-4 border-t border-base-300 dark:border-base-700">
+                    <div class="flex items-center gap-3 mb-4">
+                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                            <span class="text-sm font-semibold text-neutral-800 dark:text-white">
+                                {{ auth()->user()->initials() }}
+                            </span>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                                {{ auth()->user()->name }}
+                            </div>
+                            <div class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                                {{ auth()->user()->email }}
                             </div>
                         </div>
-                    </flux:menu.radio.group>
+                    </div>
 
-                    <flux:menu.separator />
+                    <div class="divider my-2"></div>
 
-                    <flux:menu.radio.group>
-                        <flux:menu.item :href="route('profile.edit')" icon="cog" wire:navigate>{{ __('Settings') }}</flux:menu.item>
-                    </flux:menu.radio.group>
+                    <ul class="menu menu-vertical w-full gap-1">
+                        <li>
+                            <a href="{{ route('profile.edit') }}" wire:navigate class="nav-link">
+                                <x-icon name="heroicon-o-cog-6-tooth" class="w-5 h-5" />
+                                <span>{{ __('Settings') }}</span>
+                            </a>
+                        </li>
+                        <li>
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <button type="submit" class="w-full text-left nav-link" data-test="logout-button">
+                                    <x-icon name="heroicon-o-arrow-right-on-rectangle" class="w-5 h-5" />
+                                    <span>{{ __('Log Out') }}</span>
+                                </button>
+                            </form>
+                        </li>
+                    </ul>
+                </div>
+            </aside>
+        </div>
 
-                    <flux:menu.separator />
-
-                    <form method="POST" action="{{ route('logout') }}" class="w-full">
-                        @csrf
-                        <flux:menu.item as="button" type="submit" icon="arrow-right-start-on-rectangle" class="w-full" data-test="logout-button">
-                            {{ __('Log Out') }}
-                        </flux:menu.item>
-                    </form>
-                </flux:menu>
-            </flux:dropdown>
-        </flux:header>
-
-        {{ $slot }}
-
-        @fluxScripts
-    </body>
+        <!-- Mobile Content (when drawer is closed) -->
+        <div class="drawer-content flex flex-col lg:hidden">
+            <div class="flex-1 overflow-y-auto">
+                {{ $slot }}
+            </div>
+        </div>
+    </div>
+</body>
 </html>

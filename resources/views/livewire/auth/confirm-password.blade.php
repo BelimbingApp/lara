@@ -43,18 +43,17 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="confirmPassword" class="flex flex-col gap-6">
         <!-- Password -->
-        <flux:input
+        <x-mary-input
             wire:model="password"
-            :label="__('Password')"
+            label="{{ __('Password') }}"
             type="password"
             required
             autocomplete="new-password"
-            :placeholder="__('Password')"
-            viewable
+            placeholder="{{ __('Password') }}"
         />
 
-        <flux:button variant="primary" type="submit" class="w-full" data-test="confirm-password-button">
+        <x-mary-button type="submit" class="w-full btn-primary" data-test="confirm-password-button">
             {{ __('Confirm') }}
-        </flux:button>
+        </x-mary-button>
     </form>
 </div>

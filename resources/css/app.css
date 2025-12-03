@@ -1,10 +1,7 @@
 @import 'tailwindcss';
-@import '../../vendor/livewire/flux/dist/flux.css';
 
 @source '../views';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
-@source '../../vendor/livewire/flux/stubs/**/*.blade.php';
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -47,20 +44,234 @@
     }
 }
 
-[data-flux-field]:not(ui-radio, ui-checkbox) {
-    @apply grid gap-2;
-}
+/* MaryUI and DaisyUI styles will be included automatically via the packages */
 
-[data-flux-label] {
-    @apply  !mb-0 !leading-tight;
-}
+/* Fix label contrast in dark mode */
+@layer base {
+    .dark .fieldset-legend {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
 
-input:focus[data-flux-control],
-textarea:focus[data-flux-control],
-select:focus[data-flux-control] {
-    @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
-}
+    .dark .fieldset-label {
+        color: rgb(255 255 255 / 0.7) !important;
+    }
 
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */
+    /* Ensure checkbox labels are readable */
+    .dark label.text-sm.font-medium {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
+
+    /* Fix checkbox styling in dark mode */
+    .dark input[type="checkbox"].checkbox {
+        border: 2px solid rgb(156 163 175) !important; /* gray-400 */
+        background-color: transparent !important;
+        width: 1.25rem !important;
+        height: 1.25rem !important;
+        border-radius: 0.25rem !important;
+        cursor: pointer !important;
+    }
+
+    .dark input[type="checkbox"].checkbox:checked {
+        background-color: rgb(59 130 246) !important; /* blue-500 */
+        border-color: rgb(59 130 246) !important;
+        background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-7 7a1 1 0 01-1.414 0l-3.5-3.5a1 1 0 011.414-1.414L4.5 10.586l6.293-6.293a1 1 0 011.414 0z'/%3e%3c/svg%3e") !important;
+        background-size: 100% 100% !important;
+        background-position: center !important;
+        background-repeat: no-repeat !important;
+    }
+
+    .dark input[type="checkbox"].checkbox:hover {
+        border-color: rgb(209 213 219) !important; /* gray-300 */
+    }
+
+    /* Ensure checkbox label text is readable */
+    .dark .checkbox + div .text-sm.font-medium {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
+
+    /* Fix button styling in dark mode */
+    .dark .btn-primary {
+        background-color: rgb(59 130 246) !important; /* blue-500 */
+        color: rgb(255 255 255) !important;
+        border-color: rgb(59 130 246) !important;
+    }
+
+    .dark .btn-primary:hover {
+        background-color: rgb(37 99 235) !important; /* blue-600 */
+        border-color: rgb(37 99 235) !important;
+    }
+
+    .dark .btn-primary:active {
+        background-color: rgb(29 78 216) !important; /* blue-700 */
+    }
+
+    /* Fix sidebar navigation menu text color in dark mode */
+    .dark .menu a,
+    .dark .menu button {
+        color: rgb(255 255 255 / 0.8) !important;
+    }
+
+    .dark .menu a:hover,
+    .dark .menu button:hover {
+        color: rgb(255 255 255) !important;
+        background-color: rgb(63 63 70 / 0.3) !important; /* zinc-700 with opacity */
+    }
+
+    .dark .menu a.active,
+    .dark .menu button.active {
+        color: rgb(255 255 255) !important;
+        background-color: rgb(63 63 70 / 0.5) !important; /* zinc-700 with more opacity */
+    }
+
+    /* Fix user menu dropdown text in dark mode */
+    .dark .menu.dropdown-content {
+        background-color: rgb(39 39 42) !important; /* zinc-800 */
+        border: 1px solid rgb(63 63 70) !important; /* zinc-700 */
+    }
+
+    .dark .menu.dropdown-content li.disabled {
+        opacity: 1 !important;
+    }
+
+    .dark .menu.dropdown-content .font-semibold {
+        color: rgb(255 255 255) !important;
+    }
+
+    .dark .menu.dropdown-content .text-base-content\/60 {
+        color: rgb(255 255 255 / 0.6) !important;
+    }
+
+    .dark .menu.dropdown-content hr {
+        border-color: rgb(63 63 70) !important; /* zinc-700 */
+    }
+
+    .dark .menu.dropdown-content a,
+    .dark .menu.dropdown-content button {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
+
+    .dark .menu.dropdown-content a:hover,
+    .dark .menu.dropdown-content button:hover {
+        color: rgb(255 255 255) !important;
+        background-color: rgb(63 63 70 / 0.5) !important;
+    }
+
+    /* Fix avatar text color in dark mode */
+    .dark .avatar .bg-neutral-700 span {
+        color: rgb(255 255 255) !important;
+    }
+
+    /* Fix logo and sidebar text in dark mode */
+    .dark aside .flex.items-center {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
+
+    /* Fix divider in dark mode */
+    .dark .divider {
+        border-color: rgb(63 63 70) !important; /* zinc-700 */
+    }
+
+    /* Fix dashboard card borders in dark mode */
+    .dark .border-neutral-700 {
+        border-color: rgb(63 63 70) !important; /* zinc-700 */
+    }
+
+    /* Ensure icons are visible in dark mode */
+    .dark svg {
+        color: inherit;
+    }
+
+    /* Fix user profile section in sidebar */
+    .dark aside .text-neutral-900 {
+        color: rgb(255 255 255) !important;
+    }
+
+    .dark aside .text-neutral-600 {
+        color: rgb(255 255 255 / 0.6) !important;
+    }
+
+    /* Ensure logo text is visible */
+    .dark aside a.flex.items-center {
+        color: rgb(255 255 255 / 0.9) !important;
+    }
+
+    /* Performance optimizations - GPU-accelerated sidebar transitions */
+    .sidebar-container {
+        will-change: transform;
+        transform: translateZ(0);
+        backface-visibility: hidden;
+        perspective: 1000px;
+    }
+
+    /* Smooth navigation link transitions */
+    .nav-link {
+        transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: background-color, color;
+    }
+
+    .nav-link:hover {
+        transform: translateX(2px);
+    }
+
+    /* Active state with accent color */
+    .nav-link.active {
+        background-color: rgb(59 130 246 / 0.1) !important;
+        color: rgb(59 130 246) !important;
+        border-left: 3px solid rgb(59 130 246);
+    }
+
+    .dark .nav-link.active {
+        background-color: rgb(59 130 246 / 0.2) !important;
+        color: rgb(96 165 250) !important;
+    }
+
+    /* Smooth scroll behavior */
+    html {
+        scroll-behavior: smooth;
+    }
+
+    /* Focus states for accessibility */
+    .nav-link:focus-visible {
+        outline: 2px solid rgb(59 130 246);
+        outline-offset: 2px;
+        border-radius: 0.375rem;
+    }
+
+    /* Content container optimizations */
+    .card {
+        will-change: transform;
+        transform: translateZ(0);
+    }
+
+    /* Prevent layout shifts */
+    body {
+        overflow-x: hidden;
+    }
+
+    /* Optimize drawer transitions */
+    .drawer-toggle:checked ~ .drawer-side {
+        transform: translateX(0);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .drawer-side {
+        transform: translateX(-100%);
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        will-change: transform;
+    }
+
+    @media (min-width: 1024px) {
+        .drawer-side {
+            transform: translateX(0);
+        }
+    }
+
+    /* Page header styling */
+    .text-base-content {
+        color: var(--color-neutral-900);
+    }
+
+    .dark .text-base-content {
+        color: var(--color-neutral-100);
+    }
+}

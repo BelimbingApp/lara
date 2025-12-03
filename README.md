@@ -1,20 +1,22 @@
 # BLB - Laravel Livewire Application
 
-A modern full-stack web application built with Laravel 12, Livewire, and Flux UI components.
+A modern full-stack web application built with Laravel 12 and Livewire Volt.
 
 ## 🚀 Technology Stack
 
-### Backend
-- **Laravel 12** - Latest PHP framework with modern features
-- **PHP 8.2+** - Modern PHP with enhanced performance
-- **Livewire Volt** - Reactive components with minimal boilerplate
-- **Livewire Flux** - Professional UI component library
-- **PostgreSQL** - Robust relational database
+This application is built on the **TALL Stack** (TailwindCSS, Alpine.js, Laravel, Livewire), enhanced with modern tooling:
 
-### Frontend
+### TALL Stack Core
 - **TailwindCSS 4.0** - Utility-first CSS framework
+- **Alpine.js** - Lightweight JavaScript framework (included via Livewire)
+- **Laravel 12** - Latest PHP framework with modern features
+- **Livewire Volt** - Reactive components with minimal boilerplate (single-file components)
+- **MaryUI** - Open-source UI component library built on DaisyUI for Livewire
+
+### Additional Technologies
+- **PHP 8.2+** - Modern PHP with enhanced performance
+- **PostgreSQL** - Robust relational database
 - **Vite** - Fast build tool and development server
-- **Alpine.js** - Lightweight JavaScript framework (via Livewire)
 - **Responsive Design** - Mobile-first approach with dark/light mode
 
 ### Development Tools
@@ -56,7 +58,7 @@ A modern full-stack web application built with Laravel 12, Livewire, and Flux UI
    ```
 
 5. **Database configuration**
-   
+
    Update your `.env` file with PostgreSQL credentials:
    ```env
    DB_CONNECTION=pgsql
@@ -95,12 +97,22 @@ A modern full-stack web application built with Laravel 12, Livewire, and Flux UI
   - Appearance preferences (dark/light mode)
 
 ### Technical Features
-- Full-stack reactive components with Livewire
-- Modern UI with Flux components
+- Full-stack reactive components with Livewire Volt
+- Modern UI with MaryUI components (built on DaisyUI)
 - Responsive design
 - Database sessions and queues
 - Real-time logging
 - Comprehensive testing setup
+
+## 🏗️ Architecture
+
+For detailed information about our architectural decisions, see:
+
+- **[Livewire Volt Architecture](./docs/architecture/livewire-volt.md)** - Why we use Livewire Volt and comparison with HTMX
+- **[MaryUI Component Library](./docs/architecture/ui-libraries-comparison.md)** - Analysis of TALL Stack UI libraries, MaryUI selected
+- **[MaryUI Migration Guide](./docs/architecture/flux-replacement.md)** - Guide for migrating to MaryUI
+- **[Caddy Development Setup](./docs/architecture/caddy-development-setup.md)** - Simplified development environment with custom domains
+- **[File Structure](./docs/architecture/file-structure.md)** - Project organization and structure
 
 ## 🛠️ Development Commands
 
@@ -261,7 +273,7 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - **Documentation**: [Laravel Documentation](https://laravel.com/docs)
 - **Livewire**: [Livewire Documentation](https://livewire.laravel.com)
-- **Flux UI**: [Flux Documentation](https://fluxui.dev)
+- **MaryUI**: [MaryUI Documentation](https://mary-ui.com)
 
 ## 🔄 Version
 

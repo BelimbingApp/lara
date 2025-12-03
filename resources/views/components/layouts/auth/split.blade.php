@@ -20,8 +20,8 @@
 
                 <div class="relative z-20 mt-auto">
                     <blockquote class="space-y-2">
-                        <flux:heading size="lg">&ldquo;{{ trim($message) }}&rdquo;</flux:heading>
-                        <footer><flux:heading>{{ trim($author) }}</flux:heading></footer>
+                        <h2 class="text-xl font-semibold">&ldquo;{{ trim($message) }}&rdquo;</h2>
+                        <footer><h3 class="text-lg font-semibold">{{ trim($author) }}</h3></footer>
                     </blockquote>
                 </div>
             </div>
@@ -38,6 +38,5 @@
                 </div>
             </div>
         </div>
-        @fluxScripts
     </body>
 </html>

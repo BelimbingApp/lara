@@ -81,9 +81,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="login" class="flex flex-col gap-6">
         <!-- Email Address -->
-        <flux:input
+        <x-mary-input
             wire:model="email"
-            :label="__('Email address')"
+            label="{{ __('Email address') }}"
             type="email"
             required
             autofocus
@@ -93,37 +93,36 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         <!-- Password -->
         <div class="relative">
-            <flux:input
+            <x-mary-input
                 wire:model="password"
-                :label="__('Password')"
+                label="{{ __('Password') }}"
                 type="password"
                 required
                 autocomplete="current-password"
-                :placeholder="__('Password')"
-                viewable
+                placeholder="{{ __('Password') }}"
             />
 
             @if (Route::has('password.request'))
-                <flux:link class="absolute end-0 top-0 text-sm" :href="route('password.request')" wire:navigate>
+                <a href="{{ route('password.request') }}" wire:navigate class="absolute end-0 top-0 text-sm text-primary hover:underline">
                     {{ __('Forgot your password?') }}
-                </flux:link>
+                </a>
             @endif
         </div>
 
         <!-- Remember Me -->
-        <flux:checkbox wire:model="remember" :label="__('Remember me')" />
+        <x-mary-checkbox wire:model="remember" label="{{ __('Remember me') }}" />
 
         <div class="flex items-center justify-end">
-            <flux:button variant="primary" type="submit" class="w-full" data-test="login-button">
+            <x-mary-button type="submit" class="w-full btn-primary" data-test="login-button">
                 {{ __('Log in') }}
-            </flux:button>
+            </x-mary-button>
         </div>
     </form>
 
     @if (Route::has('register'))
         <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
             <span>{{ __('Don\'t have an account?') }}</span>
-            <flux:link :href="route('register')" wire:navigate>{{ __('Sign up') }}</flux:link>
+            <a href="{{ route('register') }}" wire:navigate class="text-primary hover:underline">{{ __('Sign up') }}</a>
         </div>
     @endif
 </div>
