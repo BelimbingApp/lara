@@ -360,6 +360,87 @@ php artisan blade-icons:install
 
 ---
 
+## Alternative Approach: HTMX
+
+**Repository:** [htmx.org](https://htmx.org)
+**License:** BSD
+**Type:** HTML enhancement library (alternative to Livewire)
+
+### Overview
+
+**HTMX** is an alternative approach that extends HTML with attributes to create dynamic behavior without JavaScript frameworks. It focuses on enhancing HTML with AJAX, CSS Transitions, WebSockets, and Server-Sent Events through declarative attributes.
+
+### HTMX Approach
+
+```html
+<button hx-post="/api/update-profile"
+        hx-target="#profile"
+        hx-swap="outerHTML">
+    Update Profile
+</button>
+```
+
+HTMX works by:
+1. Listening for user interactions (clicks, form submits, etc.)
+2. Making AJAX requests to server endpoints
+3. Receiving HTML fragments from the server
+4. Updating the DOM with the received HTML
+
+### Comparison with Livewire Volt + MaryUI
+
+| Feature | Livewire Volt + MaryUI | HTMX |
+|---------|---------------------|------|
+| **Learning curve** | Requires PHP/Laravel knowledge | HTML attributes, works with any backend |
+| **State management** | Automatic reactivity, component state | Manual DOM manipulation |
+| **UI components** | Pre-built MaryUI components | Build your own or use other libraries |
+| **Framework coupling** | Laravel-specific | Framework-agnostic |
+| **Complex interactions** | Easy with PHP logic | Requires backend endpoints |
+| **Developer experience** | Integrated Laravel workflow | Requires API endpoints |
+| **Type safety** | PHP type system | No type checking |
+| **Validation** | Laravel validation rules | Server-side validation only |
+| **Component reusability** | High (Volt components) | Low (HTML fragments) |
+| **Licensing** | 100% open source (MIT) | 100% open source (BSD) |
+
+### When to Use HTMX
+
+HTMX is a better choice when:
+
+- **Building simple, server-driven applications** with minimal interactivity
+- **Preferring a framework-agnostic approach** (works with Python, Ruby, PHP, etc.)
+- **Working with non-Laravel backends** (Django, Rails, etc.)
+- **Wanting maximum simplicity** with HTML-first approach
+- **Need for lightweight solution** without framework overhead
+- **Existing backend APIs** that return HTML fragments
+
+### Why Livewire Volt + MaryUI Was Chosen Over HTMX
+
+1. **Tight Laravel integration** - Direct access to Eloquent, validation, authentication without creating separate API endpoints
+2. **Component reusability** - Volt components can be easily shared, tested, and reused across the application
+3. **Rich UI library** - MaryUI provides production-ready components out of the box with accessibility built-in
+4. **Type safety** - PHP's type system helps catch errors at development time, not runtime
+5. **Laravel ecosystem** - Works seamlessly with Laravel's features (middleware, policies, events, queues, etc.)
+6. **Less API surface** - No need to create separate API endpoints; logic lives with the component
+7. **Better developer experience** - Integrated debugging, testing, and tooling within Laravel
+8. **State management** - Automatic reactivity without manual DOM manipulation
+9. **Open source** - Both Volt and MaryUI are fully open source (MIT license)
+
+### Can HTMX and Livewire Work Together?
+
+While technically possible, they serve similar purposes and using both would add unnecessary complexity:
+
+- **Overlapping functionality** - Both handle dynamic content updates
+- **Increased complexity** - Two different paradigms for the same task
+- **Maintenance burden** - Two systems to learn, debug, and maintain
+- **Team confusion** - Unclear when to use which approach
+
+**Recommendation:** Choose one approach that fits your project's needs and stick with it for consistency.
+
+### Compatibility with AGPL-3.0
+
+✅ **Fully Compatible** - BSD license allows use in AGPL-3.0 projects
+
+---
+
 ## Comparison Matrix
 
 | Feature | TallStackUI | MaryUI | WireUI | Pines | Blade Icons |
