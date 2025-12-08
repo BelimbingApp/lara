@@ -25,25 +25,89 @@ DEFAULT_PROXY_TYPE="caddy"
 DEFAULT_SKIP_CADDY="false"
 
 # Get default ports for an environment
+# Returns: FRONTEND_PORT|BACKEND_PORT|HTTPS_PORT
 get_default_ports() {
     local env=$1
     case "$env" in
         local)
-            echo "3000|8080|443"
+            echo "5173|8000|443"
             ;;
         staging)
-            echo "3001|8081|444"
+            echo "5174|8001|444"
             ;;
         production)
-            echo "3002|8082|445"
+            echo "5175|8002|445"
             ;;
         testing)
-            echo "3003|8083|446"
+            echo "5176|8003|446"
             ;;
         *)
-            echo "3000|8080|443"
+            echo "5173|8000|443"
             ;;
     esac
+}
+
+# Get backend port for environment (reads from .env or uses default)
+get_backend_port() {
+    local env=$1
+    local project_root=${2:-$PROJECT_ROOT}
+
+    # Try to read from .env file
+    if [ -f "$project_root/.env" ]; then
+        local port
+        port=$(grep -E "^APP_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
+        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
+            echo "$port"
+            return 0
+        fi
+    fi
+
+    # Use default based on environment
+    local defaults
+    defaults=$(get_default_ports "$env")
+    echo "$defaults" | cut -d'|' -f2
+}
+
+# Get frontend port for environment (reads from .env or uses default)
+get_frontend_port() {
+    local env=$1
+    local project_root=${2:-$PROJECT_ROOT}
+
+    # Try to read from .env file
+    if [ -f "$project_root/.env" ]; then
+        local port
+        port=$(grep -E "^VITE_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
+        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
+            echo "$port"
+            return 0
+        fi
+    fi
+
+    # Use default based on environment
+    local defaults
+    defaults=$(get_default_ports "$env")
+    echo "$defaults" | cut -d'|' -f1
+}
+
+# Get HTTPS port for environment (reads from .env or uses default)
+get_https_port() {
+    local env=$1
+    local project_root=${2:-$PROJECT_ROOT}
+
+    # Try to read from .env file
+    if [ -f "$project_root/.env" ]; then
+        local port
+        port=$(grep -E "^HTTPS_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
+        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
+            echo "$port"
+            return 0
+        fi
+    fi
+
+    # Use default based on environment
+    local defaults
+    defaults=$(get_default_ports "$env")
+    echo "$defaults" | cut -d'|' -f3
 }
 
 # Get default domains for an environment

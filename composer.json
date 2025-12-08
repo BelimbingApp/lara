@@ -1,13 +1,16 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "belimbing/blb",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Belimbing (BLB) - Laravel application with Livewire Volt and MaryUI",
     "keywords": [
         "laravel",
-        "framework"
+        "livewire",
+        "volt",
+        "mary-ui",
+        "tall-stack"
     ],
-    "license": "MIT",
+    "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
         "laravel/framework": "^12.41.1",
@@ -19,9 +22,8 @@
         "fakerphp/faker": "^1.24.1",
         "laravel/pail": "^1.2.4",
         "laravel/pint": "^1.26.0",
-        "laravel/sail": "^1.49.0",
         "mockery/mockery": "^1.6",
-        "nunomaduro/collision": "^8.6",
+        "nunomaduro/collision": "^8.8.3",
         "pestphp/pest": "^4.1.6",
         "pestphp/pest-plugin-laravel": "^4.0.0"
     },
@@ -54,11 +56,23 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run dev' : 'npm run dev'); $port = getenv('APP_PORT') ?: '8000'; system('npx concurrently -c \\\"#93c5fd,#c4b5fd,#fb7185,#fdba74\\\" \\\"php artisan serve --port=' . $port . '\\\" \\\"php artisan queue:listen --tries=1\\\" \\\"php artisan pail --timeout=0\\\" \\\"' . $jsCmd . '\\\" --names=server,queue,logs,vite --kill-others');\""
+        ],
+        "vite": [
+            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run dev' : 'npm run dev'); passthru($jsCmd);\""
+        ],
+        "build": [
+            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run build' : 'npm run build'); passthru($jsCmd);\""
         ],
         "test": [
             "@php artisan config:clear --ansi",
             "@php artisan test"
+        ],
+        "lint": [
+            "@php artisan pint"
+        ],
+        "format": [
+            "@lint"
         ]
     },
     "extra": {

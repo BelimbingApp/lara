@@ -82,6 +82,30 @@ get_laravel_logs_dir() {
     echo "$project_root/storage/logs"
 }
 
+# === Common Initialization for Setup Steps ===
+# Initialize script environment for setup-step scripts
+# Sets up: SETUP_STEPS_DIR, SCRIPTS_DIR, PROJECT_ROOT, and sources all utilities
+# Usage: init_setup_step_script
+# Note: Must be called before using any other functions
+init_setup_step_script() {
+    # Get script directory and project root
+    SETUP_STEPS_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"  # Points to scripts/setup-steps/
+    SCRIPTS_DIR="$(cd "$SETUP_STEPS_DIR/.." && pwd)"  # Points to scripts/
+    PROJECT_ROOT="$(cd "$SCRIPTS_DIR/.." && pwd)"  # Points to project root
+
+    # Source shared utilities (order matters: config.sh before validation.sh)
+    # shellcheck source=../shared/colors.sh
+    source "$SCRIPTS_DIR/shared/colors.sh" 2>/dev/null || true
+    # shellcheck source=../shared/runtime.sh
+    source "$SCRIPTS_DIR/shared/runtime.sh" 2>/dev/null || true
+    # shellcheck source=../shared/config.sh
+    source "$SCRIPTS_DIR/shared/config.sh" 2>/dev/null || true
+    # shellcheck source=../shared/validation.sh
+    source "$SCRIPTS_DIR/shared/validation.sh" 2>/dev/null || true
+    # shellcheck source=../shared/interactive.sh
+    source "$SCRIPTS_DIR/shared/interactive.sh" 2>/dev/null || true
+}
+
 # Clean script runtime directories (removes only script files, not Laravel app files)
 clean_script_dirs() {
     local project_root=$1
