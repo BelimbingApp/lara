@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# scripts/setup-steps/01-git.sh
+# scripts/setup-steps/10-git.sh
 # Title: Git Version Control
 # Purpose: Install and configure Git for Belimbing
-# Usage: ./scripts/setup-steps/01-git.sh [dev|stage|prod]
+# Usage: ./scripts/setup-steps/10-git.sh [local|staging|production|testing]
 # Can be run standalone or called by main setup.sh
 #
 # This script:
@@ -29,17 +29,44 @@ source "$SCRIPTS_DIR/shared/validation.sh"
 # shellcheck source=../shared/interactive.sh
 source "$SCRIPTS_DIR/shared/interactive.sh"
 
-# Environment (default to dev if not provided)
-APP_ENV="${1:-dev}"
+# Environment (default to local if not provided, using Laravel standard)
+APP_ENV="${1:-local}"
+
+# Check if Git version needs upgrade
+check_git_version() {
+    local git_version=$1
+    local latest_version
+    latest_version=$(get_latest_git_version)
+
+    # Use version comparison helper from versions.sh
+    compare_version "$git_version" "$latest_version"
+    local result=$?
+
+    # Returns 0 if current >= latest, non-zero if current < latest
+    if [ $result -eq 0 ] || [ $result -eq 1 ]; then
+        return 0  # Version meets or exceeds latest
+    else
+        return 1  # Version needs upgrade
+    fi
+}
 
 # Install Git if needed
 install_git() {
+    local latest_version
+    latest_version=$(get_latest_git_version)
+
     # Check if Git is already installed
     if command_exists git; then
         local git_version
         git_version=$(git --version | awk '{print $3}')
-        echo -e "${GREEN}✓${NC} Git already installed: $git_version"
-        return 0
+
+        if check_git_version "$git_version"; then
+            echo -e "${GREEN}✓${NC} Git already installed: $git_version (latest: ${latest_version})"
+            return 0
+        else
+            echo -e "${YELLOW}⚠${NC} Git installed: $git_version (latest: ${latest_version})"
+            echo -e "${CYAN}ℹ${NC} Git will be upgraded to ${latest_version}"
+        fi
     fi
 
     local os_type
@@ -62,13 +89,46 @@ install_git() {
             ;;
         linux|wsl2)
             if command_exists apt-get; then
-                echo -e "${CYAN}Updating package list...${NC}"
-                sudo apt-get update -qq
-                echo -e "${CYAN}Installing Git via apt...${NC}"
+                # Check if Git is already installed and if version needs upgrade
+                local needs_upgrade=false
+                if command_exists git; then
+                    local current_version
+                    current_version=$(git --version | awk '{print $3}')
+                    if ! check_git_version "$current_version"; then
+                        needs_upgrade=true
+                    fi
+                fi
+
+                # If upgrade needed or Git not installed, use Git's official PPA for latest version
+                if [ "$needs_upgrade" = true ] || ! command_exists git; then
+                    echo -e "${CYAN}Adding Git's official PPA for latest version...${NC}"
+                    sudo apt-get update -qq
+                    sudo apt-get install -y -qq software-properties-common || true
+                    sudo add-apt-repository -y ppa:git-core/ppa 2>/dev/null || {
+                        echo -e "${YELLOW}⚠${NC} Could not add Git PPA, trying default repositories...${NC}"
+                    }
+                    sudo apt-get update -qq
+                else
+                    echo -e "${CYAN}Updating package list...${NC}"
+                    sudo apt-get update -qq
+                fi
+
+                echo -e "${CYAN}Installing/upgrading Git via apt...${NC}"
                 sudo apt-get install -y git || {
                     echo -e "${RED}✗ Failed to install Git${NC}"
                     return 1
                 }
+
+                # Verify we got a recent version (PPA should provide latest, but check anyway)
+                if command_exists git; then
+                    local installed_version
+                    installed_version=$(git --version | awk '{print $3}')
+                    if ! check_git_version "$installed_version"; then
+                        echo -e "${YELLOW}⚠${NC} Installed Git version $installed_version is older than latest ${latest_version}"
+                        echo -e "${CYAN}ℹ${NC} The PPA may not have updated yet, or there may be a repository issue"
+                        echo -e "${CYAN}ℹ${NC} You can try: ${CYAN}sudo apt-get update && sudo apt-get upgrade git${NC}"
+                    fi
+                fi
             elif command_exists yum; then
                 echo -e "${CYAN}Installing Git via yum...${NC}"
                 sudo yum install -y git || {
@@ -116,24 +176,36 @@ main() {
     load_setup_state
 
     # Check if Git is already installed
+    local latest_version
+    latest_version=$(get_latest_git_version)
+
     if command_exists git; then
         local git_version
         git_version=$(git --version | awk '{print $3}')
 
-        echo -e "${CYAN}ℹ${NC} Git is already installed: $git_version"
-        echo ""
-
-        if [ -t 0 ]; then
-            if ask_yes_no "Skip this step?" "y"; then
-                echo -e "${GREEN}✓${NC} Skipping Git setup"
-                exit 0
-            fi
+        if check_git_version "$git_version"; then
+            echo -e "${GREEN}✓${NC} Git is already installed: $git_version (latest: ${latest_version})"
             echo ""
-            echo -e "${YELLOW}OK, let's verify Git installation...${NC}"
-            echo ""
-        else
-            echo -e "${GREEN}✓${NC} Using existing installation"
+            echo -e "${GREEN}✓${NC} Git setup complete (already satisfied)"
             exit 0
+        else
+            echo -e "${YELLOW}⚠${NC} Git is installed: $git_version (latest: ${latest_version})"
+            echo -e "${CYAN}ℹ${NC} Git will be upgraded to ${latest_version} during setup"
+            echo ""
+
+            if [ -t 0 ]; then
+                if ask_yes_no "Upgrade Git to ${latest_version}?" "y"; then
+                    echo ""
+                    # Continue to installation/upgrade
+                else
+                    echo -e "${YELLOW}⚠${NC} Skipping Git upgrade"
+                    echo -e "${CYAN}ℹ${NC} You can upgrade Git later manually"
+                    exit 0
+                fi
+            else
+                echo -e "${CYAN}Non-interactive mode: Will upgrade Git...${NC}"
+                echo ""
+            fi
         fi
     fi
 

@@ -1,0 +1,227 @@
+#!/bin/bash
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 Ng Kiat Siong
+#
+# Belimbing Version Management
+# Single source of truth for all software versions used across setup scripts
+#
+# Purpose:
+#   Centralize version definitions to ensure consistency across all setup and
+#   requirements checking scripts. This file provides both minimum required
+#   versions and latest recommended versions for all dependencies.
+#
+# Usage:
+#   Source this file in your script:
+#     source "$SCRIPT_DIR/shared/versions.sh"
+#
+#   Or via config.sh (automatically sourced):
+#     source "$SCRIPT_DIR/shared/config.sh"
+#
+# How to Update Versions:
+#   1. Update the version constants in this file
+#   2. All scripts using these constants will automatically use the new versions
+#   3. Test the affected scripts to ensure compatibility
+#
+# Example:
+#   REQUIRED_PHP_VERSION=$(get_required_php_version)
+#   if check_php_version_meets_minimum "$current_version"; then
+#       echo "PHP version is sufficient"
+#   fi
+
+# === Minimum Required Versions ===
+# These define the minimum versions that must be installed
+
+# PHP: Minimum required major.minor version
+REQUIRED_PHP_MAJOR=8
+REQUIRED_PHP_MINOR=5
+
+# === Latest Recommended Versions ===
+# These define the latest stable versions recommended for installation
+
+# Git: Latest stable version
+LATEST_GIT_VERSION="2.52.0"
+
+# Bun: Latest stable version (without 'v' prefix for consistency)
+LATEST_BUN_VERSION="1.3.4"
+
+# === Service Versions ===
+# Versions for services that are installed
+
+# PostgreSQL: Version to install
+POSTGRESQL_VERSION="18"
+
+# Redis: Version to install
+REDIS_VERSION="8"
+
+# === Package Manager Specific Versions ===
+# These are generated from the base versions above to maintain single source of truth
+
+# === Helper Functions ===
+
+# Get required PHP version string (e.g., "8.5")
+# Usage: version=$(get_required_php_version)
+get_required_php_version() {
+    echo "${REQUIRED_PHP_MAJOR}.${REQUIRED_PHP_MINOR}"
+}
+
+# Get latest Git version
+# Usage: version=$(get_latest_git_version)
+get_latest_git_version() {
+    echo "$LATEST_GIT_VERSION"
+}
+
+# Get latest Bun version (with 'v' prefix if needed)
+# Usage: version=$(get_latest_bun_version)
+get_latest_bun_version() {
+    echo "$LATEST_BUN_VERSION"
+}
+
+# Get Bun version with 'v' prefix for display
+# Usage: display_version=$(get_latest_bun_version_with_prefix)
+get_latest_bun_version_with_prefix() {
+    echo "v${LATEST_BUN_VERSION}"
+}
+
+# Get PostgreSQL version
+# Usage: version=$(get_postgresql_version)
+get_postgresql_version() {
+    echo "$POSTGRESQL_VERSION"
+}
+
+# Get PostgreSQL version for Homebrew (with @ prefix)
+# Usage: brew_version=$(get_postgresql_brew_version)
+get_postgresql_brew_version() {
+    echo "postgresql@$(get_postgresql_version)"
+}
+
+# Get Redis version
+# Usage: version=$(get_redis_version)
+get_redis_version() {
+    echo "$REDIS_VERSION"
+}
+
+# Compare two version strings (semantic versioning)
+# Returns: 0 if v1 == v2, 1 if v1 > v2, 2 if v1 < v2
+# Usage: result=$(compare_version "1.2.3" "1.2.4")
+#        if [ "$result" -eq 2 ]; then echo "v1 is older"; fi
+compare_version() {
+    local v1=$1
+    local v2=$2
+
+    # Remove 'v' prefix if present
+    v1=${v1#v}
+    v2=${v2#v}
+
+    # Split versions into major.minor.patch arrays
+    local v1_parts v2_parts
+    IFS='.' read -ra v1_parts <<< "$v1"
+    IFS='.' read -ra v2_parts <<< "$v2"
+
+    # Compare major, minor, patch in order
+    local i=0
+    while [ $i -lt 3 ]; do
+        local part1=${v1_parts[$i]:-0}
+        local part2=${v2_parts[$i]:-0}
+
+        # Remove non-numeric suffixes (e.g., "8.5.0-dev" -> "8.5.0")
+        part1=${part1%%[^0-9]*}
+        part2=${part2%%[^0-9]*}
+
+        # Default to 0 if empty
+        part1=${part1:-0}
+        part2=${part2:-0}
+
+        if [ "$part1" -gt "$part2" ]; then
+            return 1  # v1 > v2
+        elif [ "$part1" -lt "$part2" ]; then
+            return 2  # v1 < v2
+        fi
+
+        ((i++))
+    done
+
+    return 0  # v1 == v2
+}
+
+# Check if a version string meets minimum requirement
+# Usage: if version_meets_minimum "8.6.0" "$REQUIRED_PHP_MAJOR" "$REQUIRED_PHP_MINOR"; then
+#           echo "Version is sufficient"
+#        fi
+version_meets_minimum() {
+    local current_version=$1
+    local required_major=$2
+    local required_minor=$3
+
+    # Remove 'v' prefix if present
+    current_version=${current_version#v}
+
+    # Extract major and minor from current version
+    local current_major current_minor
+    current_major=$(echo "$current_version" | cut -d. -f1)
+    current_minor=$(echo "$current_version" | cut -d. -f2)
+
+    # Remove non-numeric suffixes
+    current_major=${current_major%%[^0-9]*}
+    current_minor=${current_minor%%[^0-9]*}
+
+    # Default to 0 if empty
+    current_major=${current_major:-0}
+    current_minor=${current_minor:-0}
+
+    # Compare: major version must be greater, or equal with minor >= required
+    if [ "$current_major" -gt "$required_major" ]; then
+        return 0  # Meets requirement
+    elif [ "$current_major" -eq "$required_major" ] && [ "$current_minor" -ge "$required_minor" ]; then
+        return 0  # Meets requirement
+    else
+        return 1  # Does not meet requirement
+    fi
+}
+
+# Check if PHP version meets minimum requirement (8.5+)
+# Usage: if check_php_version_meets_minimum "8.6.0"; then
+#           echo "PHP version is sufficient"
+#        fi
+check_php_version_meets_minimum() {
+    local current_version=$1
+    version_meets_minimum "$current_version" "$REQUIRED_PHP_MAJOR" "$REQUIRED_PHP_MINOR"
+}
+
+# Check if Git version is at least the latest recommended version
+# Usage: if check_git_version_meets_latest "2.52.0"; then
+#           echo "Git is up to date"
+#        fi
+check_git_version_meets_latest() {
+    local current_version=$1
+    compare_version "$current_version" "$LATEST_GIT_VERSION"
+    local result=$?
+    # Returns 0 if current >= latest, non-zero otherwise
+    [ $result -eq 0 ] || [ $result -eq 1 ]
+}
+
+# Parse version string into major.minor.patch components
+# Usage: parse_version "8.5.3" major minor patch
+#        echo "Major: $major, Minor: $minor, Patch: $patch"
+parse_version() {
+    local version=$1
+    # Remove 'v' prefix if present
+    version=${version#v}
+
+    # Export variables (using eval since we're setting caller's variables)
+    eval "$2=$(echo "$version" | cut -d. -f1)"
+    eval "$3=$(echo "$version" | cut -d. -f2)"
+    eval "$4=$(echo "$version" | cut -d. -f3)"
+
+    # Clean up non-numeric suffixes
+    local major_var=$2
+    local minor_var=$3
+    local patch_var=$4
+    eval "$major_var=\${$major_var%%[^0-9]*}"
+    eval "$minor_var=\${$minor_var%%[^0-9]*}"
+    eval "$patch_var=\${$patch_var%%[^0-9]*}"
+
+    # Default to 0 if empty
+    eval "if [ -z \"\$$major_var\" ]; then $major_var=0; fi"
+    eval "if [ -z \"\$$minor_var\" ]; then $minor_var=0; fi"
+    eval "if [ -z \"\$$patch_var\" ]; then $patch_var=0; fi"
+}
