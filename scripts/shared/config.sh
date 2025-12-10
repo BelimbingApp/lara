@@ -15,6 +15,17 @@
 # - SKIP_CADDY, PROXY_TYPE
 # - BACKEND_URL
 
+# Source version constants (must be sourced before using version-related functions)
+# Determine script directory from this file's location
+_CONFIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source versions.sh if it exists
+# shellcheck source=versions.sh
+if [ -f "$_CONFIG_DIR/versions.sh" ]; then
+    source "$_CONFIG_DIR/versions.sh" 2>/dev/null || true
+fi
+unset _CONFIG_DIR
+
 # === Setup Defaults ===
 # shellcheck disable=SC2034
 # Used by setup scripts to provide sensible defaults during interactive setup
@@ -111,9 +122,18 @@ get_https_port() {
 }
 
 # Get default domains for an environment
+# Returns: frontend_domain|backend_domain
+# Pattern: ${env}.blb.lara for frontend, ${env}.api.blb.lara for backend
 get_default_domains() {
     local env=$1
-    echo "${env}.app.blb|${env}.api.blb"
+    case "$env" in
+        production)
+            echo "app.blb.lara|api.blb.lara"
+            ;;
+        *)
+            echo "${env}.blb.lara|${env}.api.blb.lara"
+            ;;
+    esac
 }
 
 # Get default JWT expiration values

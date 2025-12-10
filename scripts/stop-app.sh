@@ -78,7 +78,7 @@ stop_concurrently() {
 
 # Main orchestration function
 main() {
-    ENVIRONMENT=${1:-local}
+ENVIRONMENT=${1:-local}
 
     echo -e "${YELLOW}Stopping $ENVIRONMENT environment services...${NC}"
 

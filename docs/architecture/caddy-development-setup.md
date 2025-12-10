@@ -3,17 +3,26 @@
 **Document Type:** Architecture Specification
 **Purpose:** Define a simplified development setup using Caddy for custom domain-based local development
 **Goal:** Simplify developer experience - users only need to run Caddy, everything else auto-starts with hot reloading
-**Last Updated:** 2025-12-02
+**Last Updated:** 2025-12-10
 
 ---
 
 ## Overview
 
-This architecture enables developers to use friendly domain names (`dev.lara.blb`, `stage.lara.blb`) instead of IP addresses and ports, with automatic SSL certificates and hot reloading. The setup requires minimal technical knowledge - developers only need to ensure Caddy is running, and all services (Laravel, Vite, queue, logs) start automatically.
+This architecture enables developers to use friendly domain names (`local.blb.lara`, `stage.blb.lara`) instead of IP addresses and ports, with automatic SSL certificates and hot reloading. The setup requires minimal technical knowledge - developers only need to ensure Caddy is running, and all services (Laravel, Vite, queue, logs) start automatically.
+
+## Configuration Philosophy: Environment Parity
+
+Belimbing adheres to the **Environment Parity** principle. The goal is to maximize similarity between development, staging, and production environments to reduce "works on my machine" issues.
+
+To achieve this:
+1.  **Single Caddyfile**: We use **one** `Caddyfile` for ALL environments.
+2.  **Configuration-as-Code**: This file is version-controlled in the repository root.
+3.  **Variable Injection**: Differences (domains, ports, TLS modes) are injected via environment variables (`APP_DOMAIN`, `TLS_MODE`, etc.) at runtime.
 
 ### Key Benefits
 
-- **Simple URLs**: `dev.lara.blb` instead of `127.0.0.1:8000`
+- **Simple URLs**: `local.blb.lara` instead of `127.0.0.1:8000`
 - **Auto SSL**: Caddy automatically provisions SSL certificates for `.blb` domains
 - **Zero Configuration**: Services auto-start when Caddy starts
 - **Hot Reload**: File changes automatically trigger browser refresh (CSS/JS/Blade)
@@ -27,7 +36,7 @@ This architecture enables developers to use friendly domain names (`dev.lara.blb
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                     Developer's Browser                      │
-│                  https://dev.lara.blb                        │
+│                  https://local.blb.lara                        │
 └───────────────────────────┬─────────────────────────────────┘
                             │
                             ▼
@@ -77,16 +86,13 @@ This tutorial covers:
 
 ```
 blb/
-├── Caddyfile                 # Caddy configuration for local dev
+├── Caddyfile                 # Single Source of Truth Caddy config
 ├── scripts/
-│   ├── start-dev.sh          # Auto-start script for development
-│   ├── start-staging.sh      # Auto-start script for staging
-│   └── stop-services.sh      # Stop all services
+│   ├── start-app.sh          # Auto-start script (exports env vars)
+│   └── stop-app.sh           # Stop services
 ├── config/
 │   └── caddy/
-│       ├── dev.conf          # Dev environment Caddy config
-│       ├── staging.conf      # Staging environment Caddy config
-│       └── production.conf   # Production Caddy config (optional)
+│       └── (Removed - moved to root Caddyfile)
 └── .caddy/                   # Caddy data directory (git-ignored)
     ├── certs/                # SSL certificates
     └── logs/                 # Caddy access logs
@@ -98,31 +104,32 @@ blb/
 
 ### Phase 1: Caddy Configuration
 
-#### 1.1 Local Development Caddyfile
+#### 1.1 The Unified Caddyfile
 
-**Location:** `/home/kiat/repo/laravel/blb/Caddyfile`
+**Location:** `$PROJECT_ROOT/Caddyfile`
 
-```caddy
-# Development environment configuration
-dev.lara.blb {
-    # Enable automatic HTTPS for .blb domains
-    tls internal
+We use a single file that adapts via environment variables:
+
+```caddyfile
+{
+    # Global options
+}
+
+{$APP_DOMAIN} {
+    # TLS Configuration
+    # - Local: "internal"
+    # - Prod: Email address
+    tls {$TLS_MODE}
 
     # Logging
     log {
-        output file .caddy/logs/dev-access.log
+        output file .caddy/logs/access.log
         format console
     }
 
-    # Reverse proxy to Laravel server
-    @laravel {
-        path /build/*
-        path /assets/*
-    }
-
-    # Proxy Vite assets to Vite dev server
+    # Vite / Frontend Config
     handle /build/* {
-        reverse_proxy http://127.0.0.1:5173 {
+        reverse_proxy 127.0.0.1:{$VITE_PORT} {
             header_up Host {host}
             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-Proto {scheme}
@@ -130,53 +137,15 @@ dev.lara.blb {
     }
 
     handle /assets/* {
-        reverse_proxy http://127.0.0.1:5173 {
+        reverse_proxy 127.0.0.1:{$VITE_PORT} {
             header_up Host {host}
-            header_up X-Real-IP {remote_host}
+             header_up X-Real-IP {remote_host}
             header_up X-Forwarded-Proto {scheme}
         }
     }
 
-    # Proxy all other requests to Laravel
-    reverse_proxy http://127.0.0.1:8000 {
-        header_up Host {host}
-        header_up X-Real-IP {remote_host}
-        header_up X-Forwarded-Proto {scheme}
-        header_up X-Forwarded-Port {server_port}
-    }
-}
-
-# Staging environment (different repo, similar setup)
-stage.lara.blb {
-    tls internal
-
-    log {
-        output file .caddy/logs/stage-access.log
-        format console
-    }
-
-    @laravel {
-        path /build/*
-        path /assets/*
-    }
-
-    handle /build/* {
-        reverse_proxy http://127.0.0.1:5174 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-
-    handle /assets/* {
-        reverse_proxy http://127.0.0.1:5174 {
-            header_up Host {host}
-            header_up X-Real-IP {remote_host}
-            header_up X-Forwarded-Proto {scheme}
-        }
-    }
-
-    reverse_proxy http://127.0.0.1:8001 {
+    # Laravel Backend
+    reverse_proxy 127.0.0.1:{$APP_PORT} {
         header_up Host {host}
         header_up X-Real-IP {remote_host}
         header_up X-Forwarded-Proto {scheme}

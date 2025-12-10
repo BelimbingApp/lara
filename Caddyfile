@@ -1,17 +1,22 @@
-# Development environment configuration
-local.blb.lara {
-	# Enable automatic HTTPS for .blb.lara domains
-	tls internal
+{
+	# Global options
+}
+
+{$APP_DOMAIN} {
+	# TLS Configuration
+	# Local: "internal"
+	# Prod:  email address or "internal" if behind another proxy (though usually real email)
+	tls {$TLS_MODE}
 
 	# Logging
 	log {
-		output file .caddy/logs/local-access.log
+		output file .caddy/logs/access.log
 		format console
 	}
 
-	# Proxy Vite assets to Vite dev server
+	# Vite / Frontend Config
 	handle /build/* {
-		reverse_proxy http://127.0.0.1:5173 {
+		reverse_proxy 127.0.0.1:{$VITE_PORT} {
 			header_up Host {host}
 			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
@@ -19,15 +24,15 @@ local.blb.lara {
 	}
 
 	handle /assets/* {
-		reverse_proxy http://127.0.0.1:5173 {
+		reverse_proxy 127.0.0.1:{$VITE_PORT} {
 			header_up Host {host}
 			header_up X-Real-IP {remote_host}
 			header_up X-Forwarded-Proto {scheme}
 		}
 	}
 
-	# Proxy all other requests to Laravel
-	reverse_proxy http://127.0.0.1:8000 {
+	# Laravel Backend
+	reverse_proxy 127.0.0.1:{$APP_PORT} {
 		header_up Host {host}
 		header_up X-Real-IP {remote_host}
 		header_up X-Forwarded-Proto {scheme}

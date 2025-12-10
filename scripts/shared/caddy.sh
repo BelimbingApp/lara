@@ -58,27 +58,45 @@ install_caddy() {
 }
 
 # Check for proxy conflicts before starting Caddy
-# Returns 0 if safe to start Caddy, 1 if conflicts detected
+# Automatically finds available port if default is in use
+# Returns available port via stdout, returns 1 if no ports available
 check_proxy_conflicts() {
-    local https_port=$1
+    local preferred_https_port=$1
     local existing_proxy
     existing_proxy=$(detect_proxy)
 
-    if [ "$existing_proxy" != "none" ]; then
-        # Check if HTTPS port is already in use
-        if ! is_port_available "$https_port"; then
-            echo -e "${YELLOW}${WARNING_MARK} Port $https_port is already in use by ${CYAN}$existing_proxy${NC}"
-            echo -e "  Skipping Caddy. App will run without HTTPS proxy."
-            return 1
-        fi
-
-        # Another proxy is running, skip Caddy to avoid routing conflicts
-        echo -e "${YELLOW}${WARNING_MARK} Detected existing reverse proxy: ${CYAN}$existing_proxy${NC}"
-        echo -e "  Skipping Caddy to avoid routing conflicts. App will run without HTTPS proxy."
-        return 1
+    # Check if preferred port is available
+    if is_port_available "$preferred_https_port"; then
+        echo "$preferred_https_port"
+        return 0
     fi
 
-    return 0
+    # Port is in use - find alternative
+    if [ "$existing_proxy" != "none" ]; then
+        echo -e "${CYAN}ℹ${NC} Port $preferred_https_port is in use by ${CYAN}$existing_proxy${NC}"
+    else
+        echo -e "${CYAN}ℹ${NC} Port $preferred_https_port is in use"
+    fi
+
+    # Try to find alternative port
+    local alternative_port
+    alternative_port=$preferred_https_port
+    local attempts=0
+    while [ $attempts -lt 10 ] && ! is_port_available "$alternative_port"; do
+        ((alternative_port++))
+        ((attempts++))
+    done
+
+    if is_port_available "$alternative_port"; then
+        echo -e "${CYAN}ℹ${NC} Using alternative port: ${CYAN}$alternative_port${NC}"
+        echo "$alternative_port"
+        return 0
+    fi
+
+    # No ports available
+    echo -e "${YELLOW}${WARNING_MARK} No available ports found in range [$preferred_https_port-$alternative_port]${NC}"
+    echo "$preferred_https_port"  # Return preferred anyway for error handling
+    return 1
 }
 
 # Ensure Caddy binary can bind to privileged ports (e.g., 443)
@@ -196,7 +214,8 @@ start_caddy_proxy() {
 
 # Start Caddy with conflict checking and return PID
 # This is the main entry point for starting Caddy from start-app.sh
-# Returns PID on success, returns 1 on conflict (caller should continue without Caddy)
+# Automatically handles port conflicts by finding available ports
+# Returns PID on success, returns 1 on failure
 start_caddy_with_checks() {
     local project_root=$1
     local app_env=$2
@@ -204,18 +223,20 @@ start_caddy_with_checks() {
     local backend_domain=$4
     local frontend_port=$5
     local backend_port=$6
-    local https_port=$7
+    local preferred_https_port=$7
     local logs_dir=$8
 
     echo -e "${BLUE}${ARROW} HTTPS Proxy (Caddy)${NC}"
 
-    # Check for conflicts before starting
-    if ! check_proxy_conflicts "$https_port"; then
-        # Conflict detected - check_proxy_conflicts already printed the warning
-        # Return 1 to indicate Caddy should be skipped, but app should continue
+    # Check for conflicts and get available port (may be different from preferred)
+    local actual_https_port
+    actual_https_port=$(check_proxy_conflicts "$preferred_https_port") || {
+        echo -e "${YELLOW}${WARNING_MARK}${NC} Could not find available HTTPS port"
+        echo -e "  Skipping Caddy. App will run without HTTPS proxy."
         return 1
-    fi
+    }
 
+    # Use the actual available port (may differ from preferred)
     local caddy_pid
     caddy_pid=$(start_caddy_proxy \
         "$project_root" \
@@ -224,11 +245,14 @@ start_caddy_with_checks() {
         "$backend_domain" \
         "$frontend_port" \
         "$backend_port" \
-        "$https_port" \
+        "$actual_https_port" \
         "$logs_dir") || return 1
 
     echo -e "   ${GREEN}${CHECK_MARK}${NC} Started (PID: $caddy_pid)"
-    echo -e "   ${CYAN}${ARROW}${NC} Port $https_port"
+    echo -e "   ${CYAN}${ARROW}${NC} Port $actual_https_port"
+    if [ "$actual_https_port" != "$preferred_https_port" ]; then
+        echo -e "   ${CYAN}ℹ${NC} Using port $actual_https_port (preferred $preferred_https_port was in use)"
+    fi
     echo ""
 
     echo "$caddy_pid"
