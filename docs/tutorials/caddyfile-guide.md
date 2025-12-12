@@ -59,7 +59,7 @@ scheme://hostname:port
 Examples:
 - `https://example.com` - HTTPS on port 443
 - `http://localhost:8080` - HTTP on port 8080
-- `https://example.com:8443` - HTTPS on custom port
+- `https://example.com` - HTTPS (default)
 
 ---
 
@@ -259,10 +259,10 @@ api.blb.lara {
 }
 ```
 
-### Custom Ports
+### Default HTTPS (443)
 
 ```caddyfile
-https://local.blb.lara:8443 {
+https://local.blb.lara {
     tls certs/local.blb.lara.pem certs/local.blb.lara-key.pem
     reverse_proxy http://127.0.0.1:5174
 }
@@ -310,7 +310,7 @@ Belimbing checks for Caddyfiles in this order:
 
 1. **`/etc/caddy/Caddyfile`** - System-wide (Linux)
    - Detected but never modified
-   - Belimbing creates `Caddyfile.blb` instead
+   - Belimbing runs a project-specific Caddy using the repo-root `Caddyfile`
 
 2. **`$HOME/.config/caddy/Caddyfile`** - User-level
    - Can be updated if Belimbing config exists
@@ -320,7 +320,7 @@ Belimbing checks for Caddyfiles in this order:
 
 4. **`/usr/local/etc/caddy/Caddyfile`** - System-wide (macOS/Homebrew)
    - Detected but never modified
-   - Belimbing creates `Caddyfile.blb` instead
+   - Belimbing runs a project-specific Caddy using the repo-root `Caddyfile`
 
 ### Belimbing Caddyfile
 
@@ -399,12 +399,8 @@ If ports are in use:
    sudo lsof -i :443
    ```
 
-2. **Use alternative port:**
-   ```caddyfile
-   https://local.blb.lara:8443 {
-       # ...
-   }
-   ```
+2. **Free up port 443:**
+   Stop the process using 443 (or disable the conflicting proxy), then retry.
 
 ### Reverse Proxy Not Working
 

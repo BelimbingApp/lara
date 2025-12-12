@@ -110,8 +110,11 @@ extract_belimbing_domains() {
         return 1
     fi
 
-    # Extract domains from https:// blocks in Belimbing section
-    # Look for lines like "https://domain:port {" after Belimbing comment
+    # Extract domains from site address lines in Belimbing section
+    # Support both:
+    # - https://domain:port {
+    # - https://domain {
+    # - domain {
     local in_belimbing_block=false
     local found_first_https=false
     local frontend_domain=""
@@ -130,17 +133,20 @@ extract_belimbing_domains() {
             break
         fi
 
-        # Extract domain from https:// lines
-        if [ "$in_belimbing_block" = true ] && [[ "$line" =~ ^https:// ]]; then
+        # Extract domain from site address lines (top-level, non-indented) in Belimbing block
+        if [ "$in_belimbing_block" = true ] && [[ "$line" =~ ^[^[:space:]] ]] && [[ "$line" == *"{"* ]]; then
             found_first_https=true
-            # Extract domain:port from "https://domain:port {"
-            local domain_port
-            domain_port=$(echo "$line" | sed -n 's|^https://\([^:]*\):.*|\1|p')
-            if [ -n "$domain_port" ]; then
+            # Extract first token, then strip scheme, port, and trailing "{"
+            local addr
+            addr=$(echo "$line" | awk '{print $1}')
+            addr="${addr#https://}"
+            addr="${addr%%\{}"
+            addr="${addr%%:*}"
+            if [ -n "$addr" ]; then
                 if [ -z "$frontend_domain" ]; then
-                    frontend_domain="$domain_port"
+                    frontend_domain="$addr"
                 elif [ -z "$backend_domain" ]; then
-                    backend_domain="$domain_port"
+                    backend_domain="$addr"
                     break
                 fi
             fi
@@ -201,67 +207,23 @@ configure_existing_caddy() {
         fi
     fi
 
-    # Determine target Caddyfile location
-    # Never touch system Caddyfiles - always use project-specific one
+    # Belimbing's canonical configuration is the repo-root Caddyfile.
+    # We never modify system Caddyfiles. If a system Caddyfile exists, we still rely on
+    # running a project-specific Caddy instance using $PROJECT_ROOT/Caddyfile (via start-app.sh).
+    caddyfile="$PROJECT_ROOT/Caddyfile"
     if [ "$is_system_file" = true ]; then
         echo -e "${CYAN}ℹ${NC} System Caddyfile detected: ${CYAN}$caddyfile${NC}"
-        echo -e "${CYAN}ℹ${NC} Creating project-specific Caddyfile: ${CYAN}$PROJECT_ROOT/Caddyfile.blb${NC}"
-        caddyfile="$PROJECT_ROOT/Caddyfile.blb"
-    elif [ "$is_project_file" = true ]; then
-        echo -e "${CYAN}ℹ${NC} Found project Caddyfile: ${CYAN}$caddyfile${NC}"
-        # Will check and update if needed below
-    elif [ -z "$caddyfile" ]; then
-        # No Caddyfile found - create project-specific one
-        caddyfile="$PROJECT_ROOT/Caddyfile.blb"
-        echo -e "${CYAN}ℹ${NC} No existing Caddyfile found, creating: ${CYAN}$caddyfile${NC}"
-    else
-        # Other location (e.g., $HOME/.config/caddy/Caddyfile) - treat as project-level
-        echo -e "${CYAN}ℹ${NC} Found Caddyfile: ${CYAN}$caddyfile${NC}"
-        is_project_file=true
+        echo -e "${CYAN}ℹ${NC} Belimbing will use the project Caddyfile: ${CYAN}$PROJECT_ROOT/Caddyfile${NC}"
     fi
 
-    # Check if file exists before we start
-    local file_existed=false
-    if [ -f "$caddyfile" ]; then
-        file_existed=true
+    if [ ! -f "$caddyfile" ]; then
+        echo -e "${RED}✗${NC} Missing project Caddyfile: ${CYAN}$caddyfile${NC}" >&2
+        echo -e "${CYAN}ℹ${NC} Restore it from the repo, then re-run this step." >&2
+        return 1
     fi
 
-    # Check if Belimbing block exists and compare domains
-    local needs_update=false
-    local belimbing_exists=false
-
-    if [ "$file_existed" = true ] && grep -q "# Belimbing configuration" "$caddyfile" 2>/dev/null; then
-        belimbing_exists=true
-        # Extract existing domains
-        local existing_domains
-        existing_domains=$(extract_belimbing_domains "$caddyfile")
-
-        if [ -n "$existing_domains" ]; then
-            local existing_frontend existing_backend
-            existing_frontend=$(echo "$existing_domains" | cut -d'|' -f1)
-            existing_backend=$(echo "$existing_domains" | cut -d'|' -f2)
-
-            # Compare domains
-            if [ "$existing_frontend" != "$frontend_domain" ] || [ "$existing_backend" != "$backend_domain" ]; then
-                needs_update=true
-                echo -e "${CYAN}ℹ${NC} Domains changed:"
-                echo -e "  Old: ${CYAN}$existing_frontend${NC} / ${CYAN}$existing_backend${NC}"
-                echo -e "  New: ${CYAN}$frontend_domain${NC} / ${CYAN}$backend_domain${NC}"
-                echo -e "${CYAN}ℹ${NC} Updating Caddyfile configuration..."
-            else
-                echo -e "${GREEN}✓${NC} Domains match existing configuration"
-                echo -e "${CYAN}ℹ${NC} Caddyfile already configured correctly"
-                # Still need to ensure certificates exist
-            fi
-        else
-            # Belimbing block exists but couldn't parse domains - update anyway
-            needs_update=true
-            echo -e "${YELLOW}⚠${NC} Belimbing block found but couldn't parse domains, updating..."
-        fi
-    else
-        # No Belimbing block - will append
-        needs_update=true
-    fi
+    # We no longer generate/patch a project-specific Caddyfile.
+    # The canonical `Caddyfile` is variable-driven and used by start-app.sh.
 
     # Create certs directory if it doesn't exist
     local certs_dir="$PROJECT_ROOT/certs"
@@ -284,105 +246,10 @@ configure_existing_caddy() {
         fi
     fi
 
-    # Generate Belimbing configuration block
-    local belimbing_config
-    belimbing_config=$(cat << EOF
-
-# Belimbing configuration - Auto-generated
-# Environment: $APP_ENV
-# Project: $(basename "$PROJECT_ROOT")
-
-https://$frontend_domain:$https_port {
-    tls $certs_dir/${frontend_domain}.pem $certs_dir/${frontend_domain}-key.pem
-    reverse_proxy 127.0.0.1:$frontend_port
-}
-
-https://$backend_domain:$https_port {
-    tls $certs_dir/${frontend_domain}.pem $certs_dir/${frontend_domain}-key.pem
-    reverse_proxy 127.0.0.1:$backend_port
-}
-EOF
-)
-
-    # Update or append Caddyfile
-    if [ "$needs_update" = true ]; then
-        if [ "$belimbing_exists" = true ]; then
-            # Replace existing Belimbing block
-            # Find the start and end of Belimbing block
-            local start_line end_line
-            start_line=$(grep -n "# Belimbing configuration" "$caddyfile" | head -1 | cut -d: -f1)
-
-            if [ -n "$start_line" ]; then
-                # Find the end of the block (next non-indented line or end of file)
-                end_line=$(awk -v start="$start_line" 'NR > start && /^[^[:space:]]/ && !/^# Belimbing/ {print NR-1; exit}' "$caddyfile")
-                if [ -z "$end_line" ]; then
-                    # No end found, use end of file
-                    end_line=$(wc -l < "$caddyfile")
-                fi
-
-                # Create temporary file with updated content
-                local temp_file
-                temp_file=$(mktemp)
-
-                # Copy lines before Belimbing block
-                if [ "$start_line" -gt 1 ]; then
-                    head -n $((start_line - 1)) "$caddyfile" > "$temp_file"
-                fi
-
-                # Add new Belimbing block
-                echo "$belimbing_config" >> "$temp_file"
-
-                # Copy lines after Belimbing block
-                if [ "$end_line" -lt "$(wc -l < "$caddyfile")" ]; then
-                    tail -n +$((end_line + 1)) "$caddyfile" >> "$temp_file"
-                fi
-
-                # Replace original file
-                mv "$temp_file" "$caddyfile"
-                echo -e "${GREEN}✓${NC} Updated Belimbing configuration in: ${CYAN}$caddyfile${NC}"
-            else
-                # Fallback: append if we can't find the block
-                echo "$belimbing_config" >> "$caddyfile"
-                echo -e "${GREEN}✓${NC} Added Belimbing configuration to: ${CYAN}$caddyfile${NC}"
-            fi
-        else
-            # Append new Belimbing block
-            echo "$belimbing_config" >> "$caddyfile"
-            if [ "$file_existed" = false ]; then
-                echo -e "${GREEN}✓${NC} Created Caddyfile with Belimbing configuration: ${CYAN}$caddyfile${NC}"
-            else
-                echo -e "${GREEN}✓${NC} Added Belimbing configuration to: ${CYAN}$caddyfile${NC}"
-            fi
-        fi
-    fi
-
-    # Provide instructions based on Caddyfile location and action taken
+    # Provide instructions
     echo ""
-    if [ "$is_system_file" = true ]; then
-        echo -e "${CYAN}ℹ${NC} Project-specific Caddyfile created: ${CYAN}$caddyfile${NC}"
-        echo -e "${CYAN}ℹ${NC} To use this Caddyfile, run Caddy with: ${CYAN}caddy run --config $caddyfile${NC}"
-        echo -e "${CYAN}ℹ${NC} Or include it in your system Caddyfile: ${CYAN}import $caddyfile${NC}"
-    elif [ "$caddyfile" = "$PROJECT_ROOT/Caddyfile.blb" ]; then
-        if [ "$file_existed" = false ]; then
-            echo -e "${CYAN}ℹ${NC} Project-specific Caddyfile created: ${CYAN}$caddyfile${NC}"
-        else
-            echo -e "${CYAN}ℹ${NC} Project-specific Caddyfile: ${CYAN}$caddyfile${NC}"
-        fi
-        echo -e "${CYAN}ℹ${NC} To use this Caddyfile, run Caddy with: ${CYAN}caddy run --config $caddyfile${NC}"
-        echo -e "${CYAN}ℹ${NC} Or include it in your main Caddyfile: ${CYAN}import $caddyfile${NC}"
-    else
-        # Project-level Caddyfile (e.g., $PROJECT_ROOT/Caddyfile)
-        if [ "$needs_update" = true ]; then
-            if [ "$belimbing_exists" = true ]; then
-                echo -e "${CYAN}ℹ${NC} Caddyfile updated: ${CYAN}$caddyfile${NC}"
-            else
-                echo -e "${CYAN}ℹ${NC} Belimbing configuration added to: ${CYAN}$caddyfile${NC}"
-            fi
-        fi
-        echo -e "${CYAN}ℹ${NC} Reload Caddy to apply changes: ${CYAN}sudo systemctl reload caddy${NC}"
-        echo -e "${CYAN}ℹ${NC} Or restart Caddy: ${CYAN}sudo systemctl restart caddy${NC}"
-        echo -e "${CYAN}ℹ${NC} Or run Caddy directly: ${CYAN}caddy run --config $caddyfile${NC}"
-    fi
+    echo -e "${CYAN}ℹ${NC} Project Caddyfile: ${CYAN}$PROJECT_ROOT/Caddyfile${NC}"
+    echo -e "${CYAN}ℹ${NC} Start via: ${CYAN}./scripts/start-app.sh${NC}"
 
     return 0
 }

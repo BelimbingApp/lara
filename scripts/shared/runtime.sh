@@ -4,7 +4,7 @@
 
 # Source colors if not already loaded
 RUNTIME_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -z "$RED" ]; then
+if [ -z "${RED:-}" ]; then
     source "$RUNTIME_SCRIPT_DIR/colors.sh"
 fi
 
@@ -288,7 +288,7 @@ stop_dev_services() {
     fi
 
     # Stop processes by port (graceful then force)
-    local stop_port_by_number() {
+    stop_port_by_number() {
         local port=$1
         local service_name=$2
         local port_pids

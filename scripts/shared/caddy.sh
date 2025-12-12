@@ -141,18 +141,33 @@ create_caddyfile() {
     local caddy_file="$project_root/Caddyfile.$app_env"
     local admin_socket="unix//tmp/caddy-blb-$app_env-$$.sock"
 
+    local frontend_addr backend_addr
+    if [ "$https_port" = "443" ]; then
+        frontend_addr="https://$frontend_domain"
+        backend_addr="https://$backend_domain"
+    else
+        frontend_addr="https://$frontend_domain:$https_port"
+        backend_addr="https://$backend_domain:$https_port"
+    fi
+
     cat > "$caddy_file" << EOF
 {
     auto_https off
     admin $admin_socket
 }
 
-https://$frontend_domain:$https_port {
+$frontend_addr {
     tls certs/$frontend_domain.pem certs/$frontend_domain-key.pem
-    reverse_proxy 127.0.0.1:$frontend_port
+    @vite_assets path /build/* /assets/*
+    handle @vite_assets {
+        reverse_proxy 127.0.0.1:$frontend_port
+    }
+    handle {
+        reverse_proxy 127.0.0.1:$backend_port
+    }
 }
 
-https://$backend_domain:$https_port {
+$backend_addr {
     tls certs/$frontend_domain.pem certs/$frontend_domain-key.pem
     reverse_proxy 127.0.0.1:$backend_port
 }
