@@ -1,7 +1,3 @@
-{
-	# Global options
-}
-
 {$APP_DOMAIN} {
 	# TLS Configuration
 	# Local: "internal"
@@ -15,27 +11,47 @@
 	}
 
 	# Vite / Frontend Config
-	handle /build/* {
+	@vite_assets path /build/* /assets/*
+	handle @vite_assets {
 		reverse_proxy 127.0.0.1:{$VITE_PORT} {
 			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-Proto {scheme}
-		}
-	}
-
-	handle /assets/* {
-		reverse_proxy 127.0.0.1:{$VITE_PORT} {
-			header_up Host {host}
-			header_up X-Real-IP {remote_host}
-			header_up X-Forwarded-Proto {scheme}
 		}
 	}
 
 	# Laravel Backend
-	reverse_proxy 127.0.0.1:{$APP_PORT} {
-		header_up Host {host}
-		header_up X-Real-IP {remote_host}
-		header_up X-Forwarded-Proto {scheme}
-		header_up X-Forwarded-Port {server_port}
+	handle {
+		reverse_proxy 127.0.0.1:{$APP_PORT} {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			# Ensure Laravel generates correct absolute https:// URLs.
+			# Caddy serves HTTPS on 443 in this setup.
+			header_up X-Forwarded-Port 443
+			header_up X-Real-IP {remote_host}
+		}
+	}
+}
+
+{$BACKEND_DOMAIN} {
+	# TLS Configuration
+	# Local: "internal"
+	# Prod:  email address or "internal" if behind another proxy (though usually real email)
+	tls {$TLS_MODE}
+
+	# Logging
+	log {
+		output file .caddy/logs/access.log
+		format console
+	}
+
+	# API / Backend (Laravel)
+	handle {
+		reverse_proxy 127.0.0.1:{$APP_PORT} {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Port 443
+			header_up X-Real-IP {remote_host}
+		}
 	}
 }
