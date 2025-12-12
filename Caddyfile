@@ -10,8 +10,8 @@
 		format console
 	}
 
-	# Vite / Frontend Config
-	@vite_assets path /build/* /assets/*
+	# Vite / Frontend Config (dev mode paths + production builds)
+	@vite_assets path /build/* /assets/* /resources/* /@vite/* /@fs/* /node_modules/*
 	handle @vite_assets {
 		reverse_proxy 127.0.0.1:{$VITE_PORT} {
 			header_up Host {host}
