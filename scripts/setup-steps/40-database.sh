@@ -249,6 +249,39 @@ install_postgresql() {
     return 1
 }
 
+# Verify PostgreSQL connection using credentials from .env or provided parameters
+verify_postgresql_connection() {
+    local db_host="${1:-127.0.0.1}"
+    local db_port="${2:-5432}"
+    local db_name="${3:-}"
+    local db_user="${4:-}"
+    local db_password="${5:-}"
+
+    # If credentials not provided, try to read from .env
+    if [ -z "$db_name" ] || [ -z "$db_user" ] || [ -z "$db_password" ]; then
+        if [ -f "$PROJECT_ROOT/.env" ]; then
+            db_host=$(grep -E "^DB_HOST=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "127.0.0.1")
+            db_port=$(grep -E "^DB_PORT=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "5432")
+            db_name=$(grep -E "^DB_DATABASE=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
+            db_user=$(grep -E "^DB_USERNAME=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
+            db_password=$(grep -E "^DB_PASSWORD=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
+        fi
+    fi
+
+    # Check if we have all required credentials
+    if [ -z "$db_name" ] || [ -z "$db_user" ] || [ -z "$db_password" ]; then
+        echo -e "${YELLOW}⚠${NC} Cannot verify connection: missing database credentials" >&2
+        return 1
+    fi
+
+    # Test connection
+    if PGPASSWORD="$db_password" psql -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" -c "SELECT 1;" >/dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 # Create PostgreSQL database and user
 setup_postgresql_database() {
     local db_name="blb"
@@ -315,6 +348,17 @@ setup_postgresql_database() {
             rm -f "$PROJECT_ROOT/.env.bak"
 
             echo -e "${GREEN}✓${NC} Database credentials saved to .env"
+
+            # Verify connection using the saved credentials
+            echo -e "${CYAN}Verifying database connection...${NC}"
+            if verify_postgresql_connection "127.0.0.1" "5432" "$db_name" "$db_user" "$db_password"; then
+                echo -e "${GREEN}✓${NC} Database connection verified successfully"
+            else
+                echo -e "${YELLOW}⚠${NC} Could not verify database connection with saved credentials" >&2
+                echo -e "  ${YELLOW}Note:${NC} Connection may require additional configuration" >&2
+                # Don't fail here, as the database was created successfully
+                # The issue might be with local authentication settings
+            fi
         fi
 
         return 0
@@ -433,6 +477,13 @@ main() {
                 setup_postgresql_database
             else
                 echo -e "${GREEN}✓${NC} Database configuration found in .env"
+                echo -e "${CYAN}Verifying database connection...${NC}"
+                if verify_postgresql_connection; then
+                    echo -e "${GREEN}✓${NC} Database connection verified successfully"
+                else
+                    echo -e "${YELLOW}⚠${NC} Could not verify database connection" >&2
+                    echo -e "  ${YELLOW}Note:${NC} Please check database credentials in .env" >&2
+                fi
             fi
         else
             echo -e "${CYAN}Creating database and user...${NC}"

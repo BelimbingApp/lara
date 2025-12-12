@@ -13,7 +13,7 @@
     "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.41.1",
+        "laravel/framework": "^12.42.0",
         "laravel/tinker": "^2.10.2",
         "livewire/volt": "^1.10.1",
         "robsontenorio/mary": "^2.4"
@@ -56,13 +56,13 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run dev' : 'npm run dev'); $port = getenv('APP_PORT') ?: '8000'; system('npx concurrently -c \\\"#93c5fd,#c4b5fd,#fb7185,#fdba74\\\" \\\"php artisan serve --port=' . $port . '\\\" \\\"php artisan queue:listen --tries=1\\\" \\\"php artisan pail --timeout=0\\\" \\\"' . $jsCmd . '\\\" --names=server,queue,logs,vite --kill-others');\""
+            "bun run dev:all"
         ],
         "vite": [
-            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run dev' : 'npm run dev'); passthru($jsCmd);\""
+            "bun run dev"
         ],
         "build": [
-            "@php -r \"$jsCmd = (shell_exec('command -v bun 2>/dev/null') ? 'bun run build' : 'npm run build'); passthru($jsCmd);\""
+            "bun run build"
         ],
         "test": [
             "@php artisan config:clear --ansi",

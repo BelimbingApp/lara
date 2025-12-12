@@ -302,6 +302,10 @@ install_composer() {
         composer_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
         echo ""
         echo -e "${GREEN}✓${NC} Composer installed successfully: $composer_version"
+
+        # Self-update to ensure latest version
+        echo -e "${CYAN}Ensuring latest Composer version...${NC}"
+        composer self-update --quiet 2>/dev/null || sudo composer self-update --quiet 2>/dev/null || true
         return 0
     fi
 
@@ -389,6 +393,15 @@ main() {
         local composer_version
         composer_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
         echo -e "${GREEN}✓${NC} Composer already installed: $composer_version"
+
+        # Update Composer to latest version
+        echo -e "${CYAN}Updating Composer to latest version...${NC}"
+        composer self-update --quiet 2>/dev/null || sudo composer self-update --quiet 2>/dev/null || true
+        local updated_version
+        updated_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
+        if [ "$composer_version" != "$updated_version" ]; then
+            echo -e "${GREEN}✓${NC} Composer updated: $updated_version"
+        fi
     else
         echo -e "${YELLOW}ℹ${NC} Composer not found"
 

@@ -357,7 +357,6 @@ generate_installation_report
 
 # Final status
 if [ ${#FAILED[@]} -eq 0 ] && [ ${#COMPLETED[@]} -eq ${#STEPS[@]} ]; then
-    local total_time
     total_time=$(($(date +%s) - INSTALL_START_TIME))
     echo -e "${GREEN}✓ Setup Complete! 🎉${NC}"
     echo ""

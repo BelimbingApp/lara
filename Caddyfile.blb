@@ -1,0 +1,14 @@
+
+# Belimbing configuration - Auto-generated
+# Environment: local
+# Project: blb
+
+https://local.blb.lara:443 {
+    tls /home/kiat/repo/laravel/blb/certs/local.blb.lara.pem /home/kiat/repo/laravel/blb/certs/local.blb.lara-key.pem
+    reverse_proxy 127.0.0.1:5173
+}
+
+https://local.api.blb.lara:443 {
+    tls /home/kiat/repo/laravel/blb/certs/local.blb.lara.pem /home/kiat/repo/laravel/blb/certs/local.blb.lara-key.pem
+    reverse_proxy 127.0.0.1:8000
+}

@@ -247,6 +247,19 @@ save_to_setup_state() {
     echo "${key}=\"${value}\"" >> "$state_file"
 }
 
+# Escape special characters for sed replacement string
+# In sed replacement, we need to escape: &, \, and the delimiter #
+escape_sed_replacement() {
+    local value="$1"
+    # Escape backslashes first (must be first)
+    value="${value//\\/\\\\}"
+    # Escape ampersands
+    value="${value//&/\\&}"
+    # Escape the delimiter # (we use # instead of | for better compatibility)
+    value="${value//#/\\#}"
+    printf '%s' "$value"
+}
+
 # Update or add a variable to the .env file
 # Usage: update_env_file "/path/to/.env" "VARIABLE_NAME" "value"
 update_env_file() {
@@ -261,13 +274,35 @@ update_env_file() {
 
     # Check if variable exists in file
     if grep -q "^${var_name}=" "$env_file"; then
+        # Escape special characters in the replacement string
+        local escaped_value
+        escaped_value=$(escape_sed_replacement "$var_value")
+
+        # Escape variable name for use in sed pattern (escape special regex chars: . * ^ $ [ ] ( ) + ? { |)
+        local escaped_var_name="${var_name}"
+        escaped_var_name="${escaped_var_name//\./\\.}"
+        escaped_var_name="${escaped_var_name//\*/\\*}"
+        escaped_var_name="${escaped_var_name//\^/\\^}"
+        escaped_var_name="${escaped_var_name//\$/\\$}"
+        escaped_var_name="${escaped_var_name//\[/\\[}"
+        escaped_var_name="${escaped_var_name//\]/\\]}"
+        escaped_var_name="${escaped_var_name//\(/\\(}"
+        escaped_var_name="${escaped_var_name//\)/\\)}"
+        escaped_var_name="${escaped_var_name//\+/\\+}"
+        escaped_var_name="${escaped_var_name//\?/\\?}"
+        escaped_var_name="${escaped_var_name//\{/\\{}"
+        escaped_var_name="${escaped_var_name//\|/\\|}"
+
+        # Use # as delimiter (unlikely to appear in variable names or values)
+        local sed_pattern="s#^${escaped_var_name}=.*#${var_name}=\"${escaped_value}\"#"
+
         # Update existing variable (handle both quoted and unquoted values)
         if [[ "$OSTYPE" == "darwin"* ]]; then
             # macOS sed syntax
-            sed -i '' "s|^${var_name}=.*|${var_name}=\"${var_value}\"|" "$env_file"
+            sed -i '' "$sed_pattern" "$env_file" || return 1
         else
             # Linux sed syntax
-            sed -i "s|^${var_name}=.*|${var_name}=\"${var_value}\"|" "$env_file"
+            sed -i "$sed_pattern" "$env_file" || return 1
         fi
     else
         # Append new variable

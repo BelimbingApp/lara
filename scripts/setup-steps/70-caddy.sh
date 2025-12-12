@@ -36,7 +36,7 @@ source "$SCRIPTS_DIR/shared/caddy.sh"
 APP_ENV="${1:-local}"
 
 # Prompt user for custom domains with defaults
-# Returns: frontend_domain|backend_domain
+# Returns: frontend_domain|backend_domain (only this goes to stdout)
 prompt_for_domains() {
     local default_domains
     default_domains=$(get_default_domains "$APP_ENV")
@@ -46,27 +46,29 @@ prompt_for_domains() {
     default_backend=$(echo "$default_domains" | cut -d'|' -f2)
 
     if [ -t 0 ]; then
-        echo -e "${CYAN}Domain Configuration${NC}"
-        echo ""
+        # All informational output goes to stderr so only the result goes to stdout
+        echo -e "${CYAN}Domain Configuration${NC}" >&2
+        echo "" >&2
         local custom_frontend
         custom_frontend=$(ask_input "Frontend domain" "$default_frontend")
         # Use default if empty (shouldn't happen since default is provided, but safety check)
         [ -z "$custom_frontend" ] && custom_frontend="$default_frontend"
 
-        echo ""
+        echo "" >&2
         local custom_backend
         custom_backend=$(ask_input "Backend domain" "$default_backend")
         # Use default if empty (shouldn't happen since default is provided, but safety check)
         [ -z "$custom_backend" ] && custom_backend="$default_backend"
 
-        # Validate domains
+        # Validate domains (output to stderr)
         if ! is_valid_domain "$custom_frontend"; then
-            echo -e "${YELLOW}⚠${NC} Frontend domain format may be invalid: ${CYAN}$custom_frontend${NC}"
+            echo -e "${YELLOW}⚠${NC} Frontend domain format may be invalid: ${CYAN}$custom_frontend${NC}" >&2
         fi
         if ! is_valid_domain "$custom_backend"; then
-            echo -e "${YELLOW}⚠${NC} Backend domain format may be invalid: ${CYAN}$custom_backend${NC}"
+            echo -e "${YELLOW}⚠${NC} Backend domain format may be invalid: ${CYAN}$custom_backend${NC}" >&2
         fi
 
+        # Only the result goes to stdout
         echo "${custom_frontend}|${custom_backend}"
     else
         # Non-interactive: use defaults
@@ -111,6 +113,7 @@ extract_belimbing_domains() {
     # Extract domains from https:// blocks in Belimbing section
     # Look for lines like "https://domain:port {" after Belimbing comment
     local in_belimbing_block=false
+    local found_first_https=false
     local frontend_domain=""
     local backend_domain=""
 
@@ -121,13 +124,15 @@ extract_belimbing_domains() {
             continue
         fi
 
-        # Check if we've left the Belimbing block (next # comment that's not part of Belimbing)
-        if [ "$in_belimbing_block" = true ] && [[ "$line" =~ ^# ]] && [[ ! "$line" =~ "Belimbing" ]]; then
+        # Only check for end of block after we've seen at least one https:// line
+        # This allows comments like "# Environment: local" to be part of the block header
+        if [ "$in_belimbing_block" = true ] && [ "$found_first_https" = true ] && [[ "$line" =~ ^# ]]; then
             break
         fi
 
         # Extract domain from https:// lines
         if [ "$in_belimbing_block" = true ] && [[ "$line" =~ ^https:// ]]; then
+            found_first_https=true
             # Extract domain:port from "https://domain:port {"
             local domain_port
             domain_port=$(echo "$line" | sed -n 's|^https://\([^:]*\):.*|\1|p')
@@ -421,6 +426,27 @@ main() {
             if [ -t 0 ]; then
                 if ask_yes_no "Use the same choice again?" "y"; then
                     echo -e "${GREEN}✓${NC} Keeping your choice: ${CYAN}$PROXY_TYPE${NC}"
+
+                    # Even when keeping the previous choice, ensure hosts are configured
+                    local frontend_domain backend_domain
+                    if [ -f "$PROJECT_ROOT/.env" ]; then
+                        frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
+                        backend_domain=$(grep -E "^BACKEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
+                    fi
+                    # Use defaults if not set
+                    if [ -z "$frontend_domain" ]; then
+                        frontend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f1)
+                    fi
+                    if [ -z "$backend_domain" ]; then
+                        backend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f2)
+                    fi
+
+                    # Add hosts entries if missing
+                    if [ "$PROXY_TYPE" != "none" ]; then
+                        echo ""
+                        ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
+                    fi
+
                     exit 0
                 fi
                 echo ""
@@ -428,6 +454,27 @@ main() {
                 echo ""
             else
                 echo -e "${GREEN}✓${NC} Using your previous choice: ${CYAN}$PROXY_TYPE${NC}"
+
+                # Even when keeping the previous choice, ensure hosts are configured
+                local frontend_domain backend_domain
+                if [ -f "$PROJECT_ROOT/.env" ]; then
+                    frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
+                    backend_domain=$(grep -E "^BACKEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
+                fi
+                # Use defaults if not set
+                if [ -z "$frontend_domain" ]; then
+                    frontend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f1)
+                fi
+                if [ -z "$backend_domain" ]; then
+                    backend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f2)
+                fi
+
+                # Add hosts entries if missing
+                if [ "$PROXY_TYPE" != "none" ]; then
+                    echo ""
+                    ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
+                fi
+
                 exit 0
             fi
         fi
@@ -460,6 +507,10 @@ main() {
             save_to_setup_state "BACKEND_DOMAIN" "$backend_domain"
             update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$frontend_domain"
             update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$backend_domain"
+
+            # Add domains to /etc/hosts if missing
+            echo ""
+            ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
 
             # Get default ports
             local default_ports
@@ -536,6 +587,10 @@ EOF
                             update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
                             update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
 
+                            # Add domains to /etc/hosts if missing
+                            echo ""
+                            ensure_domains_in_hosts "$FRONTEND_DOMAIN" "$BACKEND_DOMAIN"
+
                             # Find available HTTPS port
                             local default_ports
                             default_ports=$(get_default_ports "$APP_ENV")
@@ -606,8 +661,11 @@ EOF
             save_to_setup_state "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
             update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
             update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
-            echo ""
         fi
+
+        # Always ensure domains are in hosts file (even if domains were already set)
+        echo ""
+        ensure_domains_in_hosts "$FRONTEND_DOMAIN" "$BACKEND_DOMAIN"
 
         # Check if Caddy is already installed
         if command -v caddy &> /dev/null; then

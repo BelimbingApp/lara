@@ -228,3 +228,86 @@ launch_browser() {
     echo -e "${YELLOW}${INFO_MARK} Couldn't auto-launch browser. Open manually: ${CYAN}$url${NC}"
     return 1
 }
+
+# Stop development services (Laravel, Vite, concurrently)
+# Usage: stop_dev_services [environment] [backend_port] [frontend_port]
+# If ports not provided, will detect from environment
+stop_dev_services() {
+    local environment="${1:-local}"
+    local backend_port="${2:-}"
+    local frontend_port="${3:-}"
+
+    # Get ports if not provided
+    if [ -z "$backend_port" ] || [ -z "$frontend_port" ]; then
+        if command -v get_backend_port >/dev/null 2>&1 && command -v get_frontend_port >/dev/null 2>&1; then
+            local project_root="${PROJECT_ROOT:-}"
+            if [ -z "$project_root" ]; then
+                # Try to detect project root
+                project_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
+            fi
+            backend_port=$(get_backend_port "$environment" "$project_root" 2>/dev/null || echo "")
+            frontend_port=$(get_frontend_port "$environment" "$project_root" 2>/dev/null || echo "")
+        fi
+
+        # Fallback to defaults
+        case "$environment" in
+            local)
+                backend_port="${backend_port:-8000}"
+                frontend_port="${frontend_port:-5173}"
+                ;;
+            staging)
+                backend_port="${backend_port:-8001}"
+                frontend_port="${frontend_port:-5174}"
+                ;;
+            production)
+                backend_port="${backend_port:-8002}"
+                frontend_port="${frontend_port:-5175}"
+                ;;
+            testing)
+                backend_port="${backend_port:-8003}"
+                frontend_port="${frontend_port:-5176}"
+                ;;
+            *)
+                backend_port="${backend_port:-8000}"
+                frontend_port="${frontend_port:-5173}"
+                ;;
+        esac
+    fi
+
+    # Stop concurrently processes first (parent manages children)
+    local pids
+    pids=$(pgrep -f "concurrently" 2>/dev/null || true)
+    if [ -n "$pids" ]; then
+        echo -e "${CYAN}Stopping concurrently processes...${NC}"
+        echo "$pids" | xargs kill -TERM 2>/dev/null || true
+        sleep 1
+        pids=$(pgrep -f "concurrently" 2>/dev/null || true)
+        if [ -n "$pids" ]; then
+            echo "$pids" | xargs kill -9 2>/dev/null || true
+        fi
+    fi
+
+    # Stop processes by port (graceful then force)
+    local stop_port_by_number() {
+        local port=$1
+        local service_name=$2
+        local port_pids
+
+        port_pids=$(lsof -ti:"$port" 2>/dev/null || true)
+        if [ -n "$port_pids" ]; then
+            echo -e "${CYAN}Stopping $service_name (port $port)...${NC}"
+            echo "$port_pids" | xargs kill -TERM 2>/dev/null || true
+            sleep 0.5
+            port_pids=$(lsof -ti:"$port" 2>/dev/null || true)
+            if [ -n "$port_pids" ]; then
+                echo "$port_pids" | xargs kill -9 2>/dev/null || true
+            fi
+        fi
+    }
+
+    stop_port_by_number "$backend_port" "Laravel server"
+    stop_port_by_number "$frontend_port" "Vite dev server"
+
+    # Wait for output to flush
+    sleep 0.5
+}

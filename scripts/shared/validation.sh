@@ -46,6 +46,16 @@ is_root() {
     [ "$(id -u)" -eq 0 ]
 }
 
+# Detect if running in WSL2 (Windows Subsystem for Linux)
+is_wsl2() {
+    grep -qi "microsoft" /proc/version 2>/dev/null
+}
+
+# Get Windows hosts file path (via WSL mount)
+get_windows_hosts_path() {
+    echo "/mnt/c/Windows/System32/drivers/etc/hosts"
+}
+
 # Check if sudo is available and working
 can_sudo() {
     sudo -n true 2>/dev/null
@@ -485,6 +495,146 @@ validate_manual_proxy() {
 domain_in_hosts() {
     local domain=$1
     grep -q "^127.0.0.1.*\s${domain}\(\s\|$\)" /etc/hosts 2>/dev/null
+}
+
+# Add domain to /etc/hosts if not already present
+# Usage: add_domain_to_hosts "domain1" ["domain2" ...]
+# Returns: 0 on success, 1 on failure
+add_domains_to_hosts() {
+    local domains=("$@")
+    local missing_domains=()
+
+    # Check which domains are missing
+    for domain in "${domains[@]}"; do
+        if ! domain_in_hosts "$domain"; then
+            missing_domains+=("$domain")
+        fi
+    done
+
+    # If all domains are present, nothing to do
+    if [ ${#missing_domains[@]} -eq 0 ]; then
+        return 0
+    fi
+
+    echo -e "${CYAN}${INFO_MARK} The following domains need to be added to /etc/hosts:${NC}"
+    for domain in "${missing_domains[@]}"; do
+        echo -e "  ${BULLET} $domain"
+    done
+    echo ""
+
+    # Build the hosts entry line
+    local hosts_line="127.0.0.1 ${missing_domains[*]}"
+
+    # Try to add automatically with sudo
+    echo -e "${YELLOW}Adding entries to /etc/hosts (requires sudo)...${NC}"
+
+    if echo "$hosts_line" | sudo tee -a /etc/hosts > /dev/null 2>&1; then
+        echo -e "${GREEN}${CHECK_MARK}${NC} Added to /etc/hosts: ${CYAN}$hosts_line${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}${WARNING_MARK} Could not add entries automatically${NC}"
+        echo ""
+        echo -e "${CYAN}Please add the following line to /etc/hosts manually:${NC}"
+        echo -e "  ${YELLOW}$hosts_line${NC}"
+        echo ""
+        echo -e "Run: ${CYAN}sudo sh -c 'echo \"$hosts_line\" >> /etc/hosts'${NC}"
+        return 1
+    fi
+}
+
+# Check if domain is in Windows hosts file (WSL2 only)
+domain_in_windows_hosts() {
+    local domain=$1
+    local win_hosts
+    win_hosts=$(get_windows_hosts_path)
+
+    if [ -f "$win_hosts" ]; then
+        grep -q "^127.0.0.1.*\s${domain}\(\s\|$\)" "$win_hosts" 2>/dev/null
+    else
+        return 1
+    fi
+}
+
+# Add domains to Windows hosts file (WSL2 only)
+# Returns: 0 on success, 1 on failure (will show instructions)
+add_domains_to_windows_hosts() {
+    local domains=("$@")
+    local missing_domains=()
+    local win_hosts
+    win_hosts=$(get_windows_hosts_path)
+
+    # Check which domains are missing from Windows hosts
+    for domain in "${domains[@]}"; do
+        if ! domain_in_windows_hosts "$domain"; then
+            missing_domains+=("$domain")
+        fi
+    done
+
+    # If all domains are present, nothing to do
+    if [ ${#missing_domains[@]} -eq 0 ]; then
+        echo -e "${GREEN}${CHECK_MARK}${NC} Domains already configured in Windows hosts file"
+        return 0
+    fi
+
+    local hosts_line="127.0.0.1 ${missing_domains[*]}"
+
+    echo -e "${CYAN}${INFO_MARK} WSL2 detected - browser runs on Windows${NC}"
+    echo -e "${CYAN}${INFO_MARK} Adding domains to Windows hosts file...${NC}"
+
+    # Try to write to Windows hosts file
+    if echo "$hosts_line" >> "$win_hosts" 2>/dev/null; then
+        echo -e "${GREEN}${CHECK_MARK}${NC} Added to Windows hosts: ${CYAN}$hosts_line${NC}"
+        return 0
+    else
+        # Permission denied - show instructions
+        echo -e "${YELLOW}${WARNING_MARK} Could not write to Windows hosts file (requires Admin)${NC}"
+        echo ""
+        echo -e "${CYAN}Please add this line to Windows hosts file:${NC}"
+        echo -e "  ${YELLOW}$hosts_line${NC}"
+        echo ""
+        echo -e "${CYAN}Option 1 - PowerShell (Run as Administrator):${NC}"
+        echo -e "  ${YELLOW}Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \"$hosts_line\"${NC}"
+        echo ""
+        echo -e "${CYAN}Option 2 - Notepad (Run as Administrator):${NC}"
+        echo -e "  1. Press Win+R, type ${YELLOW}notepad${NC}, press Ctrl+Shift+Enter"
+        echo -e "  2. File → Open → ${YELLOW}C:\\Windows\\System32\\drivers\\etc\\hosts${NC}"
+        echo -e "  3. Add: ${YELLOW}$hosts_line${NC}"
+        echo -e "  4. Save and close"
+        echo ""
+        return 1
+    fi
+}
+
+# Check and prompt to add domains to /etc/hosts (and Windows hosts if WSL2)
+# Usage: ensure_domains_in_hosts "frontend_domain" "backend_domain"
+# Returns: 0 if domains are ready, 1 if user action needed
+ensure_domains_in_hosts() {
+    local frontend_domain=$1
+    local backend_domain=$2
+    local domains_to_add=()
+    local result=0
+
+    # Check Linux /etc/hosts
+    if ! domain_in_hosts "$frontend_domain"; then
+        domains_to_add+=("$frontend_domain")
+    fi
+
+    if ! domain_in_hosts "$backend_domain"; then
+        domains_to_add+=("$backend_domain")
+    fi
+
+    # Add to Linux /etc/hosts if needed
+    if [ ${#domains_to_add[@]} -gt 0 ]; then
+        add_domains_to_hosts "${domains_to_add[@]}" || result=1
+    fi
+
+    # If running in WSL2, also handle Windows hosts file
+    if is_wsl2; then
+        echo ""
+        add_domains_to_windows_hosts "$frontend_domain" "$backend_domain" || result=1
+    fi
+
+    return $result
 }
 
 # Check if running in a Git repository

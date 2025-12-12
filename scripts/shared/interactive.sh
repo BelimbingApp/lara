@@ -26,7 +26,7 @@ ask_yes_no() {
         case "$response" in
             [Yy]*) return 0 ;;
             [Nn]*) return 1 ;;
-            *) echo -e "${YELLOW}Please answer y or n${NC}" ;;
+            *) echo -e "${YELLOW}Please answer y or n${NC}" >&2 ;;
         esac
     done
 }
@@ -46,7 +46,7 @@ ask_input() {
         fi
 
         if [ -z "$response" ]; then
-            echo -e "${YELLOW}This field is required${NC}"
+            echo -e "${YELLOW}This field is required${NC}" >&2
             continue
         fi
 
@@ -55,7 +55,7 @@ ask_input() {
                 echo "$response"
                 return 0
             else
-                echo -e "${YELLOW}Invalid input. Please try again.${NC}"
+                echo -e "${YELLOW}Invalid input. Please try again.${NC}" >&2
                 continue
             fi
         fi

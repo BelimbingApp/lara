@@ -33,8 +33,97 @@ source "$SCRIPTS_DIR/shared/interactive.sh" 2>/dev/null || true
 # Environment (default to local if not provided, using Laravel standard)
 APP_ENV="${1:-local}"
 
+# Add Bun to PATH permanently
+add_bun_to_path_permanently() {
+    local bun_path="$HOME/.bun/bin"
+    local path_export="export PATH=\"\$HOME/.bun/bin:\$PATH\""
+
+    # Detect shell and determine config file
+    local shell_config=""
+    local current_shell
+    current_shell=$(basename "${SHELL:-bash}")
+
+    case "$current_shell" in
+        zsh)
+            shell_config="$HOME/.zshrc"
+            ;;
+        bash)
+            shell_config="$HOME/.bashrc"
+            # Also check .bash_profile on macOS
+            if [[ "$OSTYPE" == "darwin"* ]] && [ -f "$HOME/.bash_profile" ]; then
+                shell_config="$HOME/.bash_profile"
+            fi
+            ;;
+        fish)
+            shell_config="$HOME/.config/fish/config.fish"
+            path_export="set -gx PATH \$HOME/.bun/bin \$PATH"
+            # Create fish config directory if it doesn't exist
+            if [ ! -d "$HOME/.config/fish" ]; then
+                mkdir -p "$HOME/.config/fish"
+            fi
+            ;;
+        *)
+            # Default to .bashrc for unknown shells
+            shell_config="$HOME/.bashrc"
+            ;;
+    esac
+
+    # Check if PATH entry already exists
+    if [ -f "$shell_config" ]; then
+        if grep -q "\.bun/bin" "$shell_config" 2>/dev/null; then
+            echo -e "${CYAN}ℹ${NC} Bun PATH entry already exists in ${CYAN}$shell_config${NC}"
+            return 0
+        fi
+    fi
+
+    # Add PATH entry to config file
+    if [ -n "$shell_config" ]; then
+        # Create config file if it doesn't exist
+        if [ ! -f "$shell_config" ]; then
+            touch "$shell_config"
+        fi
+
+        # Add PATH export
+        echo "" >> "$shell_config"
+        echo "# Bun - added by Belimbing setup" >> "$shell_config"
+        echo "$path_export" >> "$shell_config"
+
+        echo -e "${GREEN}✓${NC} Added Bun to PATH in ${CYAN}$shell_config${NC}"
+        echo -e "${CYAN}ℹ${NC} Restart your shell or run: ${CYAN}source $shell_config${NC}"
+        return 0
+    else
+        echo -e "${YELLOW}⚠${NC} Could not determine shell config file" >&2
+        return 1
+    fi
+}
+
 # Install Bun
 install_bun() {
+    # Check if Bun is already installed at default location
+    if [ -f "$HOME/.bun/bin/bun" ]; then
+        echo -e "${GREEN}✓${NC} Bun already installed at ~/.bun/bin/bun"
+        # Add to PATH for this session
+        export PATH="$HOME/.bun/bin:$PATH"
+        local bun_version
+        bun_version=$("$HOME/.bun/bin/bun" --version 2>/dev/null || echo "unknown")
+        echo -e "${GREEN}✓${NC} Bun version: $bun_version"
+
+        # Check if Bun is in PATH, if not add it permanently
+        if ! command_exists bun; then
+            echo -e "${CYAN}Adding Bun to PATH permanently...${NC}"
+            add_bun_to_path_permanently
+        fi
+        return 0
+    fi
+
+    # Check if Bun is already in PATH
+    if command_exists bun; then
+        local bun_version
+        bun_version=$(bun --version 2>/dev/null || echo "unknown")
+        echo -e "${GREEN}✓${NC} Bun already installed: $bun_version"
+        return 0
+    fi
+
     local os_type
     os_type=$(detect_os)
 
@@ -56,8 +145,6 @@ install_bun() {
                     echo -e "${RED}✗${NC} Failed to install Bun" >&2
                     return 1
                 }
-                echo -e "${YELLOW}Note:${NC} You may need to add Bun to your PATH"
-                echo -e "  Add to ~/.bashrc or ~/.zshrc: ${CYAN}export PATH=\"\$HOME/.bun/bin:\$PATH\"${NC}"
             fi
             ;;
         linux|wsl2)
@@ -67,8 +154,6 @@ install_bun() {
                 echo -e "${RED}✗${NC} Failed to install Bun" >&2
                 return 1
             }
-            echo -e "${YELLOW}Note:${NC} You may need to add Bun to your PATH"
-            echo -e "  Add to ~/.bashrc or ~/.zshrc: ${CYAN}export PATH=\"\$HOME/.bun/bin:\$PATH\"${NC}"
             ;;
         *)
             echo -e "${RED}✗${NC} OS not supported for auto-install" >&2
@@ -77,19 +162,75 @@ install_bun() {
             ;;
     esac
 
-    # Verify installation
+    # Verify installation - check both PATH and default location
     if command_exists bun; then
         local bun_version
         bun_version=$(bun --version 2>/dev/null || echo "unknown")
         echo ""
         echo -e "${GREEN}✓${NC} Bun installed successfully: $bun_version"
         return 0
+    elif [ -f "$HOME/.bun/bin/bun" ]; then
+        # Bun installed but not in PATH - add it permanently
+        export PATH="$HOME/.bun/bin:$PATH"
+        local bun_version
+        bun_version=$("$HOME/.bun/bin/bun" --version 2>/dev/null || echo "unknown")
+        echo ""
+        echo -e "${GREEN}✓${NC} Bun installed successfully: $bun_version"
+        echo -e "${CYAN}Adding Bun to PATH permanently...${NC}"
+        add_bun_to_path_permanently
+        return 0
     fi
 
     echo ""
-    echo -e "${YELLOW}⚠${NC} Bun installed but not in PATH" >&2
-    echo -e "  You may need to restart your shell or add ~/.bun/bin to PATH" >&2
+    echo -e "${RED}✗${NC} Bun installation verification failed" >&2
     return 1
+}
+
+# Get Bun version (centralized logic)
+get_bun_version() {
+    if command_exists bun; then
+        bun --version 2>/dev/null || echo "unknown"
+    elif [ -f "$HOME/.bun/bin/bun" ]; then
+        "$HOME/.bun/bin/bun" --version 2>/dev/null || echo "unknown"
+    else
+        echo "unknown"
+    fi
+}
+
+# Handle successful Bun setup/installation
+handle_bun_success() {
+    local bun_version
+    bun_version=$(get_bun_version)
+    save_to_setup_state "JS_RUNTIME" "bun"
+    save_to_setup_state "BUN_VERSION" "$bun_version"
+    print_divider
+    echo ""
+    echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
+    echo ""
+    exit 0
+}
+
+# Check if Node.js is available (lazy check for fallback only)
+check_node_as_fallback() {
+    if command_exists node && command_exists npm; then
+        return 0
+    fi
+    return 1
+}
+
+# Handle successful Node.js setup/installation
+handle_node_success() {
+    local node_version npm_version
+    node_version=$(node --version 2>/dev/null || echo "unknown")
+    npm_version=$(npm --version 2>/dev/null || echo "unknown")
+    save_to_setup_state "JS_RUNTIME" "node"
+    save_to_setup_state "NODE_VERSION" "$node_version"
+    save_to_setup_state "NPM_VERSION" "$npm_version"
+    print_divider
+    echo ""
+    echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
+    echo ""
+    exit 0
 }
 
 # Install Node.js and npm
@@ -180,66 +321,47 @@ main() {
     # Load existing configuration
     load_setup_state
 
-    # Check for existing JavaScript runtime
-    local has_bun=false
-    local has_node=false
-
+    # Step 1: Check if Bun exists (PATH or default location)
     if command_exists bun; then
-        has_bun=true
+        local bun_version
+        bun_version=$(get_bun_version)
+        echo -e "${GREEN}✓${NC} Bun already installed: $bun_version"
+        echo -e "${CYAN}ℹ${NC} Bun will be used (replaces Node.js and npm)"
+        echo ""
+        handle_bun_success
+    elif [ -f "$HOME/.bun/bin/bun" ]; then
+        # Bun installed but not in PATH - add it
+        export PATH="$HOME/.bun/bin:$PATH"
+        add_bun_to_path_permanently
+        local bun_version
+        bun_version=$(get_bun_version)
+        echo -e "${GREEN}✓${NC} Bun already installed: $bun_version"
+        echo -e "${CYAN}ℹ${NC} Bun will be used (replaces Node.js and npm)"
+        echo ""
+        handle_bun_success
     fi
 
-    if command_exists node && command_exists npm; then
+    # Step 2: Bun not found - offer to install
+    print_subsection_header "JavaScript Runtime Installation"
+
+    # Check for Node.js only if we need to show it as context or fallback
+    local has_node=false
+    if check_node_as_fallback; then
         has_node=true
     fi
 
-    # If both are available, prefer Bun
-    if [ "$has_bun" = true ]; then
-        local bun_version
-        bun_version=$(bun --version 2>/dev/null || echo "unknown")
-        echo -e "${GREEN}✓${NC} Bun already installed: $bun_version"
-        if [ "$has_node" = true ]; then
-            local node_version
-            node_version=$(node --version 2>/dev/null || echo "unknown")
-            echo -e "${YELLOW}ℹ${NC} Node.js $node_version is also installed but will not be used"
-            echo -e "${CYAN}ℹ${NC} Bun will be used instead (replaces Node.js and npm)"
-        else
-            echo -e "${CYAN}ℹ${NC} Bun will be used (replaces Node.js and npm)"
-        fi
-        echo ""
-        save_to_setup_state "JS_RUNTIME" "bun"
-        save_to_setup_state "BUN_VERSION" "$bun_version"
-        print_divider
-        echo ""
-        echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
-        echo ""
-        exit 0
-    fi
-
     if [ "$has_node" = true ]; then
-        local node_version npm_version
+        local node_version
         node_version=$(node --version 2>/dev/null || echo "unknown")
-        npm_version=$(npm --version 2>/dev/null || echo "unknown")
         echo -e "${GREEN}✓${NC} Node.js already installed: $node_version"
-        echo -e "${GREEN}✓${NC} npm already installed: $npm_version"
         echo ""
-        echo -e "${YELLOW}ℹ${NC} Note: Bun is the preferred runtime for this project"
-        echo -e "${CYAN}ℹ${NC} Node.js will be used, but consider installing Bun for better performance"
-        echo -e "  ${CYAN}Install Bun:${NC} curl -fsSL https://bun.sh/install | bash"
+        echo -e "${YELLOW}ℹ${NC} Note: Bun is the preferred runtime for this project (offers better performance and a built-in package manager)"
         echo ""
-        save_to_setup_state "JS_RUNTIME" "node"
-        save_to_setup_state "NODE_VERSION" "$node_version"
-        save_to_setup_state "NPM_VERSION" "$npm_version"
-        print_divider
+    else
+        echo -e "${YELLOW}ℹ${NC} No JavaScript runtime found"
         echo ""
-        echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
-        echo ""
-        exit 0
     fi
 
-    # No JavaScript runtime found - offer to install
-    print_subsection_header "JavaScript Runtime Installation"
-    echo -e "${YELLOW}ℹ${NC} No JavaScript runtime found"
-    echo ""
     local latest_bun_version
     latest_bun_version=$(get_latest_bun_version_with_prefix)
     echo -e "${CYAN}Options:${NC}"
@@ -248,7 +370,9 @@ main() {
     echo -e "     • Faster than Node.js"
     echo -e "     • Built-in package manager (replaces npm)"
     echo -e "     • Modern JavaScript runtime"
-    echo -e "     • ${YELLOW}Note:${NC} If you have Node.js installed, Bun will replace it for this project"
+    if [ "$has_node" = true ]; then
+        echo -e "     • ${YELLOW}Note:${NC} Bun will replace Node.js for this project"
+    fi
     echo ""
     echo -e "  ${YELLOW}2. Node.js + npm${NC}"
     echo -e "     • Traditional JavaScript runtime"
@@ -258,6 +382,7 @@ main() {
     echo ""
 
     if [ -t 0 ]; then
+        # Interactive mode
         local choice
         choice=$(ask_input "Choose JavaScript runtime (1 for Bun, 2 for Node.js)" "1")
 
@@ -266,38 +391,46 @@ main() {
                 if [ "$has_node" = true ]; then
                     local node_version
                     node_version=$(node --version 2>/dev/null || echo "unknown")
-                    echo -e "${YELLOW}⚠${NC} Node.js $node_version is currently installed"
+                    echo -e "${YELLOW}ℹ${NC} Node.js $node_version detected"
                     echo -e "${CYAN}ℹ${NC} Bun will be used instead of Node.js for this project"
                     echo -e "${CYAN}ℹ${NC} Node.js will remain installed but won't be used by Belimbing"
                     echo ""
                 fi
+                echo -e "${CYAN}Installing Bun...${NC}"
+                echo ""
                 if install_bun; then
-                    local bun_version
-                    bun_version=$(bun --version 2>/dev/null || echo "unknown")
-                    save_to_setup_state "JS_RUNTIME" "bun"
-                    save_to_setup_state "BUN_VERSION" "$bun_version"
+                    handle_bun_success
                 else
                     echo -e "${RED}✗${NC} Bun installation failed"
                     echo ""
-                    echo -e "${YELLOW}Please install Bun manually:${NC}"
-                    echo -e "  ${CYAN}https://bun.sh${NC}"
-                    exit 1
+                    # Fallback to Node.js if available
+                    if [ "$has_node" = true ]; then
+                        echo -e "${YELLOW}Falling back to Node.js...${NC}"
+                        echo ""
+                        handle_node_success
+                    else
+                        echo -e "${YELLOW}Please install Bun manually:${NC}"
+                        echo -e "  ${CYAN}https://bun.sh${NC}"
+                        exit 1
+                    fi
                 fi
                 ;;
             2|node|Node.js|npm)
-                if install_nodejs; then
-                    local node_version npm_version
-                    node_version=$(node --version 2>/dev/null || echo "unknown")
-                    npm_version=$(npm --version 2>/dev/null || echo "unknown")
-                    save_to_setup_state "JS_RUNTIME" "node"
-                    save_to_setup_state "NODE_VERSION" "$node_version"
-                    save_to_setup_state "NPM_VERSION" "$npm_version"
+                if [ "$has_node" = true ]; then
+                    # Node.js already installed
+                    handle_node_success
                 else
-                    echo -e "${RED}✗${NC} Node.js installation failed"
+                    echo -e "${CYAN}Installing Node.js...${NC}"
                     echo ""
-                    echo -e "${YELLOW}Please install Node.js manually:${NC}"
-                    echo -e "  ${CYAN}https://nodejs.org${NC}"
-                    exit 1
+                    if install_nodejs; then
+                        handle_node_success
+                    else
+                        echo -e "${RED}✗${NC} Node.js installation failed"
+                        echo ""
+                        echo -e "${YELLOW}Please install Node.js manually:${NC}"
+                        echo -e "  ${CYAN}https://nodejs.org${NC}"
+                        exit 1
+                    fi
                 fi
                 ;;
             *)
@@ -315,39 +448,21 @@ main() {
         else
             echo -e "${CYAN}Non-interactive mode: Installing Bun (default)...${NC}"
         fi
+        echo ""
         if install_bun; then
-            local bun_version
-            bun_version=$(bun --version 2>/dev/null || echo "unknown")
-            save_to_setup_state "JS_RUNTIME" "bun"
-            save_to_setup_state "BUN_VERSION" "$bun_version"
+            handle_bun_success
         else
             echo -e "${YELLOW}Falling back to Node.js...${NC}"
-            if install_nodejs; then
-                local node_version npm_version
-                node_version=$(node --version 2>/dev/null || echo "unknown")
-                npm_version=$(npm --version 2>/dev/null || echo "unknown")
-                save_to_setup_state "JS_RUNTIME" "node"
-                save_to_setup_state "NODE_VERSION" "$node_version"
-                save_to_setup_state "NPM_VERSION" "$npm_version"
+            echo ""
+            if [ "$has_node" = true ]; then
+                handle_node_success
+            elif install_nodejs; then
+                handle_node_success
             else
                 exit 1
             fi
         fi
     fi
-
-    print_divider
-    echo ""
-    echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
-    echo ""
-    if command_exists bun; then
-        echo -e "${CYAN}Installed:${NC}"
-        echo -e "  • Bun: $(bun --version 2>/dev/null || echo "unknown")"
-    elif command_exists node && command_exists npm; then
-        echo -e "${CYAN}Installed:${NC}"
-        echo -e "  • Node.js: $(node --version 2>/dev/null || echo "unknown")"
-        echo -e "  • npm: $(npm --version 2>/dev/null || echo "unknown")"
-    fi
-    echo ""
 }
 
 # Run main function
