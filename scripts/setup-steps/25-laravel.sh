@@ -9,7 +9,6 @@
 # - Verifies PHP and Composer are installed
 # - Installs Composer dependencies if needed
 # - Generates Laravel APP_KEY if missing
-# - Performs other Laravel-specific setup tasks
 
 set -euo pipefail
 
@@ -167,15 +166,11 @@ main() {
             save_to_setup_state "APP_KEY_GENERATED" "true"
         fi
     fi
+    save_to_setup_state "LARAVEL_CONFIGURED" "true"
 
     print_divider
     echo ""
     echo -e "${GREEN}✓ Laravel application configuration complete!${NC}"
-    echo ""
-    echo -e "${CYAN}Next steps:${NC}"
-    echo -e "  • Configure database: ${CYAN}Edit .env file${NC}"
-    echo -e "  • Run migrations: ${CYAN}php artisan migrate${NC}"
-    echo -e "  • Start development: ${CYAN}./scripts/start-app.sh${NC}"
     echo ""
 }
 

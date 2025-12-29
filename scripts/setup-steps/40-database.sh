@@ -614,7 +614,6 @@ main() {
     echo ""
     if [ -f "$PROJECT_ROOT/.env" ]; then
         echo -e "${CYAN}Database configuration saved to .env${NC}"
-        echo -e "${YELLOW}Note:${NC} Review database credentials in .env file"
     fi
     echo ""
 }

@@ -214,12 +214,24 @@ After installation, verify:
 ## Next Steps After Installation
 
 1. **Create Admin Account**
+
+   The admin account is automatically created during installation (step 60-migrations.sh). If you need to create or update an admin account manually:
+
    ```bash
-   php artisan tinker
-   >>> User::create(['name' => 'Admin', 'email' => 'admin@example.com', 'password' => Hash::make('secure-password')]);
+   # Interactive mode
+   php artisan belimbing:create-admin
+
+   # Non-interactive mode
+   php artisan belimbing:create-admin admin@example.com "secure-password"
+
+   # After installation (requires flag)
+   php artisan belimbing:create-admin admin@example.com "password" --allow-after-install
    ```
 
 2. **Run Migrations** (if not done automatically)
+
+   Migrations are automatically run in step 60-migrations.sh. To run manually:
+
    ```bash
    php artisan migrate
    ```

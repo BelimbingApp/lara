@@ -67,6 +67,7 @@ For advanced users who want full control:
 ./scripts/setup-steps/25-laravel.sh local
 ./scripts/setup-steps/30-js.sh local
 ./scripts/setup-steps/40-database.sh local
+./scripts/setup-steps/60-migrations.sh local
 ./scripts/setup-steps/70-caddy.sh local
 ```
 
@@ -94,11 +95,20 @@ This will start:
 
 ### 3. Create Admin Account
 
-On first access, you'll be prompted to create an admin account, or run:
+The admin account is automatically created during installation (step 60-migrations.sh). If you need to create or update an admin account manually, use:
 
 ```bash
-php artisan tinker
->>> User::create(['name' => 'Admin', 'email' => 'admin@example.com', 'password' => Hash::make('password')]);
+# Interactive mode (will prompt for email and password)
+php artisan belimbing:create-admin
+
+# Non-interactive mode (provide credentials)
+php artisan belimbing:create-admin admin@example.com "secure-password"
+
+# Update existing user password
+php artisan belimbing:create-admin admin@example.com "new-password" --force
+
+# After installation (requires --allow-after-install flag)
+php artisan belimbing:create-admin admin@example.com "password" --allow-after-install
 ```
 
 ## Common Commands
