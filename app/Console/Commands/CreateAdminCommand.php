@@ -183,4 +183,3 @@ class CreateAdminCommand extends Command
         return $password;
     }
 }
-
