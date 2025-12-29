@@ -54,7 +54,7 @@ run_migrations() {
 
 # Create admin user via artisan command
 create_admin_user() {
-    echo -e "${CYAN}Checking for existing admin user...${NC}"
+    echo -e "${CYAN}Creating admin user...${NC}"
 
     # Check if users table exists
     if ! php artisan tinker --execute="Schema::hasTable('users');" 2>/dev/null | grep -q "true"; then
@@ -63,21 +63,9 @@ create_admin_user() {
         return 0
     fi
 
-    # Check if any users exist
-    local user_count
-    user_count=$(php artisan tinker --execute="echo App\Modules\Core\User\Models\User::count();" 2>/dev/null | tail -1 || echo "0")
-
-    if [ "$user_count" != "0" ] && [ -n "$user_count" ]; then
-        echo -e "${GREEN}✓${NC} Admin user already exists ($user_count users found)"
-        return 0
-    fi
-
-    echo -e "${CYAN}Creating admin user...${NC}"
-
-    # Check for environment variables (non-interactive mode)
+    # Check for email from setup state
     local admin_email admin_password
     admin_email=$(grep -E "^ADMIN_EMAIL=" "$(get_setup_state_file)" 2>/dev/null | cut -d '=' -f2 | tr -d '"' || echo "")
-    admin_password="${ADMIN_PASSWORD:-}"
 
     if [ -t 0 ]; then
         # Interactive mode: prompt for credentials
@@ -87,38 +75,49 @@ create_admin_user() {
             echo -e "  Using email from setup state: ${CYAN}$admin_email${NC}"
         fi
 
+        admin_password=$(ask_password "Admin password (min 8 chars)")
         if [ -z "$admin_password" ]; then
-            admin_password=$(ask_password "Admin password (min 8 chars)")
-            if [ -z "$admin_password" ]; then
-                echo -e "${YELLOW}⚠${NC} No password provided, skipping admin creation"
-                echo -e "  Create admin later with: ${CYAN}php artisan belimbing:create-admin${NC}"
-                return 0
-            fi
+            echo -e "${YELLOW}⚠${NC} No password provided, skipping admin creation"
+            echo -e "  Create admin later with: ${CYAN}php artisan belimbing:create-admin${NC}"
+            return 0
         fi
 
-        # Run artisan command with credentials
-        if php artisan belimbing:create-admin "$admin_email" "$admin_password" --force; then
-            echo -e "${GREEN}✓${NC} Admin user created successfully"
+        # Use STDIN for password (secure - not visible in process list)
+        # Command will skip if users already exist (returns success)
+        if echo "$admin_password" | php artisan belimbing:create-admin "$admin_email" --stdin; then
             return 0
         else
             echo -e "${RED}✗${NC} Failed to create admin user" >&2
             return 1
         fi
     else
-        # Non-interactive mode: use env vars or skip
-        if [ -n "$admin_email" ] && [ -n "$admin_password" ]; then
-            if php artisan belimbing:create-admin "$admin_email" "$admin_password" --force; then
-                echo -e "${GREEN}✓${NC} Admin user created from environment"
-                return 0
-            else
-                echo -e "${RED}✗${NC} Failed to create admin user" >&2
-                return 1
-            fi
-        else
-            echo -e "${YELLOW}⚠${NC} Non-interactive mode: set ADMIN_EMAIL and ADMIN_PASSWORD env vars"
-            echo -e "  Or create admin later with: ${CYAN}php artisan belimbing:create-admin${NC}"
+        # Non-interactive mode: check for password file or skip
+        local password_file="${ADMIN_PASSWORD_FILE:-}"
+
+        if [ -z "$admin_email" ]; then
+            echo -e "${YELLOW}⚠${NC} Non-interactive mode: ADMIN_EMAIL not found in setup state"
+            echo -e "  Set ADMIN_EMAIL in setup state or create admin later with: ${CYAN}php artisan belimbing:create-admin${NC}"
             return 0
         fi
+
+        if [ -n "$password_file" ] && [ -f "$password_file" ]; then
+            # Read password from file (more secure than env var)
+            admin_password=$(cat "$password_file" | tr -d '\n')
+            if [ -n "$admin_password" ]; then
+                # Command will skip if users already exist (returns success)
+                if echo "$admin_password" | php artisan belimbing:create-admin "$admin_email" --stdin; then
+                    return 0
+                else
+                    echo -e "${RED}✗${NC} Failed to create admin user" >&2
+                    return 1
+                fi
+            fi
+        fi
+
+        echo -e "${YELLOW}⚠${NC} Non-interactive mode: set ADMIN_PASSWORD_FILE environment variable"
+        echo -e "  Example: ${CYAN}ADMIN_PASSWORD_FILE=/secure/path/to/password.txt${NC}"
+        echo -e "  Or create admin later with: ${CYAN}php artisan belimbing:create-admin${NC}"
+        return 0
     fi
 }
 
@@ -205,4 +204,3 @@ main() {
 
 # Run main function
 main "$@"
-

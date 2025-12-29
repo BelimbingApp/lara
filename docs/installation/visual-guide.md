@@ -215,18 +215,17 @@ After installation, verify:
 
 1. **Create Admin Account**
 
-   The admin account is automatically created during installation (step 60-migrations.sh). If you need to create or update an admin account manually:
+   The admin account is automatically created during installation (step 60-migrations.sh). The command only runs when no users exist:
 
    ```bash
    # Interactive mode
    php artisan belimbing:create-admin
 
-   # Non-interactive mode
-   php artisan belimbing:create-admin admin@example.com "secure-password"
-
-   # After installation (requires flag)
-   php artisan belimbing:create-admin admin@example.com "password" --allow-after-install
+   # Non-interactive mode with STDIN (secure)
+   echo "secure-password" | php artisan belimbing:create-admin admin@example.com --stdin
    ```
+
+   > **Note:** This command only creates the first admin. Use the application interface to manage users after installation.
 
 2. **Run Migrations** (if not done automatically)
 

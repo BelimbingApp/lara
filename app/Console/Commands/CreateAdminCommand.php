@@ -17,10 +17,9 @@ class CreateAdminCommand extends Command
      */
     protected $signature = 'belimbing:create-admin
                             {email? : Admin email address}
-                            {password? : Admin password (min 8 characters)}
+                            {password? : Admin password (min 8 characters) - WARNING: visible in process list, use --stdin for security}
                             {--name=Administrator : Admin display name}
-                            {--force : Overwrite existing admin user if exists}
-                            {--allow-after-install : Allow creating admin after installation is complete (security: use with caution)}';
+                            {--stdin : Read password from STDIN (secure for scripting)}';
 
     /**
      * The console command description.
@@ -34,16 +33,18 @@ class CreateAdminCommand extends Command
      */
     public function handle(): int
     {
-        // Security check: prevent unauthorized admin creation after installation
-        if (!$this->isInstallationPhase() && !$this->option('allow-after-install')) {
-            $this->error('Security: This command can only be run during installation.');
-            $this->newLine();
-            $this->line('The application appears to be already installed.');
-            $this->line('If you need to create an admin user after installation, use:');
-            $this->line('  <comment>php artisan belimbing:create-admin --allow-after-install</comment>');
-            $this->newLine();
-            $this->warn('Only use --allow-after-install if you have legitimate administrative access.');
-            return Command::FAILURE;
+        // Security: Only create admin if users table is empty (installation phase)
+        // This prevents unauthorized admin creation after installation
+        try {
+            $userCount = User::count();
+            if ($userCount > 0) {
+                $this->info("✓ Admin user already exists ({$userCount} user(s) found).");
+                $this->line('  This command only creates the initial admin during installation.');
+                return Command::SUCCESS;
+            }
+        } catch (\Exception $e) {
+            // Database not ready (migrations not run) - allow command to proceed
+            // It will fail later with a more specific error if needed
         }
 
         $this->info('Belimbing Admin User Setup');
@@ -68,21 +69,24 @@ class CreateAdminCommand extends Command
             return Command::FAILURE;
         }
 
-        // Check if user already exists
-        $existingUser = User::where('email', $email)->first();
-        if ($existingUser) {
-            if (!$this->option('force')) {
-                $this->warn("User with email '{$email}' already exists.");
-                if (!$this->confirm('Do you want to update the password for this user?', false)) {
-                    $this->info('Operation cancelled.');
-                    return Command::SUCCESS;
-                }
+        // Get password
+        $password = null;
+
+        // Option 1: Read from STDIN (most secure for scripting)
+        if ($this->option('stdin')) {
+            $password = $this->readPasswordFromStdin();
+            if (!$password) {
+                $this->error('Failed to read password from STDIN.');
+                return Command::FAILURE;
             }
         }
-
-        // Get password
-        $password = $this->argument('password');
-        if (!$password) {
+        // Option 2: CLI argument (insecure but convenient for quick testing)
+        elseif ($this->argument('password')) {
+            $password = $this->argument('password');
+            $this->warn('⚠️  Password provided as CLI argument - visible in process list. Use --stdin for production.');
+        }
+        // Option 3: Interactive prompt (secure)
+        else {
             $password = $this->askForPassword();
             if (!$password) {
                 return Command::FAILURE;
@@ -98,23 +102,15 @@ class CreateAdminCommand extends Command
         // Get name
         $name = $this->option('name');
 
-        // Create or update user
+        // Create admin user
         try {
-            if ($existingUser) {
-                $existingUser->update([
-                    'password' => $password, // Will be hashed by cast
-                ]);
-                $this->info("✓ Password updated for admin user: {$email}");
-            } else {
-                User::create([
-                    'name' => $name,
-                    'email' => $email,
-                    'password' => $password, // Will be hashed by cast
-                    'email_verified_at' => now(),
-                ]);
-                $this->info("✓ Admin user created: {$email}");
-            }
-
+            User::create([
+                'name' => $name,
+                'email' => $email,
+                'password' => $password, // Will be hashed by cast
+                'email_verified_at' => now(),
+            ]);
+            $this->info("✓ Admin user created: {$email}");
             $this->newLine();
             $this->line('You can now log in with these credentials.');
 
@@ -130,16 +126,10 @@ class CreateAdminCommand extends Command
      */
     private function askForEmail(): ?string
     {
-        // Check environment variable first (for non-interactive mode)
-        $envEmail = env('ADMIN_EMAIL');
-        if ($envEmail) {
-            $this->line("Using email from environment: {$envEmail}");
-            return $envEmail;
-        }
-
-        // Interactive prompt
+        // Interactive prompt only (email treated as sensitive to prevent enumeration)
         if (!$this->input->isInteractive()) {
-            $this->error('Email is required. Provide it as an argument or set ADMIN_EMAIL environment variable.');
+            $this->error('Email is required. Provide it as an argument or run interactively.');
+            $this->line('  Example: php artisan belimbing:create-admin email@example.com --stdin');
             return null;
         }
 
@@ -153,20 +143,28 @@ class CreateAdminCommand extends Command
     }
 
     /**
+     * Read password from STDIN (secure for non-interactive use)
+     */
+    private function readPasswordFromStdin(): ?string
+    {
+        $password = trim(fgets(STDIN));
+        if (empty($password)) {
+            return null;
+        }
+        return $password;
+    }
+
+    /**
      * Interactively ask for password
      */
     private function askForPassword(): ?string
     {
-        // Check environment variable first (for non-interactive mode)
-        $envPassword = env('ADMIN_PASSWORD');
-        if ($envPassword) {
-            $this->line('Using password from environment variable.');
-            return $envPassword;
-        }
-
-        // Interactive prompt
+        // Interactive prompt only
         if (!$this->input->isInteractive()) {
-            $this->error('Password is required. Provide it as an argument or set ADMIN_PASSWORD environment variable.');
+            $this->error('Password is required. Provide it as an argument, use --stdin, or run interactively.');
+            $this->line('  Examples:');
+            $this->line('    php artisan belimbing:create-admin email@example.com "password"');
+            $this->line('    echo "password" | php artisan belimbing:create-admin email@example.com --stdin');
             return null;
         }
 
@@ -183,46 +181,6 @@ class CreateAdminCommand extends Command
         }
 
         return $password;
-    }
-
-    /**
-     * Check if application is in installation phase
-     * Returns true if installation is not complete (safe to create admin)
-     */
-    private function isInstallationPhase(): bool
-    {
-        // Check if .env exists
-        if (!file_exists(base_path('.env'))) {
-            return true; // Not installed yet
-        }
-
-        // Check if APP_KEY is set
-        $envContent = file_get_contents(base_path('.env'));
-        if (!preg_match('/^APP_KEY=base64:.+$/m', $envContent)) {
-            return true; // Installation not complete
-        }
-
-        // Check if database migrations have run (users table exists)
-        try {
-            if (\Illuminate\Support\Facades\DB::connection()->getPdo()) {
-                $hasUsersTable = \Illuminate\Support\Facades\DB::getSchemaBuilder()->hasTable('users');
-                if (!$hasUsersTable) {
-                    return true; // Migrations not run yet
-                }
-
-                // If users table exists but no users, still in installation phase
-                $userCount = User::count();
-                if ($userCount === 0) {
-                    return true; // No users yet, still installing
-                }
-            }
-        } catch (\Exception $e) {
-            // Database not configured yet, still in installation phase
-            return true;
-        }
-
-        // Application appears to be fully installed
-        return false;
     }
 }
 
