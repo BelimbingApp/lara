@@ -199,25 +199,16 @@ create_env_file() {
 }
 
 # Main setup function
+# Execution order (avoids chicken-and-egg problems):
 # 1. Validate project structure first - fail fast if not in correct directory
-# 2. Create var directories
-# 3. Create .env from .env.example if it doesn't exist
-# 4. Save state
+# 2. Create storage directories - prerequisites for state file operations
+# 3. Load existing configuration - now safe (directories exist, .env may exist)
+# 4. Create .env from .env.example if it doesn't exist
+# 5. Save state
 main() {
     print_section_banner "Environment Setup - Belimbing ($APP_ENV)"
 
-    # Load existing configuration
-    load_setup_state
-
-    echo -e "${CYAN}Environment:${NC} ${GREEN}$APP_ENV${NC}"
-
-    # Detect OS
-    local os_type
-    os_type=$(detect_os)
-    echo -e "${CYAN}Operating System:${NC} ${GREEN}$os_type${NC}"
-    echo ""
-
-    # 1. Validate project structure
+    # 1. Validate project structure FIRST (fail fast)
     print_subsection_header "Validating Project Structure"
 
     if [ -f "$PROJECT_ROOT/.env.example" ]; then
@@ -238,16 +229,29 @@ main() {
 
     echo ""
 
-    # 2. Create storage directories
+    # 2. Create storage directories (prerequisites for state file)
     print_subsection_header "Creating Directories"
     create_directories
     echo ""
 
-    # 3. Create .env file
+    # 3. Load existing configuration (now safe - directories exist)
+    # This preserves CLI-provided APP_ENV and loads from state/.env if present
+    load_setup_state
+
+    echo -e "${CYAN}Environment:${NC} ${GREEN}$APP_ENV${NC}"
+
+    # Detect OS
+    local os_type
+    os_type=$(detect_os)
+    echo -e "${CYAN}Operating System:${NC} ${GREEN}$os_type${NC}"
+    echo ""
+
+    # 4. Create .env file
+    print_subsection_header "Creating .env File"
     create_env_file
     echo ""
 
-    # 4. Save state
+    # 5. Save state
     save_to_setup_state "APP_ENV" "$APP_ENV"
     save_to_setup_state "SETUP_DATE" "$(date +"%Y-%m-%dT%H:%M:%S%z")"
 

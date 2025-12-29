@@ -176,6 +176,10 @@ normalize_and_validate_env() {
 # === State Management ===
 # Setup state file location
 get_setup_state_file() {
+    if [ -z "${PROJECT_ROOT:-}" ]; then
+        echo "Error: PROJECT_ROOT not set" >&2
+        return 1
+    fi
     echo "$PROJECT_ROOT/storage/app/.devops/setup.env"
 }
 
