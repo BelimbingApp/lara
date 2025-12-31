@@ -97,6 +97,9 @@ class BackupCommand extends Command
 
     /**
      * Backup database
+     *
+     * Creates a full PostgreSQL dump of all tables, data, and schema.
+     * This is essential even if code is in git, as git doesn't track database state.
      */
     private function backupDatabase(string $backupPath): bool
     {
@@ -141,21 +144,53 @@ class BackupCommand extends Command
 
     /**
      * Backup files (storage, uploads, etc.)
+     *
+     * Backs up user-generated content that isn't in git:
+     * - User uploads (documents, images, etc.)
+     * - Application logs
+     * - Generated files and cache
+     * - Session files
+     *
+     * Git tracks code, but not runtime/user data - this backup protects business-critical files.
+     * Only backs up files that have changed since the last backup (delta-based).
      */
     private function backupFiles(string $backupPath): bool
     {
         $this->info('Backing up files...');
 
         try {
+            // Find the most recent previous backup for delta comparison
+            $previousBackup = $this->findPreviousBackup(dirname($backupPath));
+
             // Backup storage/app (user uploads, backups, etc.)
             if (File::exists(storage_path('app'))) {
-                File::copyDirectory(storage_path('app'), "{$backupPath}/storage-app");
+                $targetPath = "{$backupPath}/storage-app";
+                if ($previousBackup && File::exists("{$previousBackup}/storage-app")) {
+                    $this->backupDirectoryIncremental(
+                        storage_path('app'),
+                        $targetPath,
+                        "{$previousBackup}/storage-app"
+                    );
+                } else {
+                    // First backup or no previous backup - do full copy (excluding backups dir)
+                    $this->copyDirectoryExcluding(storage_path('app'), $targetPath, ['backups']);
+                }
                 $this->line("  ✓ Storage directory backed up");
             }
 
             // Backup public storage if it exists
             if (File::exists(public_path('storage'))) {
-                File::copyDirectory(public_path('storage'), "{$backupPath}/public-storage");
+                $targetPath = "{$backupPath}/public-storage";
+                if ($previousBackup && File::exists("{$previousBackup}/public-storage")) {
+                    $this->backupDirectoryIncremental(
+                        public_path('storage'),
+                        $targetPath,
+                        "{$previousBackup}/public-storage"
+                    );
+                } else {
+                    // First backup or no previous backup - do full copy
+                    File::copyDirectory(public_path('storage'), $targetPath);
+                }
                 $this->line("  ✓ Public storage backed up");
             }
 
@@ -167,7 +202,165 @@ class BackupCommand extends Command
     }
 
     /**
+     * Find the most recent previous backup directory
+     */
+    private function findPreviousBackup(string $backupDir): ?string
+    {
+        if (!File::exists($backupDir)) {
+            return null;
+        }
+
+        $directories = glob("{$backupDir}/backup-*", GLOB_ONLYDIR);
+        if (empty($directories)) {
+            return null;
+        }
+
+        // Sort by modification time, most recent first
+        usort($directories, function ($a, $b) {
+            return filemtime($b) - filemtime($a);
+        });
+
+        return $directories[0];
+    }
+
+    /**
+     * Backup directory incrementally - only copy files that have changed
+     * Uses rsync if available (with hardlink deduplication), otherwise uses PHP-based comparison
+     */
+    private function backupDirectoryIncremental(string $source, string $target, string $previousBackup): void
+    {
+        // Exclude backups directory to prevent recursion
+        $excludeBackups = '--exclude=backups';
+
+        // Try rsync first (most efficient with hardlink deduplication)
+        $rsyncResult = Process::run(sprintf(
+            'rsync -a %s --link-dest=%s %s %s 2>&1',
+            $excludeBackups,
+            escapeshellarg($previousBackup),
+            escapeshellarg(rtrim($source, '/') . '/'),
+            escapeshellarg($target)
+        ));
+
+        if ($rsyncResult->successful()) {
+            return; // rsync succeeded
+        }
+
+        // Fall back to PHP-based incremental backup
+        $this->backupDirectoryIncrementalPhp($source, $target, $previousBackup);
+    }
+
+    /**
+     * PHP-based incremental backup - only copy files that are new or modified
+     */
+    private function backupDirectoryIncrementalPhp(string $source, string $target, string $previousBackup): void
+    {
+        File::ensureDirectoryExists($target);
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        $copiedCount = 0;
+        $skippedCount = 0;
+        $backupsDirName = 'backups';
+
+        foreach ($iterator as $item) {
+            $sourcePath = $item->getPathname();
+            $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $sourcePath);
+
+            // Skip backups directory to prevent recursion
+            if (strpos($relativePath, $backupsDirName . DIRECTORY_SEPARATOR) === 0 ||
+                $relativePath === $backupsDirName) {
+                continue;
+            }
+
+            $targetPath = $target . DIRECTORY_SEPARATOR . $relativePath;
+            $previousPath = $previousBackup . DIRECTORY_SEPARATOR . $relativePath;
+
+            if ($item->isDir()) {
+                File::ensureDirectoryExists($targetPath);
+                continue;
+            }
+
+            // Check if file needs to be copied
+            $needsCopy = true;
+            if (File::exists($previousPath)) {
+                // File exists in previous backup - check if it changed
+                $sourceMtime = filemtime($sourcePath);
+                $previousMtime = filemtime($previousPath);
+                $sourceSize = filesize($sourcePath);
+                $previousSize = filesize($previousPath);
+
+                // Only copy if modified time or size changed
+                if ($sourceMtime === $previousMtime && $sourceSize === $previousSize) {
+                    // Create hardlink to previous backup (saves space)
+                    if (@link($previousPath, $targetPath)) {
+                        $needsCopy = false;
+                        $skippedCount++;
+                    }
+                }
+            }
+
+            if ($needsCopy) {
+                File::ensureDirectoryExists(dirname($targetPath));
+                File::copy($sourcePath, $targetPath);
+                $copiedCount++;
+            }
+        }
+
+        if ($copiedCount > 0 || $skippedCount > 0) {
+            $this->line(sprintf("    Copied: %d files, Linked: %d files (unchanged)", $copiedCount, $skippedCount));
+        }
+    }
+
+    /**
+     * Copy directory while excluding specified subdirectories
+     */
+    private function copyDirectoryExcluding(string $source, string $target, array $excludeDirs): void
+    {
+        File::ensureDirectoryExists($target);
+
+        $iterator = new \RecursiveIteratorIterator(
+            new \RecursiveDirectoryIterator($source, \RecursiveDirectoryIterator::SKIP_DOTS),
+            \RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        foreach ($iterator as $item) {
+            $sourcePath = $item->getPathname();
+            $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $sourcePath);
+
+            // Skip excluded directories
+            $shouldExclude = false;
+            foreach ($excludeDirs as $excludeDir) {
+                if (strpos($relativePath, $excludeDir . DIRECTORY_SEPARATOR) === 0 ||
+                    $relativePath === $excludeDir) {
+                    $shouldExclude = true;
+                    break;
+                }
+            }
+
+            if ($shouldExclude) {
+                continue;
+            }
+
+            $targetPath = $target . DIRECTORY_SEPARATOR . $relativePath;
+
+            if ($item->isDir()) {
+                File::ensureDirectoryExists($targetPath);
+            } else {
+                File::ensureDirectoryExists(dirname($targetPath));
+                File::copy($sourcePath, $targetPath);
+            }
+        }
+    }
+
+    /**
      * Backup configuration
+     *
+     * Backs up environment variables (.env) and configuration files.
+     * .env contains secrets and is git-ignored, so it must be backed up separately.
+     * Config files may have customizations not in version control.
      */
     private function backupConfig(string $backupPath): bool
     {
