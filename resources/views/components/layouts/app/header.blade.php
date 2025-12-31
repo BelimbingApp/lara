@@ -29,7 +29,7 @@
                 <a href="#" class="btn btn-ghost btn-sm" title="{{ __('Search') }}">
                     <x-icon name="heroicon-o-magnifying-glass" class="w-5 h-5" />
                 </a>
-                <a href="https://github.com/laravel/livewire-starter-kit" target="_blank" class="btn btn-ghost btn-sm" title="{{ __('Repository') }}">
+                <a href="https://github.com/BelimbingApp/lara" target="_blank" class="btn btn-ghost btn-sm" title="{{ __('Repository') }}">
                     <x-icon name="heroicon-o-folder" class="w-5 h-5" />
                 </a>
                 <a href="https://laravel.com/docs/starter-kits#livewire" target="_blank" class="btn btn-ghost btn-sm" title="{{ __('Documentation') }}">
@@ -64,7 +64,7 @@
                     <div class="divider"></div>
                     <ul class="menu menu-vertical w-full">
                         <li>
-                            <a href="https://github.com/laravel/livewire-starter-kit" target="_blank">
+                            <a href="https://github.com/BelimbingApp/lara" target="_blank">
                                 <x-icon name="heroicon-o-folder" class="w-5 h-5" />
                                 {{ __('Repository') }}
                             </a>

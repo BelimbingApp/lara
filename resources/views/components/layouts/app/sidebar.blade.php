@@ -63,7 +63,7 @@
                     <ul class="menu menu-vertical w-full gap-1">
                         <li>
                             <a
-                                href="https://github.com/laravel/livewire-starter-kit"
+                                href="https://github.com/BelimbingApp/lara"
                                 target="_blank"
                                 class="nav-link"
                             >
@@ -165,7 +165,7 @@
                     <ul class="menu menu-vertical w-full gap-1">
                         <li>
                             <a
-                                href="https://github.com/laravel/livewire-starter-kit"
+                                href="https://github.com/BelimbingApp/lara"
                                 target="_blank"
                                 class="nav-link"
                             >
