@@ -9,7 +9,6 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 // Schedule automated backups (daily at 2 AM) - production only
-// Dev/local/staging environments don't need backups as data can be recreated from git/migrations
 if (app()->environment('production')) {
     Schedule::command('belimbing:backup --type=full')
         ->dailyAt('02:00')
