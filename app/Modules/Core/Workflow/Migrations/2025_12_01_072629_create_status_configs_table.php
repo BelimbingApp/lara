@@ -11,7 +11,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('status_configs', function (Blueprint $table) {
+        Schema::create('blb_status_configs', function (Blueprint $table) {
             $table->increments('id');
             $table->string('entity');
             $table->string('code');
@@ -39,6 +39,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('status_configs');
+        Schema::dropIfExists('blb_status_configs');
     }
 };
