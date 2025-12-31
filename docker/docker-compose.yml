@@ -59,6 +59,7 @@ services:
     volumes:
       - ../:/var/www/html
       - ./php.ini:/usr/local/etc/php/conf.d/custom.ini
+      - ./.env:/var/www/html/.env
     environment:
       APP_ENV: ${APP_ENV:-local}
       APP_DEBUG: ${APP_DEBUG:-true}
@@ -90,6 +91,8 @@ services:
       dockerfile: docker/Dockerfile.prod
     container_name: blb-app
     working_dir: /var/www/html
+    volumes:
+      - ./.env:/var/www/html/.env
     environment:
       APP_ENV: production
       APP_DEBUG: false
@@ -121,6 +124,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ../:/var/www/html
+      - ./.env:/var/www/html/.env
     environment:
       NODE_ENV: development
     ports:
@@ -137,6 +141,8 @@ services:
       dockerfile: docker/Dockerfile.prod
     container_name: blb-queue
     working_dir: /var/www/html
+    volumes:
+      - ./.env:/var/www/html/.env
     environment:
       APP_ENV: production
       APP_DEBUG: false

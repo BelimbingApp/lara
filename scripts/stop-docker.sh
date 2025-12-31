@@ -117,7 +117,7 @@ run_compose() {
     local profile
     profile=$(get_compose_profile)
     local compose_file="$PROJECT_ROOT/docker/docker-compose.yml"
-    local env_file="$PROJECT_ROOT/.env"
+    local env_file="$PROJECT_ROOT/docker/.env"
 
     # Build base command args
     local cmd_args=(-f "$compose_file" --env-file "$env_file" --profile "$profile" -p "$project_name")
@@ -201,7 +201,7 @@ validate_volume_removal() {
         echo -e "${YELLOW}If you need to remove volumes, you must do it manually using Docker CLI:${NC}"
         echo ""
         echo -e "${CYAN}Manual commands:${NC}"
-        echo -e "  1. Stop services: ${CYAN}docker compose -f docker/docker-compose.yml --env-file .env --profile prod -p blb down${NC}"
+        echo -e "  1. Stop services: ${CYAN}docker compose -f docker/docker-compose.yml --env-file docker/.env --profile prod -p blb down${NC}"
         echo -e "  2. List volumes: ${CYAN}docker volume ls | grep blb${NC}"
         echo -e "  3. Remove volumes: ${CYAN}docker volume rm <volume-name>${NC}"
         echo ""

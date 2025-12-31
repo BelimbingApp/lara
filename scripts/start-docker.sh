@@ -174,6 +174,7 @@ next_free_port() {
 # Setup Docker Compose
 setup_docker_compose() {
     local compose_file="$PROJECT_ROOT/docker/docker-compose.yml"
+    local docker_env_file="$PROJECT_ROOT/docker/.env"
 
     if [ ! -f "$compose_file" ]; then
         echo -e "${RED}✗${NC} docker-compose.yml not found at $compose_file" >&2
@@ -182,14 +183,14 @@ setup_docker_compose() {
     echo -e "${GREEN}✓${NC} Found docker-compose.yml"
 
     # Create .env file for Docker if it doesn't exist
-    if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    if [ ! -f "$docker_env_file" ]; then
         echo -e "${CYAN}Creating .env file for Docker...${NC}"
         if [ -f "$PROJECT_ROOT/.env.example" ]; then
-            cp "$PROJECT_ROOT/.env.example" "$PROJECT_ROOT/.env"
-            echo -e "${GREEN}✓${NC} .env file created"
+            cp "$PROJECT_ROOT/.env.example" "$docker_env_file"
+            echo -e "${GREEN}✓${NC} Docker .env file created at $docker_env_file"
         fi
     else
-        echo -e "${GREEN}✓${NC} Found .env"
+        echo -e "${GREEN}✓${NC} Found Docker .env at $docker_env_file"
     fi
 
     # Find available ports (auto-detect if defaults are in use)
@@ -217,22 +218,23 @@ setup_docker_compose() {
         [ "$DOCKER_HTTP_PORT" != "80" ] && echo -e "  HTTP: ${CYAN}$DOCKER_HTTP_PORT${NC} (default 80 in use)"
         [ "$DOCKER_HTTPS_PORT" != "443" ] && echo -e "  HTTPS: ${CYAN}$DOCKER_HTTPS_PORT${NC} (default 443 in use)"
 
-        # Persist non-default ports to .env for future restarts
+        # Persist non-default ports to Docker .env for future restarts
+        local docker_env_file="$PROJECT_ROOT/docker/.env"
         update_env_port() {
             local key=$1
             local value=$2
             local default=$3
             if [ "$value" != "$default" ]; then
-                if grep -q "^${key}=" "$PROJECT_ROOT/.env" 2>/dev/null; then
+                if grep -q "^${key}=" "$docker_env_file" 2>/dev/null; then
                     # Update existing entry
                     if [[ "$OSTYPE" == "darwin"* ]]; then
-                        sed -i '' "s|^${key}=.*|${key}=${value}|" "$PROJECT_ROOT/.env"
+                        sed -i '' "s|^${key}=.*|${key}=${value}|" "$docker_env_file"
                     else
-                        sed -i "s|^${key}=.*|${key}=${value}|" "$PROJECT_ROOT/.env"
+                        sed -i "s|^${key}=.*|${key}=${value}|" "$docker_env_file"
                     fi
                 else
                     # Append new entry
-                    echo "${key}=${value}" >> "$PROJECT_ROOT/.env"
+                    echo "${key}=${value}" >> "$docker_env_file"
                 fi
             fi
         }
@@ -248,14 +250,14 @@ setup_docker_compose() {
         local frontend_domain
         frontend_domain=$(get_frontend_domain)
         local new_app_url="https://${frontend_domain}:${DOCKER_HTTPS_PORT}"
-        if grep -q "^APP_URL=" "$PROJECT_ROOT/.env" 2>/dev/null; then
+        if grep -q "^APP_URL=" "$docker_env_file" 2>/dev/null; then
             if [[ "$OSTYPE" == "darwin"* ]]; then
-                sed -i '' "s|^APP_URL=.*|APP_URL=${new_app_url}|" "$PROJECT_ROOT/.env"
+                sed -i '' "s|^APP_URL=.*|APP_URL=${new_app_url}|" "$docker_env_file"
             else
-                sed -i "s|^APP_URL=.*|APP_URL=${new_app_url}|" "$PROJECT_ROOT/.env"
+                sed -i "s|^APP_URL=.*|APP_URL=${new_app_url}|" "$docker_env_file"
             fi
         else
-            echo "APP_URL=${new_app_url}" >> "$PROJECT_ROOT/.env"
+            echo "APP_URL=${new_app_url}" >> "$docker_env_file"
         fi
     else
         echo -e "${GREEN}✓${NC} Using default ports"
@@ -281,7 +283,7 @@ run_compose() {
     local profile
     profile=$(get_compose_profile)
     local compose_file="$PROJECT_ROOT/docker/docker-compose.yml"
-    local env_file="$PROJECT_ROOT/.env"
+    local env_file="$PROJECT_ROOT/docker/.env"
 
     # Build base command args
     local cmd_args=(-f "$compose_file" --env-file "$env_file" --profile "$profile" -p "$project_name")
@@ -391,13 +393,14 @@ create_admin_if_needed() {
     fi
 }
 
-# Get frontend domain from .env or use default
+# Get frontend domain from Docker .env or use default
 get_frontend_domain() {
     local frontend_domain=""
+    local docker_env_file="$PROJECT_ROOT/docker/.env"
 
-    # Read FRONTEND_DOMAIN from .env
-    if [ -f "$PROJECT_ROOT/.env" ]; then
-        frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
+    # Read FRONTEND_DOMAIN from Docker .env
+    if [ -f "$docker_env_file" ]; then
+        frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$docker_env_file" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
     fi
 
     # Use defaults if not set

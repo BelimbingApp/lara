@@ -21,6 +21,11 @@ Get Belimbing running in minutes.
 
 > **Warning:** Use only ONE method. Running both causes port conflicts.
 
+> **Note:** Docker and Native installations use separate `.env` files:
+> - **Native**: Uses root `.env` file
+> - **Docker**: Uses `./docker/.env` file
+> This allows both methods to coexist with different configurations.
+
 ## Native Installation
 
 ```bash
@@ -46,10 +51,15 @@ Installs PHP, Composer, PostgreSQL 18, Redis, and configures everything.
 ```bash
 git clone <repository-url> belimbing
 cd belimbing
-./scripts/start-docker.sh local
+./scripts/start-docker.sh
 ```
 
 The script handles Docker installation, service startup, migrations, and admin creation.
+
+**Stop:**
+```bash
+./scripts/stop-docker.sh
+```
 
 **Manual commands** (from `docker/` directory):
 ```bash
@@ -96,14 +106,12 @@ docker compose --profile dev exec app php artisan belimbing:create-admin
 **Native → Docker:**
 ```bash
 ./scripts/stop-app.sh
-sudo systemctl stop postgresql redis
-./scripts/start-docker.sh local
+./scripts/start-docker.sh
 ```
 
 **Docker → Native:**
 ```bash
-cd docker && docker compose --profile dev down && cd ..
-sudo systemctl start postgresql redis
+./scripts/stop-docker.sh
 ./scripts/start-app.sh
 ```
 
@@ -111,10 +119,11 @@ sudo systemctl start postgresql redis
 
 | Problem | Fix |
 |---------|-----|
-| Port in use | Stop conflicting service or change port in `.env` |
+| Port in use | Stop conflicting service or change port in `.env` (root `.env` for native, `./docker/.env` for Docker) |
 | Database error | Check PostgreSQL: `systemctl status postgresql` |
 | Docker error | Check Docker Desktop is running |
 | Permission error | `sudo chown -R $USER:$USER storage` |
+| Wrong config in Docker | Ensure `./docker/.env` exists and has Docker-specific values (DB_HOST=postgres, REDIS_HOST=redis) |
 
 ## Next Steps
 
