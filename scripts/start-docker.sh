@@ -185,9 +185,13 @@ setup_docker_compose() {
     # Create .env file for Docker if it doesn't exist
     if [ ! -f "$docker_env_file" ]; then
         echo -e "${CYAN}Creating .env file for Docker...${NC}"
-        if [ -f "$PROJECT_ROOT/.env.example" ]; then
-            cp "$PROJECT_ROOT/.env.example" "$docker_env_file"
+        local docker_env_example="$PROJECT_ROOT/docker/.env.example"
+        if [ -f "$docker_env_example" ]; then
+            cp "$docker_env_example" "$docker_env_file"
             echo -e "${GREEN}✓${NC} Docker .env file created at $docker_env_file"
+        else
+            echo -e "${RED}✗${NC} docker/.env.example not found" >&2
+            return 1
         fi
     else
         echo -e "${GREEN}✓${NC} Found Docker .env at $docker_env_file"

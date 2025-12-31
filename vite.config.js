@@ -8,15 +8,24 @@ import { resolve } from 'path';
 
 // Read APP_ENV from environment, .env file, or default to 'local'
 let appEnv = process.env.APP_ENV || 'local';
-if (!process.env.APP_ENV) {
+let httpsPort = process.env.HTTPS_PORT || '443';
+if (!process.env.APP_ENV || !process.env.HTTPS_PORT) {
     try {
         const envFile = readFileSync(resolve(__dirname, '.env'), 'utf8');
-        const match = envFile.match(/^APP_ENV=(.+)$/m);
-        if (match) {
-            appEnv = match[1].trim();
+        if (!process.env.APP_ENV) {
+            const envMatch = envFile.match(/^APP_ENV=(.+)$/m);
+            if (envMatch) {
+                appEnv = envMatch[1].trim();
+            }
+        }
+        if (!process.env.HTTPS_PORT) {
+            const portMatch = envFile.match(/^HTTPS_PORT=(.+)$/m);
+            if (portMatch) {
+                httpsPort = portMatch[1].trim();
+            }
         }
     } catch (e) {
-        // .env file not found or unreadable, use default
+        // .env file not found or unreadable, use defaults
     }
 }
 const domain = `${appEnv}.blb.lara`;
@@ -40,7 +49,7 @@ export default defineConfig({
         hmr: {
             host: domain,
             protocol: 'wss',
-            clientPort: 443,
+            clientPort: parseInt(httpsPort),
         },
         cors: true,
     },

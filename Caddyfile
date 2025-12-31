@@ -1,4 +1,4 @@
-{$APP_DOMAIN} {
+{$APP_DOMAIN}:{$HTTPS_PORT:443} {
 	# TLS Configuration
 	# Local: "internal"
 	# Prod:  email address or "internal" if behind another proxy (though usually real email)
@@ -12,7 +12,7 @@
 
 	# Vite / Frontend Config (dev mode paths + production builds)
 	# Try Vite first for dev assets, fallback to Laravel for built assets
-	@vite_dev path /@vite/* /@fs/* /node_modules/*
+	@vite_dev path /@vite/* /@fs/* /node_modules/* /resources/*
 	handle @vite_dev {
 		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT} {
 			header_up Host {host}
@@ -43,7 +43,7 @@
 	}
 }
 
-{$BACKEND_DOMAIN} {
+{$BACKEND_DOMAIN}:{$HTTPS_PORT:443} {
 	# TLS Configuration
 	# Local: "internal"
 	# Prod:  email address or "internal" if behind another proxy (though usually real email)
