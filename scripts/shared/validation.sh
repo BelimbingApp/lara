@@ -9,13 +9,13 @@
 VALIDATION_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source config.sh for defaults (if not already loaded)
-if [ -z "$DEFAULT_DB_USER" ]; then
+if [ -z "${DEFAULT_DB_USER:-}" ]; then
     source "$VALIDATION_SCRIPT_DIR/config.sh" 2>/dev/null || true
 fi
 
 # Source colors if not already loaded
-if [ -z "$RED" ]; then
-    source "$SCRIPT_DIR/colors.sh"
+if [ -z "${RED:-}" ]; then
+    source "$VALIDATION_SCRIPT_DIR/colors.sh" 2>/dev/null || true
 fi
 
 # Check if a command exists

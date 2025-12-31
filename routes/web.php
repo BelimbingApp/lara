@@ -22,8 +22,6 @@ Route::middleware(['auth'])->group(function () {
 
 // Health check endpoints
 Route::get('/health', [HealthController::class, 'health']);
-Route::get('/ready', [HealthController::class, 'ready']);
-Route::get('/live', [HealthController::class, 'live']);
 Route::get('/api/health/dashboard', [HealthController::class, 'dashboard'])->middleware('auth');
 
 require __DIR__.'/auth.php';
