@@ -20,6 +20,7 @@ This application is built on the **TALL Stack** (TailwindCSS, Alpine.js, Laravel
 - **Responsive Design** - Mobile-first approach with dark/light mode
 
 ### Development Tools
+- **Bun** - Fast JavaScript runtime and package manager (preferred over Node.js/npm)
 - **Pest** - Modern PHP testing framework
 - **Laravel Pail** - Real-time log monitoring
 - **Laravel Pint** - Code style fixer
@@ -27,57 +28,20 @@ This application is built on the **TALL Stack** (TailwindCSS, Alpine.js, Laravel
 
 ## 📋 Prerequisites
 
-- PHP 8.2 or higher
-- Composer
-- Node.js & npm
-- PostgreSQL
-- Git
+- Linux server (Ubuntu 22.04+, Debian 12+) or WSL2
+- 2GB RAM, 10GB disk
+- Internet connection
+- Root or sudo access (for automated setup)
+
+> **Note:** The setup scripts will automatically install PHP 8.2+, Composer, Bun (or Node.js/npm), PostgreSQL, Redis, and all other dependencies.
 
 ## 🔧 Installation
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url> blb
-   cd blb
-   ```
+Installation is fully automated via setup scripts. See the **[Quick Start Guide](./docs/installation/quickstart.md)** for complete installation instructions.
 
-2. **Install PHP dependencies**
-   ```bash
-   composer install
-   ```
-
-3. **Install Node.js dependencies**
-   ```bash
-   npm install
-   ```
-
-4. **Environment setup**
-   ```bash
-   cp .env.example .env
-   php artisan key:generate
-   ```
-
-5. **Database configuration**
-
-   Update your `.env` file with PostgreSQL credentials:
-   ```env
-   DB_CONNECTION=pgsql
-   DB_HOST=127.0.0.1
-   DB_PORT=5432
-   DB_DATABASE=blb
-   DB_USERNAME=your_username
-   DB_PASSWORD=your_password
-   ```
-
-6. **Run database migrations**
-   ```bash
-   php artisan migrate
-   ```
-
-7. **Start development servers**
-   ```bash
-   composer run dev
-   ```
+**Quick commands:**
+- **Native:** `./scripts/setup.sh local && ./scripts/start-app.sh`
+- **Docker:** `./scripts/start-docker.sh local`
 
 ## 🎯 Features
 
@@ -117,6 +81,14 @@ For detailed information about our architectural decisions, see:
 ## 🛠️ Development Commands
 
 ### Start Development Environment
+
+**Recommended:** Use the automated start script:
+```bash
+# Starts all services: Laravel, Vite, queue worker, logs, and Caddy
+./scripts/start-app.sh
+```
+
+**Manual start** (if not using the script):
 ```bash
 # Starts all services: server, queue, logs, and Vite
 composer run dev
@@ -128,13 +100,19 @@ composer run dev
 php artisan serve
 
 # Start Vite development server
-npm run dev
+bun run dev
 
 # Watch logs in real-time
 php artisan pail
 
 # Process queue jobs
 php artisan queue:work
+```
+
+### Stop Services
+```bash
+# Stop all development services
+./scripts/stop-app.sh
 ```
 
 ### Testing
@@ -237,7 +215,7 @@ php artisan test --coverage
    php artisan config:cache
    php artisan route:cache
    php artisan view:cache
-   npm run build
+   bun run build
    ```
 
 2. **Database Setup**

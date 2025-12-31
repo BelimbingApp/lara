@@ -13,18 +13,18 @@
     "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.42.0",
+        "laravel/framework": "^12.44.0",
         "laravel/tinker": "^2.10.2",
         "livewire/volt": "^1.10.1",
-        "robsontenorio/mary": "^2.4"
+        "robsontenorio/mary": "^2.5.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.24.1",
         "laravel/pail": "^1.2.4",
         "laravel/pint": "^1.26.0",
-        "mockery/mockery": "^1.6",
+        "mockery/mockery": "^1.6.12",
         "nunomaduro/collision": "^8.8.3",
-        "pestphp/pest": "^4.1.6",
+        "pestphp/pest": "^4.3.0",
         "pestphp/pest-plugin-laravel": "^4.0.0"
     },
     "autoload": {
