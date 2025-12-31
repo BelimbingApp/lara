@@ -1,203 +1,123 @@
-# Quick Start Guide - Belimbing
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 Ng Kiat Siong
 
-This guide will help you get Belimbing up and running in minutes.
+# Quick Start Guide
+
+Get Belimbing running in minutes.
 
 ## Prerequisites
 
-Before you begin, ensure you have:
-- A Linux server (Ubuntu 22.04+, Debian 12+, or similar)
-- At least 2GB RAM and 10GB disk space
+- Linux server (Ubuntu 22.04+, Debian 12+)
+- 2GB RAM, 10GB disk
 - Internet connection
 - Root or sudo access
 
-## Installation Methods
+## Choose Your Method
 
-### Method 1: One-Command Installation (Recommended)
+| Method | Best For | Command |
+|--------|----------|---------|
+| **Native** | Production, performance | `./scripts/setup.sh local` |
+| **Docker** | Development, teams | `./scripts/start-docker.sh local` |
 
-The fastest way to get started:
+> **Warning:** Use only ONE method. Running both causes port conflicts.
+
+## Native Installation
 
 ```bash
-# Clone the repository
 git clone <repository-url> belimbing
 cd belimbing
-
-# Run the setup script
 ./scripts/setup.sh local
 ```
 
-The setup script will:
-- Check system requirements
-- Install missing dependencies (PHP, Composer, PostgreSQL, Redis, etc.)
-- Configure the database
-- Generate application keys
-- Set up all services
+Installs PHP, Composer, PostgreSQL 18, Redis, and configures everything.
 
-**Time:** ~5-10 minutes
+**Start the app:**
+```bash
+./scripts/start-app.sh
+```
 
-### Method 2: Docker Installation
+**Stop:**
+```bash
+./scripts/stop-app.sh
+```
 
-For containerized deployment:
+## Docker Installation
 
 ```bash
-# Clone the repository
 git clone <repository-url> belimbing
 cd belimbing
-
-# Run Docker installer
-./scripts/install-docker.sh local
-
-# Or manually with Docker Compose
-docker compose -f docker/docker-compose.yml up -d
+./scripts/start-docker.sh local
 ```
 
-**Time:** ~3-5 minutes (if Docker is pre-installed)
+The script handles Docker installation, service startup, migrations, and admin creation.
 
-### Method 3: Manual Installation
-
-For advanced users who want full control:
-
+**Manual commands** (from `docker/` directory):
 ```bash
-# 1. Check requirements
-./scripts/check-requirements.sh local
+# Development
+docker compose --profile dev up -d
 
-# 2. Run setup steps individually
-./scripts/setup-steps/00-environment.sh local
-./scripts/setup-steps/10-git.sh local
-./scripts/setup-steps/20-php.sh local
-./scripts/setup-steps/25-laravel.sh local
-./scripts/setup-steps/30-js.sh local
-./scripts/setup-steps/40-database.sh local
-./scripts/setup-steps/60-migrations.sh local
-./scripts/setup-steps/70-caddy.sh local
+# Production
+docker compose --profile prod up -d
+
+# Logs
+docker compose --profile dev logs -f
+
+# Stop
+docker compose --profile dev down
+
+# Run artisan
+docker compose --profile dev exec app php artisan <command>
 ```
 
-**Time:** ~15-30 minutes
+## Access
 
-## Post-Installation
-
-### 1. Start the Application
-
-```bash
-./scripts/start-app.sh
-```
-
-This will start:
-- Laravel development server (port 8000)
-- Vite development server (port 5173)
-- Queue worker
-- Log monitor
-- Caddy reverse proxy (HTTPS on port 443)
-
-### 2. Access the Application
-
-- **Web Interface:** https://local.blb.lara (or the domain configured for your environment)
+- **Web:** https://local.blb.lara
 - **API:** https://local.blb.lara/api
 
-### 3. Create Admin Account
+> Add to `/etc/hosts` if needed: `127.0.0.1 local.blb.lara`
 
-The admin account is automatically created during installation (step 60-migrations.sh). The command only runs when no users exist:
+## Create Admin
+
+Admin is created during installation. To create manually:
 
 ```bash
-# Interactive mode (will prompt for email and password)
+# Interactive
 php artisan belimbing:create-admin
 
-# Non-interactive mode with STDIN (secure)
-echo "secure-password" | php artisan belimbing:create-admin admin@example.com --stdin
+# Non-interactive
+echo "password" | php artisan belimbing:create-admin admin@example.com --stdin
+
+# Docker
+docker compose --profile dev exec app php artisan belimbing:create-admin
 ```
 
-> **Note:** This command only creates the first admin user. Once any user exists, the command will skip. Use the application interface to manage users after installation.
+## Switching Methods
 
-## Common Commands
-
-### Development
-
+**Native → Docker:**
 ```bash
-# Start development environment
-./scripts/start-app.sh
-
-# Stop all services
 ./scripts/stop-app.sh
-
-# Run tests
-composer run test
-
-# Code quality
-composer run lint
+sudo systemctl stop postgresql redis
+./scripts/start-docker.sh local
 ```
 
-### Maintenance
-
+**Docker → Native:**
 ```bash
-# Update application
-php artisan belimbing:update
-
-# Create backup
-php artisan belimbing:backup
-
-# Check system health
-curl http://localhost:8000/health
-```
-
-### Docker Commands
-
-```bash
-# View logs
-docker compose -f docker/docker-compose.yml logs -f
-
-# Stop services
-docker compose -f docker/docker-compose.yml down
-
-# Restart services
-docker compose -f docker/docker-compose.yml restart
-
-# Rebuild images
-docker compose -f docker/docker-compose.yml build
+cd docker && docker compose --profile dev down && cd ..
+sudo systemctl start postgresql redis
+./scripts/start-app.sh
 ```
 
 ## Troubleshooting
 
-### Port Already in Use
-
-If you get port conflicts:
-
-```bash
-# Check what's using the port
-sudo lsof -i :8000
-sudo lsof -i :5432
-
-# Stop conflicting services or change ports in .env
-```
-
-### Database Connection Failed
-
-```bash
-# Check PostgreSQL is running
-sudo systemctl status postgresql
-
-# Test connection
-psql -h localhost -U belimbing_app -d blb
-```
-
-### Permission Errors
-
-```bash
-# Fix storage permissions
-sudo chown -R www-data:www-data storage bootstrap/cache
-sudo chmod -R 775 storage bootstrap/cache
-```
+| Problem | Fix |
+|---------|-----|
+| Port in use | Stop conflicting service or change port in `.env` |
+| Database error | Check PostgreSQL: `systemctl status postgresql` |
+| Docker error | Check Docker Desktop is running |
+| Permission error | `sudo chown -R $USER:$USER storage` |
 
 ## Next Steps
 
-- Read the [Architecture Documentation](../architecture/)
-- Explore the [Module Documentation](../modules/)
-- Check the [Troubleshooting Guide](troubleshooting.md) for common issues
-
-## Getting Help
-
-- **Documentation:** Check `docs/` directory
-- **Issues:** Open an issue on GitHub
-- **Community:** Join our community discussions
-
----
-
-**Installation complete!** You're ready to start building with Belimbing. 🎉
+- [Visual Guide](visual-guide.md) - Installation diagrams
+- [Architecture](../architecture/) - System design
+- [Troubleshooting](troubleshooting.md) - Common issues

@@ -1,264 +1,184 @@
-# Visual Installation Guide - Belimbing
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 Ng Kiat Siong
 
-Step-by-step installation guide with decision trees and visual aids.
+# Visual Installation Guide
+
+Visual overview of Belimbing installation with decision trees and flow diagrams.
+
+## Quick Decision: Which Method?
+
+```
+                    ┌─────────────────┐
+                    │  Start Install  │
+                    └────────┬────────┘
+                             │
+                             ▼
+              ┌──────────────────────────┐
+              │  What's your use case?   │
+              └──────────────┬───────────┘
+                             │
+         ┌───────────────────┼───────────────────┐
+         │                   │                   │
+         ▼                   ▼                   ▼
+   ┌───────────┐      ┌────────────┐      ┌───────────┐
+   │Production │      │Development │      │ Quick Try │
+   │  Server   │      │  Machine   │      │   / Demo  │
+   └─────┬─────┘      └──────┬─────┘      └─────┬─────┘
+         │                   │                  │
+         ▼                   ▼                  ▼
+   ┌───────────┐      ┌────────────┐      ┌───────────┐
+   │  Native   │      │   Docker   │      │  Docker   │
+   │  Install  │      │   Install  │      │  Install  │
+   └───────────┘      └────────────┘      └───────────┘
+```
+
+## Method Comparison
+
+| Aspect | Native | Docker |
+|--------|--------|--------|
+| **Command** | `./scripts/setup.sh local` | `./scripts/start-docker.sh local` |
+| **Best For** | Production | Development |
+| **Performance** | Better | Good |
+| **Cleanup** | Manual | `docker compose down` |
+| **Database** | System PostgreSQL | Container PostgreSQL |
 
 ## Installation Flow
 
+### Native Installation
+
 ```
-┌─────────────────────────────────────┐
-│   Choose Installation Method        │
-└──────────────┬──────────────────────┘
+┌──────────────────────┐
+│  ./scripts/setup.sh  │
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Check Requirements  │ ── PHP, Git, etc.
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Install PostgreSQL  │ ── System service
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Install Redis       │ ── System service
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Configure Laravel   │ ── .env, keys
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Run Migrations      │ ── Database tables
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  Create Admin        │ ── First user
+└──────────┬───────────┘
+           │
+           ▼
+┌──────────────────────┐
+│  ✓ Ready!            │
+│  ./scripts/start-app │
+└──────────────────────┘
+```
+
+### Docker Installation
+
+```
+┌────────────────────────────┐
+│  ./scripts/start-docker.sh │
+└──────────────┬─────────────┘
                │
-       ┌───────┴────────┐
-       │                │
-   ┌───▼───┐      ┌─────▼─────┐
-   │  CLI  │      │   Docker  │
-   │ Setup │      │  Compose  │
-   └───┬───┘      └─────┬─────┘
-       │                │
-       └───────┬────────┘
+               ▼
+┌────────────────────────────┐
+│  Check/Install Docker      │
+└──────────────┬─────────────┘
                │
-    ┌──────────▼─────────┐
-    │  Pre-flight Check  │
-    │  (Requirements)    │
-    └──────────┬─────────┘
+               ▼
+┌────────────────────────────┐
+│  Start Containers          │ ── PostgreSQL, Redis, App
+└──────────────┬─────────────┘
                │
-    ┌──────────▼───────────┐
-    │  Install Dependencies│
-    │  (PHP, DB, Redis)    │
-    └──────────┬───────────┘
+               ▼
+┌────────────────────────────┐
+│  Wait for Health           │ ── All services ready
+└──────────────┬─────────────┘
                │
-    ┌──────────▼──────────┐
-    │  Configure App      │
-    │  (.env, keys)       │
-    └──────────┬──────────┘
+               ▼
+┌────────────────────────────┐
+│  Run Migrations            │ ── Inside container
+└──────────────┬─────────────┘
                │
-    ┌──────────▼──────────┐
-    │  Start Services     │
-    │  (Server, Vite)     │
-    └──────────┬──────────┘
+               ▼
+┌────────────────────────────┐
+│  Create Admin              │ ── Interactive prompt
+└──────────────┬─────────────┘
                │
-    ┌──────────▼─────────┐
-    │  ✓ Ready!          │
-    └────────────────────┘
+               ▼
+┌────────────────────────────┐
+│  ✓ Ready!                  │
+│  https://local.blb.lara    │
+└────────────────────────────┘
 ```
 
-## Decision Tree: Which Installation Method?
+## Docker Architecture
 
 ```
-                    Start Installation
-                           │
-                           ▼
-              ┌────────────────────────┐
-              │  Do you have Docker?   │
-              └────────┬───────────────┘
-                       │
-          ┌────────────┴─────────────┐
-          │                          │
-         YES                        NO
-          │                          │
-          ▼                          ▼
-  ┌──────────────┐          ┌──────────────┐
-  │ Use Docker   │          │ Use CLI      │
-  │ Method       │          │ Method       │
-  └──────┬───────┘          └──────┬───────┘
-         │                          │
-         ▼                          ▼
-  docker-compose up          ./scripts/setup.sh
+┌─────────────────────────────────────────────────────────────┐
+│                        Docker Network                       │
+│                                                             │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────┐ │
+│  │ postgres │  │  redis   │  │   app    │  │    caddy     │ │
+│  │   :5432  │  │   :6379  │  │   :8000  │  │  :80 / :443  │ │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────────┘ │
+│       │              │             │              │         │
+│       └──────────────┴─────────────┴──────────────┘         │
+│                                                             │
+│  Dev Profile: + vite (:5173)                                │
+│  Prod Profile: + queue (worker)                             │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+                     ┌────────────────┐
+                     │   localhost    │
+                     │   :80 / :443   │
+                     └────────────────┘
 ```
-
-## Step-by-Step: CLI Installation
-
-### Step 1: Clone Repository
-
-```bash
-git clone <repository-url> belimbing
-cd belimbing
-```
-
-**Expected output:**
-```
-Cloning into 'belimbing'...
-remote: Enumerating objects: X, done.
-✓ Repository cloned
-```
-
-### Step 2: Run Setup Script
-
-```bash
-./scripts/setup.sh local
-```
-
-**What happens:**
-1. System requirements check
-2. Dependency installation prompts
-3. Database setup
-4. Application configuration
-5. Service startup
-
-**Expected output:**
-```
-Belimbing Environment Setup (local)
-====================================
-
-Setup Steps:
-  1. Environment & Prerequisites
-  2. Git Version Control
-  3. PHP & Composer
-  4. Laravel Application
-  5. JavaScript Runtime
-  6. Database & Redis
-  7. Caddy Reverse Proxy
-
-Press Enter to begin...
-```
-
-### Step 3: Verify Installation
-
-```bash
-# Check health
-curl http://localhost:8000/health
-
-# Or visit in browser
-open https://local.blb.lara
-```
-
-**Expected response:**
-```json
-{
-  "status": "healthy",
-  "checks": {
-    "database": {"status": "ok"},
-    "redis": {"status": "ok"}
-  }
-}
-```
-
-## Step-by-Step: Docker Installation
-
-### Step 1: Install Docker (if needed)
-
-```bash
-# Check if Docker is installed
-docker --version
-
-# If not, run installer
-./scripts/install-docker.sh local
-```
-
-### Step 2: Start Services
-
-```bash
-# Development
-docker compose -f docker/docker-compose.yml up -d
-
-# Production
-docker compose -f docker-compose.prod.yml up -d
-```
-
-### Step 3: Verify Services
-
-```bash
-docker compose -f docker/docker-compose.yml ps
-```
-
-**Expected output:**
-```
-NAME                  STATUS          PORTS
-belimbing-app         Up              0.0.0.0:8000->8000/tcp
-belimbing-postgres    Up (healthy)    0.0.0.0:5432->5432/tcp
-belimbing-redis       Up (healthy)    0.0.0.0:6379->6379/tcp
-belimbing-caddy       Up              0.0.0.0:80->80/tcp, 0.0.0.0:443->443/tcp
-```
-
-## Common Scenarios
-
-### Scenario 1: Fresh Server Installation
-
-**Steps:**
-1. SSH into server
-2. Install Git: `sudo apt-get install git`
-3. Clone repository
-4. Run: `./scripts/setup.sh local --auto-install`
-5. Wait for completion (~10 minutes)
-6. Access: `https://your-domain.com`
-
-### Scenario 2: Development Machine
-
-**Steps:**
-1. Ensure Docker Desktop is running
-2. Clone repository
-3. Run: `./scripts/install-docker.sh local`
-4. Access: `https://local.blb.lara`
-
-### Scenario 3: Existing Laravel Server
-
-**Steps:**
-1. Check requirements: `./scripts/check-requirements.sh local`
-2. Run only missing steps:
-   - `./scripts/setup-steps/40-database.sh local` (if DB not configured)
-   - `./scripts/setup-steps/70-caddy.sh local` (if reverse proxy needed)
-3. Start app: `./scripts/start-app.sh`
 
 ## Verification Checklist
 
 After installation, verify:
 
-- [ ] Health endpoint returns 200: `curl http://localhost:8000/health`
-- [ ] Database connection works: `php artisan tinker` → `DB::connection()->getPdo()`
-- [ ] Redis connection works: `redis-cli ping` → `PONG`
-- [ ] Web interface loads: Visit `https://local.blb.lara`
-- [ ] Logs directory exists: `ls storage/logs/`
-- [ ] .env file configured: `cat .env | grep APP_KEY` (should not be empty)
+| Check | Command | Expected |
+|-------|---------|----------|
+| Web loads | Visit `https://local.blb.lara` | Login page |
+| Health | `curl localhost:8000/health` | `{"status":"ok"}` |
+| Database | `php artisan tinker` → `DB::connection()->getPdo()` | No error |
+| Redis | `redis-cli ping` | `PONG` |
 
-## Next Steps After Installation
+## Common Issues Quick Reference
 
-1. **Create Admin Account**
+| Problem | Fix |
+|---------|-----|
+| Port 8000 in use | `./scripts/stop-app.sh` or stop other service |
+| Port 5432 in use | Stop system PostgreSQL: `sudo systemctl stop postgresql` |
+| Docker won't start | Check Docker Desktop is running (WSL2) |
+| Permission denied | `sudo chown -R $USER:$USER storage` |
 
-   The admin account is automatically created during installation (step 60-migrations.sh). The command only runs when no users exist:
+## Next Steps
 
-   ```bash
-   # Interactive mode
-   php artisan belimbing:create-admin
+After installation:
 
-   # Non-interactive mode with STDIN (secure)
-   echo "secure-password" | php artisan belimbing:create-admin admin@example.com --stdin
-   ```
-
-   > **Note:** This command only creates the first admin. Use the application interface to manage users after installation.
-
-2. **Run Migrations** (if not done automatically)
-
-   Migrations are automatically run in step 60-migrations.sh. To run manually:
-
-   ```bash
-   php artisan migrate
-   ```
-
-3. **Configure Email** (optional)
-   ```bash
-   # Edit .env with your mail settings
-   nano .env
-   ```
-
-4. **Set Up Backups**
-   ```bash
-   # Test backup
-   php artisan belimbing:backup
-   ```
-
-## Troubleshooting Quick Reference
-
-| Problem | Quick Fix |
-|---------|-----------|
-| Port in use | Change port in `.env` or stop conflicting service |
-| Database error | Run `./scripts/setup-steps/40-database.sh local` |
-| Permission denied | `sudo chown -R www-data:www-data storage` |
-| APP_KEY missing | `php artisan key:generate` |
-| Docker won't start | Check logs: `docker compose logs` |
-
-For detailed troubleshooting, see [Troubleshooting Guide](troubleshooting.md).
+1. **Access:** https://local.blb.lara
+2. **Login:** Use admin credentials created during setup
+3. **Explore:** Check [Architecture Docs](../architecture/)
 
 ---
 
-**Visual guides with screenshots will be added as the project matures.**
+For detailed commands, see [Quick Start Guide](quickstart.md).

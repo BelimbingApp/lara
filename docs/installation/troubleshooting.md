@@ -287,7 +287,7 @@ php artisan key:generate
 1. **Verify services are on same network:**
    ```bash
    docker network ls
-   docker network inspect belimbing-network
+   docker network inspect blb_belimbing-network
    ```
 
 2. **Check database container:**

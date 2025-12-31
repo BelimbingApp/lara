@@ -272,3 +272,145 @@ start_caddy_with_checks() {
 
     echo "$caddy_pid"
 }
+
+# Setup SSL certificate trust for local development
+# Works with both native Caddy and Docker Caddy
+# Usage: setup_ssl_trust [project_root] [container_name]
+#   project_root: Project root directory (default: current directory)
+#   container_name: Docker container name if using Docker (optional)
+setup_ssl_trust() {
+    local project_root="${1:-$(pwd)}"
+    local container_name="${2:-}"
+    local cert_path="$project_root/storage/app/ssl"
+    local root_ca_file="$cert_path/caddy-root-ca.crt"
+
+    echo -e "${CYAN}Setting up SSL certificate trust...${NC}"
+
+    # Create directory for certificates
+    mkdir -p "$cert_path"
+
+    local root_ca_source=""
+    local is_docker=false
+
+    # Detect if Caddy is in Docker or native
+    if [ -n "$container_name" ] && docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+        # Docker Caddy
+        is_docker=true
+        root_ca_source="/data/caddy/pki/authorities/local/root.crt"
+
+        # Wait for Caddy to generate certificates (up to 10 seconds)
+        local attempts=0
+        local max_attempts=10
+        while [ $attempts -lt $max_attempts ]; do
+            if docker exec "$container_name" test -f "$root_ca_source" 2>/dev/null; then
+                break
+            fi
+            sleep 1
+            attempts=$((attempts + 1))
+        done
+
+        # Export root CA from Docker container
+        if ! docker exec "$container_name" cat "$root_ca_source" > "$root_ca_file" 2>/dev/null; then
+            echo -e "${YELLOW}⚠${NC} Could not export Caddy root CA from container (certificate may not be generated yet)"
+            echo -e "  You can manually accept the certificate warning in your browser"
+            return 1
+        fi
+    else
+        # Native Caddy - try common locations
+        local native_locations=(
+            "$HOME/.local/share/caddy/pki/authorities/local/root.crt"
+            "$HOME/.config/caddy/pki/authorities/local/root.crt"
+            "/root/.local/share/caddy/pki/authorities/local/root.crt"
+        )
+
+        for location in "${native_locations[@]}"; do
+            if [ -f "$location" ]; then
+                root_ca_source="$location"
+                break
+            fi
+        done
+
+        if [ -z "$root_ca_source" ] || [ ! -f "$root_ca_source" ]; then
+            echo -e "${YELLOW}⚠${NC} Could not find Caddy root CA (certificate may not be generated yet)"
+            echo -e "  Expected locations:"
+            for location in "${native_locations[@]}"; do
+                echo -e "    ${CYAN}$location${NC}"
+            done
+            echo -e "  You can manually accept the certificate warning in your browser"
+            return 1
+        fi
+
+        # Copy from native location
+        cp "$root_ca_source" "$root_ca_file" 2>/dev/null || {
+            echo -e "${YELLOW}⚠${NC} Could not copy Caddy root CA"
+            return 1
+        }
+    fi
+
+    # Check if certificate was exported successfully
+    if [ ! -s "$root_ca_file" ]; then
+        echo -e "${YELLOW}⚠${NC} Root CA file is empty"
+        return 1
+    fi
+
+    echo -e "${GREEN}✓${NC} Exported Caddy root CA to ${CYAN}storage/app/ssl/caddy-root-ca.crt${NC}"
+
+    # Try to install to system trust store (Linux/WSL2)
+    local installed=false
+    if command_exists update-ca-certificates; then
+        # Debian/Ubuntu
+        if [ -t 0 ]; then
+            echo -e "${CYAN}Installing certificate to system trust store...${NC}"
+            if sudo cp "$root_ca_file" /usr/local/share/ca-certificates/caddy-blb-root.crt 2>/dev/null && \
+               sudo update-ca-certificates 2>/dev/null; then
+                echo -e "${GREEN}✓${NC} Certificate installed to system trust store"
+                installed=true
+            fi
+        fi
+    elif command_exists trust; then
+        # Fedora/RHEL
+        if [ -t 0 ]; then
+            echo -e "${CYAN}Installing certificate to system trust store...${NC}"
+            if sudo trust anchor --store "$root_ca_file" 2>/dev/null; then
+                echo -e "${GREEN}✓${NC} Certificate installed to system trust store"
+                installed=true
+            fi
+        fi
+    fi
+
+    # On WSL2, also help with Windows trust
+    if is_wsl2; then
+        # Try to find Windows username
+        local win_user
+        win_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n' || echo "")
+
+        if [ -n "$win_user" ] && [ -d "/mnt/c/Users/$win_user" ]; then
+            local win_cert_path="/mnt/c/Users/$win_user/Desktop/caddy-blb-root-ca.crt"
+            cp "$root_ca_file" "$win_cert_path" 2>/dev/null || true
+
+            if [ -f "$win_cert_path" ]; then
+                echo ""
+                echo -e "${CYAN}For Windows browser support:${NC}"
+                echo -e "  Certificate copied to: ${CYAN}Desktop/caddy-blb-root-ca.crt${NC}"
+                echo -e "  To install:"
+                echo -e "    1. Double-click the certificate on your Desktop"
+                echo -e "    2. Click 'Install Certificate' → 'Local Machine' → Next"
+                echo -e "    3. Select 'Place all certificates in the following store'"
+                echo -e "    4. Browse → 'Trusted Root Certification Authorities' → OK → Next → Finish"
+                echo -e "    5. Restart your browser"
+                echo ""
+            fi
+        else
+            echo -e "${YELLOW}⚠${NC} Could not copy certificate to Windows Desktop"
+            echo -e "  Manual location: ${CYAN}$root_ca_file${NC}"
+        fi
+    fi
+
+    if [ "$installed" = false ] && ! is_wsl2; then
+        echo -e "${YELLOW}Note:${NC} Certificate not auto-installed to system trust store"
+        echo -e "  You can manually install: ${CYAN}$root_ca_file${NC}"
+        echo -e "  Or accept the browser warning (safe for local development)"
+    fi
+
+    return 0
+}

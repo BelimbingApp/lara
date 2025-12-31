@@ -1,0 +1,112 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+# Copyright (c) 2025 Ng Kiat Siong
+#
+# Production Dockerfile for Belimbing
+# Multi-stage build targeting < 500MB final image size
+
+# Stage 1: Build dependencies
+FROM php:8.5-fpm-alpine AS builder
+
+RUN apk add --no-cache \
+    git \
+    curl \
+    libpng-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    postgresql-dev \
+    oniguruma-dev \
+    nodejs \
+    npm
+
+# Install PHP extensions
+RUN docker-php-ext-install \
+    pdo \
+    pdo_pgsql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    opcache
+
+# Install Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Install Bun
+RUN curl -fsSL https://bun.sh/install | bash && \
+    cp /root/.bun/bin/bun /usr/local/bin/bun
+
+WORKDIR /var/www/html
+
+# Copy composer files
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --optimize-autoloader --no-interaction --prefer-dist
+
+# Copy package files
+COPY package.json package-lock.json* ./
+RUN if command -v bun >/dev/null 2>&1; then \
+        bun install --production; \
+    else \
+        npm ci --production; \
+    fi
+
+# Copy application code
+COPY . .
+
+# Build assets
+RUN if command -v bun >/dev/null 2>&1; then \
+        bun run build; \
+    else \
+        npm run build; \
+    fi
+
+# Stage 2: Production image
+FROM php:8.5-fpm-alpine
+
+# Install only runtime dependencies
+RUN apk add --no-cache \
+    libpng \
+    libzip \
+    postgresql-libs \
+    oniguruma \
+    bash \
+    wget
+
+# Copy PHP extensions from builder
+COPY --from=builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=builder /usr/local/etc/php/conf.d/ /usr/local/etc/php/conf.d/
+
+# Configure PHP for production
+RUN echo "opcache.enable=1" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.memory_consumption=128" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.interned_strings_buffer=8" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.max_accelerated_files=10000" >> /usr/local/etc/php/conf.d/opcache.ini && \
+    echo "opcache.validate_timestamps=0" >> /usr/local/etc/php/conf.d/opcache.ini
+
+# Create non-root user
+RUN addgroup -g 1000 www && \
+    adduser -D -u 1000 -G www www
+
+WORKDIR /var/www/html
+
+# Copy application from builder
+COPY --from=builder --chown=www:www /var/www/html .
+
+# Set permissions
+RUN chown -R www:www /var/www/html/storage /var/www/html/bootstrap/cache && \
+    chmod -R 775 /var/www/html/storage /var/www/html/bootstrap/cache
+
+# Switch to non-root user
+USER www
+
+# Health check (using curl to check /health endpoint)
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:8000/health || exit 1
+
+# Expose port
+EXPOSE 8000
+
+# Production command
+CMD ["php", "artisan", "serve", "--host=0.0.0.0", "--port=8000"]

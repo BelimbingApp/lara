@@ -11,22 +11,33 @@
 	}
 
 	# Vite / Frontend Config (dev mode paths + production builds)
-	@vite_assets path /build/* /assets/* /resources/* /@vite/* /@fs/* /node_modules/*
-	handle @vite_assets {
-		reverse_proxy 127.0.0.1:{$VITE_PORT} {
+	# Try Vite first for dev assets, fallback to Laravel for built assets
+	@vite_dev path /@vite/* /@fs/* /node_modules/*
+	handle @vite_dev {
+		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT} {
 			header_up Host {host}
+		}
+	}
+
+	# Built assets (CSS/JS from public/build) - serve from Laravel
+	@built_assets path /build/* /assets/*
+	handle @built_assets {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
+			header_up Host {host}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+			header_up X-Forwarded-Port {$HTTPS_PORT:443}
 		}
 	}
 
 	# Laravel Backend
 	handle {
-		reverse_proxy 127.0.0.1:{$APP_PORT} {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
-			# Ensure Laravel generates correct absolute https:// URLs.
-			# Caddy serves HTTPS on 443 in this setup.
-			header_up X-Forwarded-Port 443
+			# Pass the external HTTPS port (defaults to 443, but may be different if port conflict)
+			header_up X-Forwarded-Port {$HTTPS_PORT:443}
 			header_up X-Real-IP {remote_host}
 		}
 	}
@@ -46,11 +57,12 @@
 
 	# API / Backend (Laravel)
 	handle {
-		reverse_proxy 127.0.0.1:{$APP_PORT} {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
-			header_up X-Forwarded-Port 443
+			# Pass the external HTTPS port (defaults to 443, but may be different if port conflict)
+			header_up X-Forwarded-Port {$HTTPS_PORT:443}
 			header_up X-Real-IP {remote_host}
 		}
 	}

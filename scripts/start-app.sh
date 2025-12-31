@@ -17,6 +17,8 @@ source "$SCRIPT_DIR/shared/config.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/shared/validation.sh" 2>/dev/null || true
 # shellcheck source=shared/runtime.sh
 source "$SCRIPT_DIR/shared/runtime.sh" 2>/dev/null || true
+# shellcheck source=shared/caddy.sh
+source "$SCRIPT_DIR/shared/caddy.sh" 2>/dev/null || true
 
 if ! command -v stop_dev_services >/dev/null 2>&1; then
     echo -e "${RED}✗${NC} stop_dev_services is not available (failed to load shared/runtime.sh)" >&2
@@ -481,6 +483,13 @@ main() {
 
     # Start Caddy
     start_caddy
+
+    # Setup SSL certificate trust
+    if command -v setup_ssl_trust >/dev/null 2>&1; then
+        sleep 2  # Wait for Caddy to generate certificates
+        echo ""
+        setup_ssl_trust "$PROJECT_ROOT" || true  # Don't fail if SSL setup has issues
+    fi
 
     # Build the URL with port (omit port if 443)
     local frontend_url backend_url
