@@ -1,4 +1,5 @@
-/.phpunit.cache
+# Laravel & Build directories
+/vendor
 /node_modules
 /public/build
 /public/hot
@@ -6,21 +7,31 @@
 /storage/*.key
 /storage/pail
 /storage/app/ssl
-/vendor
+
+# Environment files
 .env
 .env.backup
-.env.production
-.phpactor.json
+
+# Testing & Analysis
+/.phpunit.cache
 .phpunit.result.cache
+.phpactor.json
 Homestead.json
 Homestead.yaml
+
+# Package manager logs
 npm-debug.log
 yarn-error.log
-/auth.json
+package-lock.json
+
+# IDE & Editor configs
 /.fleet
 /.idea
 /.nova
 /.vscode
 /.zed
+
+# Project specific
 /.caddy
 /certs
+/auth.json
