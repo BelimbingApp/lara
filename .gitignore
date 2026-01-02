@@ -7,6 +7,8 @@
 /storage/*.key
 /storage/pail
 /storage/app/ssl
+Homestead.json
+Homestead.yaml
 
 # Environment files
 .env
@@ -16,8 +18,7 @@
 /.phpunit.cache
 .phpunit.result.cache
 .phpactor.json
-Homestead.json
-Homestead.yaml
+/.playwright-mcp
 
 # Package manager logs
 npm-debug.log
