@@ -18,6 +18,11 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('password.edit');
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
+
+    // User Management
+    Volt::route('users', 'users.index')->name('users.index');
+    Volt::route('users/create', 'users.create')->name('users.create');
+    Volt::route('users/{user}/edit', 'users.edit')->name('users.edit');
 });
 
 // Health check endpoints
