@@ -74,7 +74,6 @@ For detailed information about our architectural decisions, see:
 
 - **[Livewire Volt Architecture](./docs/architecture/livewire-volt.md)** - Why we use Livewire Volt and comparison with HTMX
 - **[MaryUI Component Library](./docs/architecture/ui-libraries-comparison.md)** - Analysis of TALL Stack UI libraries, MaryUI selected
-- **[MaryUI Migration Guide](./docs/architecture/flux-replacement.md)** - Guide for migrating to MaryUI
 - **[Caddy Development Setup](./docs/architecture/caddy-development-setup.md)** - Simplified development environment with custom domains
 - **[File Structure](./docs/architecture/file-structure.md)** - Project organization and structure
 
@@ -132,31 +131,6 @@ php artisan test
 php artisan config:clear
 php artisan cache:clear
 php artisan view:clear
-```
-
-## 📁 Project Structure
-
-```
-blb/
-├── app/
-│   ├── Http/Controllers/     # HTTP Controllers
-│   ├── Models/              # Eloquent Models
-│   ├── Livewire/            # Livewire Components
-│   └── Providers/           # Service Providers
-├── resources/
-│   ├── views/               # Blade Templates
-│   │   └── livewire/        # Livewire Views
-│   ├── js/                  # JavaScript Assets
-│   └── css/                 # CSS Assets
-├── routes/
-│   ├── web.php              # Web Routes
-│   ├── auth.php             # Authentication Routes
-│   └── console.php          # Console Routes
-├── database/
-│   ├── migrations/          # Database Migrations
-│   ├── factories/           # Model Factories
-│   └── seeders/             # Database Seeders
-└── tests/                   # Test Files
 ```
 
 ## 🌐 Routes
@@ -245,20 +219,24 @@ php artisan test --coverage
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the [GNU Affero General Public License v3.0 (AGPL-3.0)](./LICENSE) - see the [LICENSE](./LICENSE) and [NOTICE](./NOTICE) files for details.
+
+### Contributor License Agreement (CLA)
+
+All contributors must agree to the terms in [CLA.md](./CLA.md).
+
+- Contributions are only accepted from authors who agree to the CLA.
+- If contributing on behalf of an employer, ensure you are authorized to do so.
+
+### Third-party code
+
+If you include third-party code, preserve original notices and add a reference in a `THIRD_PARTY_NOTICES.md` or a per-component NOTICE as appropriate.
 
 ## 📞 Support
 
 - **Documentation**: [Laravel Documentation](https://laravel.com/docs)
 - **Livewire**: [Livewire Documentation](https://livewire.laravel.com)
 - **MaryUI**: [MaryUI Documentation](https://mary-ui.com)
-
-## 🔄 Version
-
-- **Laravel**: ^12.0
-- **PHP**: ^8.2
-- **Livewire**: Latest
-- **TailwindCSS**: ^4.0
 
 ---
 
