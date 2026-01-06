@@ -14,10 +14,12 @@ Get Belimbing running in minutes.
 
 ## Choose Your Method
 
-| Method | Best For | Command |
-|--------|----------|---------|
-| **Native** | Production, performance | `./scripts/setup.sh local` |
-| **Docker** | Development, teams | `./scripts/start-docker.sh local` |
+| Method | Best For | Skill Level | Command |
+|--------|----------|-------------|---------|
+| **Native** | Production, simple servers | Basic Linux | `./scripts/setup.sh local` |
+| **Docker** | Development, keeping OS clean | **Intermediate** (Requires Docker knowledge) | `./scripts/start-docker.sh local` |
+
+> **Recommendation:** If you are unsure or have never used Docker before, use the **Native** method. It is easier to troubleshoot on a standard Linux server.
 
 > **Warning:** Use only ONE method. Running both causes port conflicts.
 
@@ -123,6 +125,7 @@ docker compose --profile dev exec app php artisan belimbing:create-admin
 | Database error | Check PostgreSQL: `systemctl status postgresql` |
 | Docker error | Check Docker Desktop is running |
 | Permission error | `sudo chown -R $USER:$USER storage` |
+| Docker Permission Denied | Common issue. Ensure your user ID matches or run `sudo chown -R 1000:1000 storage` inside the container context. |
 | Wrong config in Docker | Ensure `./docker/.env` exists and has Docker-specific values (DB_HOST=postgres, REDIS_HOST=redis) |
 
 ## Next Steps
