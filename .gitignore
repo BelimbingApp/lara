@@ -20,6 +20,11 @@ Homestead.yaml
 .phpactor.json
 /.playwright-mcp
 
+# IDE Helper files (generated)
+_ide_helper.php
+_ide_helper_models.php
+.phpstorm.meta.php
+
 # Package manager logs
 npm-debug.log
 yarn-error.log
@@ -36,3 +41,4 @@ package-lock.json
 /.caddy
 /certs
 /auth.json
+/docs/zpad

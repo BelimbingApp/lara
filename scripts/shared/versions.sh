@@ -42,7 +42,7 @@ REQUIRED_PHP_MINOR=5
 LATEST_GIT_VERSION="2.52.0"
 
 # Bun: Latest stable version (without 'v' prefix for consistency)
-LATEST_BUN_VERSION="1.3.4"
+LATEST_BUN_VERSION="1.3.5"
 
 # === Service Versions ===
 # Versions for services that are installed

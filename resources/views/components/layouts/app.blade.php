@@ -14,13 +14,13 @@
     @endif
 </head>
 <body class="min-h-screen bg-base-100 dark:bg-zinc-900">
-    <!-- Desktop Layout: Sidebar + Content -->
-    <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
-        <x-layouts.app.sidebar-component />
-        <x-layouts.app.content>
-            {{ $slot }}
-        </x-layouts.app.content>
-    </div>
+        <!-- Desktop Layout: Sidebar + Content -->
+        <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
+            <x-layouts.app.sidebar-component />
+            <x-layouts.app.content>
+                {{ $slot }}
+            </x-layouts.app.content>
+        </div>
 
     <!-- Mobile Layout - Custom Alpine.js drawer -->
     <div class="lg:hidden min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
