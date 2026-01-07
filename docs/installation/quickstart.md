@@ -86,7 +86,37 @@ docker compose --profile dev exec app php artisan <command>
 - **Web:** https://local.blb.lara
 - **API:** https://local.blb.lara/api
 
-> Add to `/etc/hosts` if needed: `127.0.0.1 local.blb.lara`
+### Hosts File Configuration
+
+**Linux (Native installation):**
+```bash
+# Add to /etc/hosts
+127.0.0.1 local.blb.lara local.api.blb.lara
+```
+
+**Windows (WSL2 users):**
+If you're running Belimbing in WSL2 and accessing from a Windows browser, you need to use the **WSL2 IP address** instead of `127.0.0.1`.
+
+1. **Find your WSL2 IP address:**
+   ```bash
+   # In WSL2 terminal
+   ip addr show eth0 | grep "inet " | awk '{print $2}' | cut -d/ -f1
+   ```
+
+2. **Add to Windows hosts file** (`C:\Windows\System32\drivers\etc\hosts`):
+   ```
+   172.25.114.176 local.blb.lara local.api.blb.lara
+   ```
+   *(Replace `172.25.114.176` with your actual WSL2 IP address)*
+
+3. **Edit as Administrator:**
+   - Open Notepad as Administrator (Win+R → `notepad` → Ctrl+Shift+Enter)
+   - Or use PowerShell as Administrator:
+     ```powershell
+     Add-Content -Path "C:\Windows\System32\drivers\etc\hosts" -Value "172.25.114.176 local.blb.lara local.api.blb.lara"
+     ```
+
+> **Why?** Windows `127.0.0.1` points to Windows localhost, not WSL2. Using the WSL2 IP allows Windows browsers to reach services running in WSL2.
 
 ## Create Admin
 
@@ -127,6 +157,7 @@ docker compose --profile dev exec app php artisan belimbing:create-admin
 | Permission error | `sudo chown -R $USER:$USER storage` |
 | Docker Permission Denied | Common issue. Ensure your user ID matches or run `sudo chown -R 1000:1000 storage` inside the container context. |
 | Wrong config in Docker | Ensure `./docker/.env` exists and has Docker-specific values (DB_HOST=postgres, REDIS_HOST=redis) |
+| 502 Bad Gateway from Windows browser (WSL2) | Use WSL2 IP address in Windows hosts file instead of `127.0.0.1`. See [Hosts File Configuration](#hosts-file-configuration) above. |
 
 ## Next Steps
 

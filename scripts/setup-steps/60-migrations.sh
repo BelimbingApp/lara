@@ -56,9 +56,9 @@ run_migrations() {
 create_admin_user() {
     echo -e "${CYAN}Creating admin user...${NC}"
 
-    # Check if users table exists
-    if ! php artisan tinker --execute="Schema::hasTable('users');" 2>/dev/null | grep -q "true"; then
-        echo -e "${YELLOW}⚠${NC} Users table not found, skipping admin creation"
+    # Check if users table exists (explicitly echo result)
+    if ! php artisan tinker --execute="echo Schema::hasTable('users') ? 'true' : 'false';" 2>/dev/null | grep -q "true"; then
+        echo -e "${YELLOW}⚠${NC} Users table not found (check failed), skipping admin creation"
         echo -e "  Run migrations first, then create admin with: ${CYAN}php artisan belimbing:create-admin${NC}"
         return 0
     fi

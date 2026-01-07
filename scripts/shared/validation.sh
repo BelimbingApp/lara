@@ -56,6 +56,25 @@ get_windows_hosts_path() {
     echo "/mnt/c/Windows/System32/drivers/etc/hosts"
 }
 
+# Get WSL2 IP address (for Windows hosts file configuration)
+get_wsl2_ip() {
+    # Try to get IP from eth0 (most common WSL2 interface)
+    local wsl_ip
+    wsl_ip=$(ip addr show eth0 2>/dev/null | grep -oP 'inet \K[\d.]+' | head -1)
+
+    if [ -z "$wsl_ip" ]; then
+        # Fallback: try other common interfaces
+        wsl_ip=$(ip addr show 2>/dev/null | grep -oP 'inet \K172\.\d+\.\d+\.\d+' | head -1)
+    fi
+
+    if [ -z "$wsl_ip" ]; then
+        # Last resort: use hostname -I
+        wsl_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+    fi
+
+    echo "$wsl_ip"
+}
+
 # Check if sudo is available and working
 can_sudo() {
     sudo -n true 2>/dev/null
@@ -494,7 +513,8 @@ validate_manual_proxy() {
 # Check if domain is in /etc/hosts
 domain_in_hosts() {
     local domain=$1
-    grep -q "^127.0.0.1.*\s${domain}\(\s\|$\)" /etc/hosts 2>/dev/null
+    # Check for domain on any non-commented line (accepts any IP, ignores comments)
+    grep -E -q "^[[:space:]]*[^#[:space:]]+[[:space:]]+([^#]*[[:space:]]+)?${domain//./\\.}([[:space:]]|$)" /etc/hosts 2>/dev/null
 }
 
 # Add domain to /etc/hosts if not already present
@@ -549,7 +569,8 @@ domain_in_windows_hosts() {
     win_hosts=$(get_windows_hosts_path)
 
     if [ -f "$win_hosts" ]; then
-        grep -q "^127.0.0.1.*\s${domain}\(\s\|$\)" "$win_hosts" 2>/dev/null
+        # Check using extended regex, handling Windows line endings and any IP
+        tr -d '\r' < "$win_hosts" 2>/dev/null | grep -E -q "^[[:space:]]*[^#[:space:]]+[[:space:]]+([^#]*[[:space:]]+)?${domain//./\\.}([[:space:]]|$)"
     else
         return 1
     fi
@@ -563,43 +584,64 @@ add_domains_to_windows_hosts() {
     local win_hosts
     win_hosts=$(get_windows_hosts_path)
 
-    # Check which domains are missing from Windows hosts
+    # Get WSL2 IP address (needed for Windows to reach WSL2 services)
+    local wsl_ip
+    wsl_ip=$(get_wsl2_ip)
+
+    if [ -z "$wsl_ip" ]; then
+        echo -e "${RED}✗${NC} Could not determine WSL2 IP address" >&2
+        echo -e "${YELLOW}Please manually configure Windows hosts file with your WSL2 IP address${NC}" >&2
+        return 1
+    fi
+
+    # Check which domains are missing from Windows hosts OR pointing to wrong IP
     for domain in "${domains[@]}"; do
         if ! domain_in_windows_hosts "$domain"; then
             missing_domains+=("$domain")
+        else
+            # Check if domain is pointing to 127.0.0.1 (wrong for WSL2)
+            if grep -E "^[[:space:]]*127\.0\.0\.1[[:space:]]+.*${domain//./\\.}" "$win_hosts" 2>/dev/null | grep -v "^#" > /dev/null; then
+                missing_domains+=("$domain")
+                echo -e "${YELLOW}⚠${NC} Domain $domain is pointing to 127.0.0.1, needs update to $wsl_ip"
+            fi
         fi
     done
 
-    # If all domains are present, nothing to do
+    # If all domains are present and correct, nothing to do
     if [ ${#missing_domains[@]} -eq 0 ]; then
-        echo -e "${GREEN}${CHECK_MARK}${NC} Domains already configured in Windows hosts file"
+        echo -e "${GREEN}${CHECK_MARK}${NC} Domains already configured correctly in Windows hosts file"
         return 0
     fi
 
-    local hosts_line="127.0.0.1 ${missing_domains[*]}"
+    local hosts_line="$wsl_ip ${missing_domains[*]}"
 
     echo -e "${CYAN}${INFO_MARK} WSL2 detected - browser runs on Windows${NC}"
-    echo -e "${CYAN}${INFO_MARK} Adding domains to Windows hosts file...${NC}"
+    echo -e "${CYAN}${INFO_MARK} WSL2 IP address: ${YELLOW}$wsl_ip${NC}"
+    echo -e "${CYAN}${INFO_MARK} Adding/updating domains in Windows hosts file...${NC}"
 
     # Try to write to Windows hosts file
     if echo "$hosts_line" >> "$win_hosts" 2>/dev/null; then
         echo -e "${GREEN}${CHECK_MARK}${NC} Added to Windows hosts: ${CYAN}$hosts_line${NC}"
+        echo -e "${YELLOW}⚠${NC} If domains were already present with 127.0.0.1, please remove the old entries manually"
         return 0
     else
         # Permission denied - show instructions
         echo -e "${YELLOW}${WARNING_MARK} Could not write to Windows hosts file (requires Admin)${NC}"
         echo ""
-        echo -e "${CYAN}Please add this line to Windows hosts file:${NC}"
+        echo -e "${CYAN}Please add/update this line in Windows hosts file:${NC}"
         echo -e "  ${YELLOW}$hosts_line${NC}"
         echo ""
+        echo -e "${CYAN}If you have existing entries with 127.0.0.1, please remove them first.${NC}"
+        echo ""
         echo -e "${CYAN}Option 1 - PowerShell (Run as Administrator):${NC}"
-        echo -e "  ${YELLOW}Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \"$hosts_line\"${NC}"
+        echo -e "  ${YELLOW}\$line = \"$hosts_line\"; Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \$line${NC}"
         echo ""
         echo -e "${CYAN}Option 2 - Notepad (Run as Administrator):${NC}"
         echo -e "  1. Press Win+R, type ${YELLOW}notepad${NC}, press Ctrl+Shift+Enter"
         echo -e "  2. File → Open → ${YELLOW}C:\\Windows\\System32\\drivers\\etc\\hosts${NC}"
-        echo -e "  3. Add: ${YELLOW}$hosts_line${NC}"
-        echo -e "  4. Save and close"
+        echo -e "  3. Remove any existing lines with ${YELLOW}127.0.0.1 local.blb.lara${NC}"
+        echo -e "  4. Add: ${YELLOW}$hosts_line${NC}"
+        echo -e "  5. Save and close"
         echo ""
         return 1
     fi

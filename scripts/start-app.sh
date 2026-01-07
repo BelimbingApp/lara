@@ -39,9 +39,7 @@ VITE_PORT=""
 # Logging function
 log() {
     if [ -n "$LOG_FILE" ]; then
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
-    else
-        echo "[$(date '+%Y-%M-%d %H:%M:%S')] $*"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $*" >> "$LOG_FILE"
     fi
 }
 
@@ -58,7 +56,6 @@ check_dependencies() {
     if command -v bun &> /dev/null; then
         has_bun=true
         echo -e "${CYAN}ℹ${NC} Using Bun (replaces Node.js and npm)"
-        log "Using Bun for JavaScript runtime"
     else
         # Fall back to node/npm if bun is not available
         if ! command -v node &> /dev/null; then
@@ -98,10 +95,8 @@ check_dependencies() {
 
     if [ "$has_bun" = true ]; then
         echo -e "${GREEN}✓${NC} All dependencies available (using Bun)"
-        log "Dependencies checked: composer, bun, caddy - all available"
     else
         echo -e "${GREEN}✓${NC} All dependencies available (using Node.js/npm)"
-        log "Dependencies checked: composer, npm, node, caddy - all available"
     fi
 }
 
@@ -152,9 +147,8 @@ read_app_env() {
         fi
     fi
 
-    log "Using environment: $APP_ENV"
-    log "Frontend domain: $FRONTEND_DOMAIN"
-    log "Backend domain: $BACKEND_DOMAIN"
+    # Log environment info (important for troubleshooting)
+    log "Environment: $APP_ENV, Frontend: $FRONTEND_DOMAIN, Backend: $BACKEND_DOMAIN"
 
     echo -e "${GREEN}Using environment: ${APP_ENV}${NC}"
 }
@@ -162,7 +156,9 @@ read_app_env() {
 # Check if domains are in /etc/hosts
 check_hosts_entries() {
     local missing_hosts=()
+    local result=0
 
+    # Check Linux /etc/hosts
     if ! grep -q "^127.0.0.1.*\s${FRONTEND_DOMAIN}\(\s\|$\)" /etc/hosts 2>/dev/null; then
         missing_hosts+=("$FRONTEND_DOMAIN")
     fi
@@ -185,11 +181,83 @@ check_hosts_entries() {
         echo -e "  ${YELLOW}./scripts/setup-steps/70-caddy.sh $APP_ENV${NC}"
         echo ""
         log "WARNING: Missing hosts entries: ${missing_hosts[*]}"
-        return 1
+        result=1
+    else
+        echo -e "${GREEN}✓${NC} Domains configured in /etc/hosts"
     fi
 
-    echo -e "${GREEN}✓${NC} Domains configured in /etc/hosts"
-    return 0
+    # Check Windows hosts file if running in WSL2
+    if is_wsl2; then
+        local win_hosts
+        win_hosts=$(get_windows_hosts_path)
+        local wsl_ip
+        wsl_ip=$(get_wsl2_ip)
+        local win_missing=()
+        local win_wrong_ip=()
+
+        if [ -z "$wsl_ip" ]; then
+            echo -e "${YELLOW}⚠${NC} Could not determine WSL2 IP address for Windows hosts file check"
+            log "WARNING: Could not determine WSL2 IP address"
+            return $result
+        fi
+
+        # Check if domains exist in Windows hosts file
+        if ! domain_in_windows_hosts "$FRONTEND_DOMAIN"; then
+            win_missing+=("$FRONTEND_DOMAIN")
+        elif grep -E "^[[:space:]]*127\.0\.0\.1[[:space:]]+.*${FRONTEND_DOMAIN//./\\.}" "$win_hosts" 2>/dev/null | grep -v "^#" > /dev/null; then
+            win_wrong_ip+=("$FRONTEND_DOMAIN")
+        fi
+
+        if ! domain_in_windows_hosts "$BACKEND_DOMAIN"; then
+            win_missing+=("$BACKEND_DOMAIN")
+        elif grep -E "^[[:space:]]*127\.0\.0\.1[[:space:]]+.*${BACKEND_DOMAIN//./\\.}" "$win_hosts" 2>/dev/null | grep -v "^#" > /dev/null; then
+            win_wrong_ip+=("$BACKEND_DOMAIN")
+        fi
+
+        if [ ${#win_missing[@]} -gt 0 ] || [ ${#win_wrong_ip[@]} -gt 0 ]; then
+            echo ""
+            echo -e "${YELLOW}⚠${NC} Windows hosts file needs configuration (WSL2 detected):"
+
+            if [ ${#win_missing[@]} -gt 0 ]; then
+                echo -e "  ${YELLOW}Missing domains:${NC} ${win_missing[*]}"
+            fi
+
+            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+                echo -e "  ${YELLOW}Wrong IP address (using 127.0.0.1 instead of WSL2 IP):${NC} ${win_wrong_ip[*]}"
+            fi
+
+            echo ""
+            echo -e "${CYAN}WSL2 IP address: ${YELLOW}$wsl_ip${NC}"
+            echo ""
+            echo -e "${CYAN}Add/update this line in Windows hosts file:${NC}"
+            echo -e "  ${YELLOW}$wsl_ip $FRONTEND_DOMAIN $BACKEND_DOMAIN${NC}"
+            echo ""
+            echo -e "${CYAN}Windows hosts file location:${NC}"
+            echo -e "  ${YELLOW}C:\\Windows\\System32\\drivers\\etc\\hosts${NC}"
+            echo ""
+            echo -e "${CYAN}To fix:${NC}"
+            echo -e "  1. Open Notepad as Administrator (Win+R → ${YELLOW}notepad${NC} → Ctrl+Shift+Enter)"
+            echo -e "  2. Open: ${YELLOW}C:\\Windows\\System32\\drivers\\etc\\hosts${NC}"
+            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+                echo -e "  3. Remove/comment lines with ${YELLOW}127.0.0.1${NC} for these domains"
+            fi
+            echo -e "  4. Add: ${YELLOW}$wsl_ip $FRONTEND_DOMAIN $BACKEND_DOMAIN${NC}"
+            echo -e "  5. Save and close"
+            echo ""
+            echo -e "${CYAN}Or use PowerShell (Run as Administrator):${NC}"
+            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+                echo -e "  ${YELLOW}\$content = Get-Content \"C:\\Windows\\System32\\drivers\\etc\\hosts\"; \$content = \$content | Where-Object { \$_ -notmatch \"127\\.0\\.0\\.1.*local\\.blb\\.lara\" -and \$_ -notmatch \"127\\.0\\.0\\.1.*local\\.api\\.blb\\.lara\" }; \$content | Set-Content \"C:\\Windows\\System32\\drivers\\etc\\hosts\"${NC}"
+            fi
+            echo -e "  ${YELLOW}Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \"$wsl_ip $FRONTEND_DOMAIN $BACKEND_DOMAIN\"${NC}"
+            echo ""
+            log "WARNING: Windows hosts file needs configuration. WSL2 IP: $wsl_ip"
+            result=1
+        else
+            echo -e "${GREEN}✓${NC} Windows hosts file configured correctly (WSL2 IP: $wsl_ip)"
+        fi
+    fi
+
+    return $result
 }
 
 # Get ports from configuration
@@ -227,7 +295,6 @@ get_ports() {
     export VITE_PORT
     export APP_PORT
 
-    log "Using ports - Laravel: $APP_PORT, Vite: $VITE_PORT, HTTPS: $HTTPS_PORT"
 }
 
 # Check if services are already running and stop them
@@ -284,7 +351,10 @@ stop_caddy() {
 cleanup() {
     echo ""
     echo -e "${YELLOW}Stopping services...${NC}"
-    log "Stopping services (cleanup triggered)"
+
+    local stop_user
+    stop_user=$(whoami 2>/dev/null || echo "${USER:-unknown}")
+    log "[$stop_user] Stopping services"
 
     # Stop Caddy first (project-specific instance)
     stop_caddy
@@ -311,12 +381,9 @@ wait_for_service() {
     local attempt=1
 
     echo -e "${CYAN}Waiting for $service_name to be ready...${NC}"
-    log "Waiting for $service_name to be ready at $url"
-
     while [ $attempt -le $max_attempts ]; do
         if curl -s -f "$url" >/dev/null 2>&1 || curl -s -f -k "https://$url" >/dev/null 2>&1; then
             echo -e "${GREEN}✓${NC} $service_name is ready"
-            log "$service_name is ready after $attempt attempt(s)"
             return 0
         fi
         sleep 1
@@ -334,9 +401,30 @@ start_caddy() {
     export APP_DOMAIN="$FRONTEND_DOMAIN"
     export BACKEND_DOMAIN="$BACKEND_DOMAIN"
     export APP_PORT="$APP_PORT"
+    export APP_HOST="127.0.0.1"  # Caddy connects to localhost (Laravel server)
     export VITE_PORT="$VITE_PORT"
+    export VITE_HOST="127.0.0.1"  # Caddy connects to localhost (Vite server)
     export HTTPS_PORT="$HTTPS_PORT"
-    export TLS_MODE="internal"
+
+    # TLS Mode: environment-aware
+    # - local/testing: Always use "internal" (self-signed Caddy certs)
+    # - staging/production: Read from .env, default to "internal" for staging
+    #   Production should set TLS_MODE in .env to an email (e.g., admin@example.com) for Let's Encrypt
+    local tls_mode
+    if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "testing" ]; then
+        tls_mode="internal"
+    else
+        # Read from .env if set, otherwise default to "internal"
+        if [ -f "$PROJECT_ROOT/.env" ]; then
+            tls_mode=$(grep -E "^TLS_MODE=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "internal")
+            if [ -z "$tls_mode" ]; then
+                tls_mode="internal"
+            fi
+        else
+            tls_mode="internal"
+        fi
+    fi
+    export TLS_MODE="$tls_mode"
 
     # Ensure .caddy/logs directory exists
     mkdir -p "$PROJECT_ROOT/.caddy/logs"
@@ -345,7 +433,6 @@ start_caddy() {
     local caddyfile_path=""
     if [ -f "$PROJECT_ROOT/Caddyfile" ]; then
         caddyfile_path="$PROJECT_ROOT/Caddyfile"
-        log "Using Caddyfile: $caddyfile_path"
     else
         echo -e "${RED}✗${NC} No Caddyfile found. Run setup first:" >&2
         echo -e "  ${CYAN}./scripts/setup-steps/70-caddy.sh $APP_ENV${NC}" >&2
@@ -368,17 +455,16 @@ start_caddy() {
     if [ "$system_caddy_running" = true ]; then
         # System Caddy is running - start a separate instance for the project
         echo -e "${YELLOW}⚠${NC} System Caddy is running. Starting project-specific Caddy instance..."
-        log "Starting project-specific Caddy instance alongside system Caddy"
+        log "Starting project-specific Caddy instance (system Caddy detected)"
 
         # Stop any existing project Caddy first (if any)
         caddy stop --config "$caddyfile_path" 2>/dev/null || true
 
         # Start with a different admin socket to avoid conflicts
-        caddy start --config "$caddyfile_path" --adapter caddyfile 2>&1 | tee -a "$LOG_FILE"
+        caddy start --config "$caddyfile_path" --adapter caddyfile > /dev/null 2>&1
         CADDY_EXIT_CODE=${PIPESTATUS[0]}
         if [ "$CADDY_EXIT_CODE" -eq 0 ]; then
             echo -e "${GREEN}✓${NC} Project Caddy started successfully"
-            log "Project Caddy started successfully"
         else
             echo -e "${RED}✗${NC} Failed to start project Caddy (exit code: $CADDY_EXIT_CODE)" >&2
             log "ERROR: Failed to start project Caddy (exit code: $CADDY_EXIT_CODE)"
@@ -387,12 +473,10 @@ start_caddy() {
     elif ! pgrep -x "caddy" > /dev/null; then
         # No Caddy running - start fresh
         echo -e "${GREEN}Starting Caddy reverse proxy...${NC}"
-        log "Starting Caddy reverse proxy"
-        caddy start --config "$caddyfile_path" --adapter caddyfile 2>&1 | tee -a "$LOG_FILE"
+        caddy start --config "$caddyfile_path" --adapter caddyfile > /dev/null 2>&1
         CADDY_EXIT_CODE=${PIPESTATUS[0]}
         if [ "$CADDY_EXIT_CODE" -eq 0 ]; then
             echo -e "${GREEN}✓${NC} Caddy started successfully"
-            log "Caddy started successfully"
         else
             echo -e "${RED}✗${NC} Failed to start Caddy (exit code: $CADDY_EXIT_CODE)" >&2
             log "ERROR: Failed to start Caddy (exit code: $CADDY_EXIT_CODE)"
@@ -404,11 +488,10 @@ start_caddy() {
         # Non-system Caddy is already running - reload with project config
         echo -e "${YELLOW}Caddy is already running. Reloading configuration...${NC}"
         log "Caddy is already running, reloading configuration"
-        caddy reload --config "$caddyfile_path" --adapter caddyfile 2>&1 | tee -a "$LOG_FILE"
+        caddy reload --config "$caddyfile_path" --adapter caddyfile > /dev/null 2>&1
         CADDY_EXIT_CODE=${PIPESTATUS[0]}
         if [ "$CADDY_EXIT_CODE" -eq 0 ]; then
             echo -e "${GREEN}✓${NC} Caddy configuration reloaded"
-            log "Caddy configuration reloaded successfully"
         else
             echo -e "${YELLOW}⚠${NC} Caddy reload may have failed (exit code: $CADDY_EXIT_CODE)" >&2
             echo -e "${YELLOW}Continuing anyway...${NC}" >&2
@@ -452,7 +535,9 @@ main() {
     LOG_FILE="$log_dir/start-app.log"
     mkdir -p "$log_dir"
 
-    log "Starting BLB Development Environment..."
+    local start_user
+    start_user=$(whoami 2>/dev/null || echo "${USER:-unknown}")
+    log "[$start_user] Starting BLB Development Environment..."
     echo -e "${GREEN}Starting BLB Development Environment...${NC}"
 
     # Initialize environment
@@ -481,16 +566,6 @@ main() {
     # Wait for Laravel to be ready
     wait_for_service "http://127.0.0.1:$APP_PORT" "Laravel server" || true
 
-    # Start Caddy
-    start_caddy
-
-    # Setup SSL certificate trust
-    if command -v setup_ssl_trust >/dev/null 2>&1; then
-        sleep 2  # Wait for Caddy to generate certificates
-        echo ""
-        setup_ssl_trust "$PROJECT_ROOT" || true  # Don't fail if SSL setup has issues
-    fi
-
     # Build the URL with port (omit port if 443)
     local frontend_url backend_url
     if [ "$HTTPS_PORT" = "443" ]; then
@@ -501,11 +576,10 @@ main() {
         backend_url="https://${BACKEND_DOMAIN}:${HTTPS_PORT}"
     fi
 
-    # Display success message
-    log "Development environment is ready!"
+    # Inform user that web app is ready (before Caddy starts and takes over terminal)
     echo ""
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
-    echo -e "${GREEN}✓ Development environment is ready!${NC}"
+    echo -e "${GREEN}✓ Belimbing is ready for access!${NC}"
     echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo -e "${CYAN}Access your application:${NC}"
@@ -515,6 +589,21 @@ main() {
     echo -e "${CYAN}Internal services:${NC}"
     echo -e "  ${BULLET} Laravel: http://127.0.0.1:$APP_PORT"
     echo -e "  ${BULLET} Vite:    http://127.0.0.1:$VITE_PORT"
+    echo ""
+    echo -e "${CYAN}Starting Caddy reverse proxy...${NC}"
+    echo ""
+
+    # Start Caddy
+    start_caddy
+
+    # Setup SSL certificate trust
+    ensure_ssl_trust "$PROJECT_ROOT" "${TLS_MODE:-internal}" || true
+
+    # Display final success message
+    echo ""
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
+    echo -e "${GREEN}✓ Development environment is ready!${NC}"
+    echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
     echo ""
     echo -e "${CYAN}Log file:${NC} ${LOG_FILE}"
     echo ""

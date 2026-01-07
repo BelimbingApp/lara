@@ -694,7 +694,7 @@ main() {
     create_admin_if_needed
     echo ""
 
-    # Setup SSL certificate trust for local development
+    # Setup SSL certificate trust (for self-signed certificates)
     print_subsection_header "SSL Certificate"
     local project_name
     project_name=$(get_compose_project_name)

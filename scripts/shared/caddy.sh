@@ -273,7 +273,8 @@ start_caddy_with_checks() {
     echo "$caddy_pid"
 }
 
-# Setup SSL certificate trust for local development
+# Setup SSL certificate trust for self-signed certificates (TLS_MODE=internal)
+# Use in any environment: local, staging, or production behind proxy/internal network
 # Works with both native Caddy and Docker Caddy
 # Usage: setup_ssl_trust [project_root] [container_name]
 #   project_root: Project root directory (default: current directory)
@@ -359,9 +360,27 @@ setup_ssl_trust() {
     local installed=false
     if command_exists update-ca-certificates; then
         # Debian/Ubuntu
-        if [ -t 0 ]; then
+        local system_cert_path="/usr/local/share/ca-certificates/caddy-blb-root.crt"
+
+        # Check if already installed and matches current certificate
+        if [ -f "$system_cert_path" ]; then
+            if diff -q "$root_ca_file" "$system_cert_path" >/dev/null 2>&1; then
+                echo -e "${GREEN}✓${NC} Certificate already installed in system trust store"
+                installed=true
+            else
+                echo -e "${YELLOW}ℹ${NC} Certificate changed, updating system trust store..."
+                if [ -t 0 ]; then
+                    if sudo cp "$root_ca_file" "$system_cert_path" 2>/dev/null && \
+                       sudo update-ca-certificates 2>/dev/null; then
+                        echo -e "${GREEN}✓${NC} Certificate updated in system trust store"
+                        installed=true
+                    fi
+                fi
+            fi
+        elif [ -t 0 ]; then
+            # Not installed yet - install it
             echo -e "${CYAN}Installing certificate to system trust store...${NC}"
-            if sudo cp "$root_ca_file" /usr/local/share/ca-certificates/caddy-blb-root.crt 2>/dev/null && \
+            if sudo cp "$root_ca_file" "$system_cert_path" 2>/dev/null && \
                sudo update-ca-certificates 2>/dev/null; then
                 echo -e "${GREEN}✓${NC} Certificate installed to system trust store"
                 installed=true
@@ -369,7 +388,11 @@ setup_ssl_trust() {
         fi
     elif command_exists trust; then
         # Fedora/RHEL
-        if [ -t 0 ]; then
+        # Check if already in trust store
+        if trust list | grep -q "caddy-blb-root" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} Certificate already installed in system trust store"
+            installed=true
+        elif [ -t 0 ]; then
             echo -e "${CYAN}Installing certificate to system trust store...${NC}"
             if sudo trust anchor --store "$root_ca_file" 2>/dev/null; then
                 echo -e "${GREEN}✓${NC} Certificate installed to system trust store"
@@ -409,8 +432,69 @@ setup_ssl_trust() {
     if [ "$installed" = false ] && ! is_wsl2; then
         echo -e "${YELLOW}Note:${NC} Certificate not auto-installed to system trust store"
         echo -e "  You can manually install: ${CYAN}$root_ca_file${NC}"
-        echo -e "  Or accept the browser warning (safe for local development)"
+        echo -e "  Or accept the browser warning (safe for self-signed development certificates)"
     fi
 
     return 0
 }
+
+# High-level orchestration to ensure SSL trust is set up if needed
+# Checks TLS_MODE and whether cert is already installed before attempting setup
+# Usage: ensure_ssl_trust [project_root] [tls_mode] [container_name]
+ensure_ssl_trust() {
+    local project_root="${1:-$(pwd)}"
+    local tls_mode="${2:-internal}"
+    local container_name="${3:-}"
+
+    # Production environments with real certificates (TLS_MODE != "internal") don't need this
+    if [ "${tls_mode}" != "internal" ]; then
+        if command -v log >/dev/null 2>&1; then
+            log "Using TLS mode: $tls_mode (real certificates, skipping SSL trust setup)"
+        fi
+        return 0
+    fi
+
+    # Check if we can even run the setup
+    if ! command -v setup_ssl_trust >/dev/null 2>&1; then
+        return 1
+    fi
+
+    # Check if certificate is already in system trust store
+    local ssl_already_installed=false
+
+    if command -v update-ca-certificates >/dev/null 2>&1; then
+        # Debian/Ubuntu - check if already installed
+        if [ -f "/usr/local/share/ca-certificates/caddy-blb-root.crt" ]; then
+            ssl_already_installed=true
+        fi
+    elif command -v trust >/dev/null 2>&1; then
+        # Fedora/RHEL - check if already in trust store
+        if trust list | grep -q "caddy-blb-root" 2>/dev/null; then
+            ssl_already_installed=true
+        fi
+    fi
+
+    if [ "$ssl_already_installed" = true ]; then
+        # Already installed - skip setup
+        return 0
+    fi
+
+    # Not installed yet - try to set up
+    # We wait briefly for Caddy to generate certificates if they don't exist yet
+    sleep 2
+
+    echo ""
+    echo -e "${CYAN}Setting up SSL certificate trust (one-time, for development)...${NC}"
+
+    if setup_ssl_trust "$project_root" "$container_name"; then
+        return 0
+    else
+        # Setup failed - provide helpful guidance
+        echo ""
+        echo -e "${YELLOW}Note:${NC} SSL trust setup was skipped or failed (not critical for development)"
+        echo -e "To set up SSL trust later, run: ${CYAN}./scripts/setup-steps/75-ssl-trust.sh${NC}"
+        echo -e "Or accept the browser warning when accessing your app (safe for self-signed certs)"
+        return 1
+    fi
+}
+

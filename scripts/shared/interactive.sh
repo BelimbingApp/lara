@@ -64,3 +64,13 @@ ask_input() {
         return 0
     done
 }
+
+# Ask for password (hidden input)
+ask_password() {
+    local prompt=$1
+
+    # Read silently (-s)
+    read -s -p "$(echo -e "${prompt}: ")" response
+    echo "" >&2 # Add newline to stderr so it doesn't mess up captured stdout
+    echo "$response"
+}
