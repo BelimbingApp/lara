@@ -401,35 +401,23 @@ setup_ssl_trust() {
         fi
     fi
 
-    # On WSL2, also help with Windows trust
+    # On WSL2, provide instructions for Windows trust
     if is_wsl2; then
-        # Try to find Windows username
-        local win_user
-        win_user=$(cmd.exe /c "echo %USERNAME%" 2>/dev/null | tr -d '\r\n' || echo "")
-
-        if [ -n "$win_user" ] && [ -d "/mnt/c/Users/$win_user" ]; then
-            local win_cert_path="/mnt/c/Users/$win_user/Desktop/caddy-blb-root-ca.crt"
-            cp "$root_ca_file" "$win_cert_path" 2>/dev/null || true
-
-            if [ -f "$win_cert_path" ]; then
-                echo ""
-                echo -e "${CYAN}For Windows browser support:${NC}"
-                echo -e "  Certificate copied to: ${CYAN}Desktop/caddy-blb-root-ca.crt${NC}"
-                echo -e "  To install:"
-                echo -e "    1. Double-click the certificate on your Desktop"
-                echo -e "    2. Click 'Install Certificate' → 'Local Machine' → Next"
-                echo -e "    3. Select 'Place all certificates in the following store'"
-                echo -e "    4. Browse → 'Trusted Root Certification Authorities' → OK → Next → Finish"
-                echo -e "    5. Restart your browser"
-                echo ""
-            fi
-        else
-            echo -e "${YELLOW}⚠${NC} Could not copy certificate to Windows Desktop"
-            echo -e "  Manual location: ${CYAN}$root_ca_file${NC}"
-        fi
+        echo ""
+        echo -e "${CYAN}For Windows browser support:${NC}"
+        echo -e "  Certificate location: ${CYAN}storage/app/ssl/caddy-root-ca.crt${NC}"
+        echo -e "  To install:"
+        echo -e "    1. Open Windows Explorer and navigate to: ${CYAN}storage/app/ssl${NC}"
+        echo -e "       (In WSL2, access via: ${CYAN}\\\\wsl$\\\\<distro>\\\\<project_path>\\\\storage\\\\app\\\\ssl${NC})"
+        echo -e "    2. Double-click ${CYAN}caddy-root-ca.crt${NC}"
+        echo -e "    3. Click 'Install Certificate' → 'Local Machine' → Next"
+        echo -e "    4. Select 'Place all certificates in the following store'"
+        echo -e "    5. Browse → 'Trusted Root Certification Authorities' → OK → Next → Finish"
+        echo -e "    6. Restart your browser"
+        echo ""
     fi
 
-    if [ "$installed" = false ] && ! is_wsl2; then
+    if [ "$installed" = false ]; then
         echo -e "${YELLOW}Note:${NC} Certificate not auto-installed to system trust store"
         echo -e "  You can manually install: ${CYAN}$root_ca_file${NC}"
         echo -e "  Or accept the browser warning (safe for self-signed development certificates)"

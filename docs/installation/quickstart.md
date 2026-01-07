@@ -118,6 +118,25 @@ If you're running Belimbing in WSL2 and accessing from a Windows browser, you ne
 
 > **Why?** Windows `127.0.0.1` points to Windows localhost, not WSL2. Using the WSL2 IP allows Windows browsers to reach services running in WSL2.
 
+### SSL Certificate Trust (WSL2 users)
+
+When accessing custom domains like `https://local.blb.lara` from a Windows browser, you'll see a certificate warning because Caddy uses self-signed certificates for development. To trust the certificate:
+
+1. **Navigate to the certificate in Windows Explorer:**
+   - Open Windows Explorer
+   - Navigate to: `<project_root>\storage\app\ssl`
+
+2. **Double-click `caddy-root-ca.crt`**
+
+3. **Install the certificate:**
+   - Click "Install Certificate" → "Local Machine" → Next
+   - Select "Place all certificates in the following store"
+   - Click "Browse" → Select "Trusted Root Certification Authorities" → OK → Next → Finish
+
+4. **Restart your browser**
+
+> **Alternative:** You can also accept the browser warning each time (safe for self-signed development certificates).
+
 ## Create Admin
 
 Admin is created during installation. To create manually:
