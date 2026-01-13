@@ -1,6 +1,6 @@
 # Database Migration Guidelines
 
-- Table names should be prefixed with the name of the module or vendor or company followed by the name of the table.
+- Table names should **always** be prefixed with the name of the module or vendor or company followed by the name of the table.
 - Use `id()` method for primary keys, not `uuid()`.
 - For changes to tables, use batch rollback by batch number, do not use `migrate:fresh`.
 
@@ -8,18 +8,48 @@
 
 As a framework designed for extensibility and adoption by various businesses, Belimbing adheres to strict database naming conventions. These conventions are crucial for preventing conflicts between the core framework, installed modules, and the custom business logic implemented by the end users.
 
-### Module Table Prefixes
+### Table Naming by Layer
 
-Tables related to a module should be prefixed with the name of the module. Examples:
-- `companies`
-- `company_relationship_types`
-- `company_relationships`
-- `company_external_accesses`
+**Base Layer Tables (`app/Base/`):**
+- Prefix: `base_*`
+- Purpose: Framework infrastructure (not business logic)
+- Examples:
+  - `base_extensions` - Extension registry
+  - `base_extension_hooks` - Hook registrations
+  - `base_config_scopes` - Scope-based configuration
+  - `base_permissions` - Permission system
+  - `base_audit_logs` - Audit trail
+  - `base_workflow_definitions` - Workflow engine definitions
 
-Tables related to extensions should be prefixed with the name of the vendor or company followed by the name of the module. Examples:
-- `sbg_companies`
-- `sbg_company_relationships`
-- `sbg_company_external_accesses`
+**Core Module Tables (`app/Modules/Core/`):**
+- Prefix: Module name only (no `core_` prefix)
+- Purpose: Core business domain modules
+- Examples:
+  - `companies` - Company module
+  - `company_relationships` - Company module
+  - `users` - User module
+  - `geonames_countries` - Geonames module
+
+**Business Module Tables (`app/Modules/Business/`):**
+- Prefix: Module name
+- Examples:
+  - `erp_orders` - ERP module
+  - `crm_leads` - CRM module
+  - `hr_employees` - HR module
+
+**Vendor Extension Tables (`extensions/vendor/`):**
+- Prefix: `vendor_module_*`
+- Examples:
+  - `sbg_companies` - SBG vendor extension
+  - `sbg_company_relationships` - SBG vendor extension
+  - `acme_crm_leads` - ACME vendor extension
+
+### Rationale
+
+The `base_*` prefix distinguishes framework infrastructure from business domain tables:
+- `base_*` tables are framework-owned meta-systems (never user-created)
+- Module tables are business domains (even if core to framework)
+- Vendor tables are clearly marked by vendor name
 
 ## Database ID Standards
 

@@ -29,13 +29,17 @@ belimbing/
 │   └── deployment/          # Deployment state, rollback points
 │
 ├── app/                     # Core application code
-│   ├── Core/                # Framework core (immutable, extension points only)
+│   ├── Base/                # Base framework layer (infrastructure, extension points)
 │   ├── Modules/             # Business process modules
 │   ├── Extensions/          # Extension integration layer
 │   ├── Admin/               # Admin panel (git workflow, extensions, config)
 │   ├── AI/                  # AI services and code generation
 │   ├── Infrastructure/      # Infrastructure services (cache, queue, etc.)
 │   └── Support/            # Helpers, utilities, base classes
+│
+├── bootstrap/               # Framework bootstrapping
+│   ├── app.php              # Application configuration (middleware, exceptions)
+│   └── providers.php        # Service provider registration
 │
 ├── config/                  # Configuration files (minimal, mostly in DB)
 │   ├── app.php             # Application bootstrap config
@@ -62,8 +66,8 @@ belimbing/
 │
 ├── routes/                  # Route definitions
 │   ├── web.php             # Web routes
-│   ├── api.php             # API routes
-│   ├── admin.php           # Admin panel routes
+│   ├── callback.php        # API/Callback routes
+│   ├── console.php         # Artisan commands (replaces Console/Kernel)
 │   └── extensions.php      # Extension routes (auto-loaded)
 │
 ├── storage/                 # Storage (logs, cache, sessions)
@@ -78,7 +82,8 @@ belimbing/
 │   ├── Feature/            # Feature tests
 │   ├── Integration/       # Integration tests
 │   ├── Performance/        # Performance benchmarks
-│   └── AI/                 # AI-generated code tests
+│   ├── AI/                 # AI-generated code tests
+│   └── Pest.php            # Pest configuration
 │
 ├── docs/                    # Documentation
 │   ├── architecture/       # Architecture docs (this file)
@@ -102,12 +107,14 @@ belimbing/
 
 ## Core Application Structure (`app/`)
 
-### `app/Core/` - Framework Core
+### `app/Base/` - Base Framework Layer
 
-The immutable core that provides extension points but never changes.
+**Note on Fluidity:** While architecturally intended to be immutable to ensure stability for extensions, the Base layer is currently in an **active specialized development phase** (see `AGENTS.md`). Refactoring is expected.
+
+The base layer provides framework infrastructure, extension points, and core abstractions.
 
 ```
-app/Core/
+app/Base/
 ├── Foundation/             # Base classes and interfaces
 │   ├── Model.php           # Base model with extension hooks
 │   ├── Controller.php      # Base controller
@@ -215,7 +222,7 @@ Core and Business modules differ in fundamental ways:
    - Business modules: Loaded after core, can be disabled
 
 2. **Dependency Rules**
-   - Core modules: Can depend on `app/Core/` infrastructure only
+   - Core modules: Can depend on `app/Base/` base layer only
    - Business modules: Can depend on core modules + other business modules
 
 3. **Lifecycle Management**
@@ -670,8 +677,3 @@ This structure supports incremental adoption:
 **Document Status:** Proposal
 **Next Steps:** Review and refine based on implementation experience
 **Related Documents:** `docs/brief.md`, `docs/modules/*/`
-
----
-
-**Note:** The rationale for using directory structure (`Core/` vs `Business/`) over metadata was previously documented in `directory-structure-vs-metadata.md`. That analysis has been integrated into this document and the separate analysis document is now redundant.
-
