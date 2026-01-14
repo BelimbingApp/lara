@@ -42,3 +42,4 @@ package-lock.json
 /certs
 /auth.json
 /docs/development
+/docs/deprecated
