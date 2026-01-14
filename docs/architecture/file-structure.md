@@ -162,19 +162,39 @@ Each module is a self-contained business process (ERP, CRM, HR, etc.).
 ```
 app/Modules/
 ├── Core/                    # Core framework modules
-│   ├── User/                # User management module
+│   ├── Company/             # Company management module
+│   │   ├── Database/
+│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_10_*)
+│   │   │   ├── Seeders/     # Module-specific seeders
+│   │   │   └── Factories/   # Module-specific factories
 │   │   ├── Models/
 │   │   ├── Services/
 │   │   ├── Controllers/
 │   │   ├── Livewire/
-│   │   ├── Events/
 │   │   └── Hooks/           # Extension hooks for this module
 │   │
-│   ├── Workflow/            # Workflow management module
+│   ├── Geonames/            # Geonames module
+│   │   ├── Database/
+│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_03_*)
+│   │   │   └── Seeders/
+│   │   └── Models/
+│   │
+│   ├── User/                # User management module
+│   │   ├── Database/
+│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_20_*)
+│   │   │   ├── Seeders/
+│   │   │   └── Factories/
 │   │   ├── Models/
-│   │   │   └── StatusConfig.php
 │   │   ├── Services/
 │   │   ├── Controllers/
+│   │   ├── Livewire/
+│   │   └── Hooks/
+│   │
+│   ├── Workflow/            # Workflow management module
+│   │   ├── Database/
+│   │   │   └── Migrations/
+│   │   ├── Models/
+│   │   ├── Services/
 │   │   └── Livewire/
 │   │
 │   └── Admin/               # Admin panel module
@@ -185,8 +205,16 @@ app/Modules/
 │
 └── Business/                # Business process modules (examples)
     ├── ERP/                 # ERP module
+    │   └── Database/
+    │       ├── Migrations/  # Module-specific migrations (0010_01_01_*)
+    │       ├── Seeders/
+    │       └── Factories/
     ├── CRM/                 # CRM module
+    │   └── Database/
+    │       └── Migrations/  # Module-specific migrations (0020_01_01_*)
     ├── HR/                  # HR module
+    │   └── Database/
+    │       └── Migrations/  # Module-specific migrations (0030_01_01_*)
     └── Custom/              # Custom business processes
 ```
 
@@ -194,6 +222,10 @@ app/Modules/
 
 ```
 app/Modules/{ModuleName}/
+├── Database/                 # Module database layer
+│   ├── Migrations/           # Module migrations (auto-discovered)
+│   ├── Seeders/              # Module seeders
+│   └── Factories/            # Module factories
 ├── Models/                   # Eloquent models
 ├── Services/                 # Business logic services
 ├── Controllers/              # HTTP controllers
@@ -201,8 +233,6 @@ app/Modules/{ModuleName}/
 ├── Events/                   # Module-specific events
 ├── Listeners/                # Event listeners
 ├── Hooks/                    # Extension hooks for this module
-├── Migrations/               # Module migrations
-├── Seeders/                  # Module seeders
 ├── Routes/                   # Module routes
 ├── Views/                    # Module views
 ├── Config/                   # Module configuration schema
@@ -472,25 +502,21 @@ extensions/
 
 ```
 database/
-├── migrations/
-│   ├── core/                # Core framework migrations
-│   ├── modules/             # Module migrations
-│   │   ├── user/
-│   │   ├── workflow/
-│   │   └── admin/
-│   └── extensions/          # Extension migrations (auto-loaded)
+├── migrations/               # Base layer migrations only (0001_01_01_*)
+│   ├── 0001_01_01_000000_create_users_table.php
+│   ├── 0001_01_01_000001_create_cache_table.php
+│   └── 0001_01_01_000002_create_jobs_table.php
 │
-├── seeders/
-│   ├── core/                # Core seeders
-│   └── modules/             # Module seeders
+├── seeders/                  # Global database seeders
+│   └── DatabaseSeeder.php
 │
-├── schemas/                 # Schema definitions
-│   ├── core.json
-│   └── modules/
-│
-└── scripts/                 # Database scripts
-    ├── config-update.php    # Update configuration
-    └── scope-migrate.php    # Migrate scope data
+└── .gitignore
+
+# Module migrations are in their respective modules:
+# app/Modules/Core/Geonames/Database/Migrations/0002_01_03_*
+# app/Modules/Core/Company/Database/Migrations/0002_01_10_*
+# app/Modules/Core/User/Database/Migrations/0002_01_20_*
+# app/Modules/Business/ERP/Database/Migrations/0010_01_01_*
 ```
 
 ---

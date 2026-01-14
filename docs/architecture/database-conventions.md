@@ -2,11 +2,25 @@
 
 **Document Type:** Architecture Specification
 **Purpose:** Define database table and migration file naming conventions for Belimbing framework
-**Last Updated:** 2026-01-13
+**Last Updated:** 2026-01-14
 
 ## Overview
 
 Belimbing uses layered naming conventions for both migration files and database tables to clearly distinguish between framework infrastructure, business modules, and vendor extensions. This prevents naming conflicts and makes ownership immediately clear.
+
+---
+
+## Migration Loading and Discovery
+
+**Implementation:** Migrations are auto-discovered from module directories via `DatabaseServiceProvider`. The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
+
+### Benefits
+
+1. **Zero HTTP Overhead**: Auto-discovery only runs during console commands (`runningInConsole()`)
+2. **No Manual Registration**: Glob-based discovery finds all module migrations automatically
+3. **Self-Contained Modules**: Each module owns its database layer (migrations, seeders, factories)
+4. **Enforced Ordering**: Year-based naming ensures Base → Core → Business → Extensions
+5. **Deep Modules**: Migrations live with the code they support
 
 ---
 
@@ -136,12 +150,71 @@ This allows fine-grained ordering within each module while maintaining clear lay
    - Laravel sorts migrations by filename prefix
    - `0001 < 0002 < 0010 < 0030` maintains correct order
 
-### Migration from Current Pattern
+### Module Database Structure
 
-Existing migrations using `0001_01_01_000010` format can remain as-is (they'll still run before year `0002`), or be migrated to the new year-based pattern for consistency:
+Each module is self-contained with its own database layer:
 
-- `0001_01_01_000010_create_companies_table.php` → `0003_01_01_000000_create_companies_table.php`
-- `0001_01_01_000020_create_geonames_countries_table.php` → `0004_01_01_000000_create_geonames_countries_table.php`
+```
+app/Modules/Core/{ModuleName}/
+├── Database/
+│   ├── Migrations/           # Module-specific migrations
+│   │   ├── 0002_MM_DD_000000_create_{table}_table.php
+│   │   ├── 0002_MM_DD_000001_create_{related}_table.php
+│   │   └── ...
+│   ├── Seeders/              # Module-specific seeders
+│   │   ├── {ModuleName}Seeder.php
+│   │   └── ...
+│   └── Factories/            # Module-specific factories
+│       ├── {Model}Factory.php
+│       └── ...
+└── Models/
+    ├── {Model}.php
+    └── ...
+```
+
+**Benefits:**
+- **Encapsulation**: Migrations, seeders, and factories live with their models
+- **Ownership**: Clear which module owns which database schema
+- **Portability**: Can copy entire module directory with its database layer
+- **Testability**: Module tests can seed their own data independently
+- **Discovery**: Auto-discovered without manual registration
+
+**Example - Geonames Module:**
+```
+app/Modules/Core/Geonames/
+├── Database/
+│   ├── Migrations/
+│   │   ├── 0002_01_03_000000_create_geonames_countries_table.php
+│   │   └── 0002_01_03_000001_create_geonames_admin1_table.php
+│   └── Seeders/
+│       ├── CountrySeeder.php
+│       └── Admin1Seeder.php
+└── Models/
+    ├── Country.php
+    └── Admin1.php
+```
+
+**Example - Company Module:**
+```
+app/Modules/Core/Company/
+├── Database/
+│   ├── Migrations/
+│   │   ├── 0002_01_10_000000_create_companies_table.php
+│   │   ├── 0002_01_10_000001_create_company_relationship_types_table.php
+│   │   ├── 0002_01_10_000002_create_company_relationships_table.php
+│   │   ├── 0002_01_10_000003_create_company_external_accesses_table.php
+│   │   └── 0002_01_10_000004_add_company_id_to_users_table.php
+│   ├── Seeders/
+│   │   └── RelationshipTypeSeeder.php
+│   └── Factories/
+│       ├── CompanyFactory.php
+│       └── RelationshipTypeFactory.php
+└── Models/
+    ├── Company.php
+    ├── CompanyRelationship.php
+    ├── ExternalAccess.php
+    └── RelationshipType.php
+```
 
 ---
 
@@ -341,6 +414,7 @@ acme_integrations           # ACME vendor extension
 
 ## Related Documentation
 
-- `docs/architecture/file-structure.md` - Complete file structure
-- `docs/todo/architecture-migration.md` - Migration roadmap
+- `docs/architecture/file-structure.md` - Complete file structure and module organization
+- `docs/development/module-migration-restructure-summary.md` - Module-based migration restructure summary (2026-01-14)
 - `database/AGENTS.md` - Database migration guidelines and best practices
+- `docs/todo/architecture-migration.md` - Migration roadmap
