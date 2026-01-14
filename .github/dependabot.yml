@@ -1,6 +1,3 @@
-# SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2025 Ng Kiat Siong
-#
 # Dependabot configuration for Belimbing
 # Monitors and updates dependencies in package.json and composer.json
 

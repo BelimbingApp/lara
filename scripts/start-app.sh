@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # SPDX-License-Identifier: AGPL-3.0-only
-# Copyright (c) 2025 Ng Kiat Siong
+# (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 set -euo pipefail
 

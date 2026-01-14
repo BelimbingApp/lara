@@ -13,8 +13,8 @@
     "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.44.0",
-        "laravel/tinker": "^2.10.2",
+        "laravel/framework": "^12.46.0",
+        "laravel/tinker": "^2.11.2",
         "livewire/volt": "^1.10.1",
         "robsontenorio/mary": "^2.5.0"
     },
@@ -90,6 +90,6 @@
             "php-http/discovery": true
         }
     },
-    "minimum-stability": "stable",
+    "minimum-stability": "dev",
     "prefer-stable": true
 }

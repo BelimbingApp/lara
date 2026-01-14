@@ -172,6 +172,6 @@ Does package create database tables?
 
 ## Related Documentation
 
-- `database/AGENTS.md` - Database naming conventions
+- `database/AGENTS.md` - Database migration guidelines
 - `database/PACKAGES.md` - Registry of adopted packages
-- `docs/architecture/table-naming.md` - Complete naming standards
+- `docs/architecture/database-conventions.md` - Complete database naming standards
