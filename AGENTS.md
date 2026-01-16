@@ -1,12 +1,14 @@
 # Belimbing (BLB) Architect & Agent Guidelines
 
 ## 1. Project Context
-Belimbing (BLB) is a Laravel application leveraging the TALL stack evolution:
+Belimbing (BLB) is an enterprise-grade **framework** built on Laravel, leveraging the TALL stack evolution:
 - **Framework:** Laravel 12+
 - **Frontend/Logic:** Livewire Volt + MaryUI
 - **Testing:** Pest PHP
 - **Linting:** Laravel Pint
 - **Dependencies:** Use the latest available versions for all packages and dependencies.
+
+It is not just a Laravel application. It has no-bone in customizing the Laravel framework to align with its architectural principles based largely on **Ousterhout's principles**.
 
 ## 2. Development Philosophy: Early & Fluid
 **Context:** Initialization phase. No external users. No production deployment.

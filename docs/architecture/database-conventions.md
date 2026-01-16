@@ -12,7 +12,7 @@ Belimbing uses layered naming conventions for both migration files and database 
 
 ## Migration Loading and Discovery
 
-**Implementation:** Migrations are auto-discovered from module directories via `DatabaseServiceProvider`. The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
+**Implementation:** Migrations are auto-discovered from module directories via `App\Base\Database\ServiceProvider` (formerly `DatabaseServiceProvider`). The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
 
 ### Benefits
 
