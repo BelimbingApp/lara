@@ -8,7 +8,9 @@ Belimbing (BLB) is an enterprise-grade **framework** built on Laravel, leveragin
 - **Linting:** Laravel Pint
 - **Dependencies:** Use the latest available versions for all packages and dependencies.
 
-It is not just a Laravel application. It has no-bone in customizing the Laravel framework to align with its architectural principles based largely on **Ousterhout's principles**.
+BLB is a higher-order framework layered on top of Laravel. It preserves compatibility where practical but will intentionally diverge when necessary to uphold BLB’s architectural principles. BLB extends and adapts Laravel internals accordingly, guided by Ousterhout’s design tenets: deep modules, simple interfaces, and clear boundaries.
+
+Think of Laravel as the Level 0 foundation and BLB as a Level 1 framework built atop it — cohesive, opinionated, and extensible. BLB is not a mere Laravel application; it has no qualms about customizing Laravel to align with its architectural principles.
 
 ## 2. Development Philosophy: Early & Fluid
 **Context:** Initialization phase. No external users. No production deployment.
