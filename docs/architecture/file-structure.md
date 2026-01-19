@@ -1,20 +1,80 @@
-# Belimbing File Structure Proposal
+# Belimbing File Structure Guidelines
 
 **Document Type:** Architecture Specification
 **Purpose:** Define the file and directory structure for Belimbing framework
 **Based On:** Project Brief v1.0.0, Ousterhout's "A Philosophy of Software Design"
-**Last Updated:** 2025-12-01
+**Last Updated:** 2026-01-18
 
 ---
 
 ## Overview
 
-This document proposes a file structure that supports Belimbing's core principles:
+This document provide a guide for file structure that supports Belimbing's core principles:
 - **Customizable Framework** - Deep extension system with hooks at every layer
 - **Git-Native Workflow** - Development → Staging → Production branches
 - **AI-Native Architecture** - AI integration points throughout
 - **Quality-Obsessed** - Deep modules with simple interfaces
 - **Extension Management** - Registry, validation, runtime safety
+
+---
+
+## Directory Layer Convention
+
+BLB uses a layered directory naming convention to define architectural boundaries within `app/`. Layers are numbered from the root, and labeling stops at the **Module** boundary—everything within a module is considered module internals.
+
+### Layer Hierarchy
+
+```
+app/{Layer0}/{Module}/...              # For Base (shallow)
+app/{Layer0}/{Layer1}/{Module}/...     # For Modules (deeper)
+```
+
+**Key Principle:** Stop labeling at the Module boundary. Subdirectories within a module are implementation details, not architectural layers.
+
+### Layer Definitions
+
+| Path Component | Layer | Examples |
+|----------------|-------|----------|
+| `app/Base` | Layer0 | Framework infrastructure |
+| `app/Modules` | Layer0 | Business process modules |
+| `app/Base/Database` | Module | `Layer0/Module` |
+| `app/Base/Events` | Module | `Layer0/Module` |
+| `app/Modules/Core` | Layer1 | Core module category |
+| `app/Modules/Business` | Layer1 | Business module category |
+| `app/Modules/Core/Geonames` | Module | `Layer0/Layer1/Module` |
+| `app/Modules/Business/ERP` | Module | `Layer0/Layer1/Module` |
+
+### Module Internals (Not Layered)
+
+Everything within a Module directory follows standard conventions but is not assigned layer numbers:
+
+```
+app/Modules/Core/Geonames/
+├── Database/                    # Module internals (NOT Layer2)
+│   └── Migrations/              # Module internals
+├── Models/                      # Module internals
+└── Services/                    # Module internals
+```
+
+### Namespace Alignment
+
+The layer convention maps directly to PHP namespaces:
+
+```php
+App\Base\Database\MigrationManager
+└┬─┘└─┬─┘└──┬────┘└──────┬───────┘
+root Layer0 Module     Class
+
+App\Modules\Core\Geonames\Models\Country
+└┬─┘└──┬──┘└─┬──┘└───┬───┘└──┬──┘└──┬──┘
+root Layer0 Layer1 Module Internal Class
+```
+
+### Rationale
+
+1. **Cognitive Simplicity**: Developers understand hierarchy down to the module level; standard conventions apply within.
+2. **Tooling-Friendly**: Static analysis can enforce rules like "Layer1=Core cannot depend on Layer1=Business."
+3. **Deep Modules**: The module is the architectural unit (per Ousterhout). Internal structure is hidden complexity.
 
 ---
 
@@ -28,14 +88,14 @@ belimbing/
 │   ├── ai/                  # AI model cache, generated code templates
 │   └── deployment/          # Deployment state, rollback points
 │
-├── app/                     # Core application code
-│   ├── Base/                # Base framework layer (infrastructure, extension points)
+├── app/                     # Core application code (Layer0 directories)
+│   ├── Base/                # Framework infrastructure
 │   ├── Modules/             # Business process modules
-│   ├── Extensions/          # Extension integration layer
-│   ├── Admin/               # Admin panel (git workflow, extensions, config)
-│   ├── AI/                  # AI services and code generation
-│   ├── Infrastructure/      # Infrastructure services (cache, queue, etc.)
-│   └── Support/            # Helpers, utilities, base classes
+│   ├── Extensions/          # [Fluid] Extension integration layer
+│   ├── Admin/               # [Fluid] Admin panel (git workflow, extensions, config)
+│   ├── AI/                  # [Fluid] AI services and code generation
+│   ├── Infrastructure/      # [Fluid] Infrastructure services (cache, queue, etc.)
+│   └── Support/             # [Fluid] Helpers, utilities, base classes
 │
 ├── bootstrap/               # Framework bootstrapping
 │   ├── app.php              # Application configuration (middleware, exceptions)
@@ -107,11 +167,21 @@ belimbing/
 
 ## Core Application Structure (`app/`)
 
-### `app/Base/` - Base Framework Layer
+Directories under `app/` are Layer0. See [Directory Layer Convention](#directory-layer-convention) for the full hierarchy.
 
-**Note on Fluidity:** While architecturally intended to be immutable to ensure stability for extensions, the Base layer is currently in an **active specialized development phase** (see `AGENTS.md`). Refactoring is expected.
+**Fluidity Status:**
+- **Less Fluid** (`Base/`, `Modules/`): Active implementation; structure is stabilizing but still subject to refinement per `AGENTS.md`.
+- **Fluid** (`Extensions/`, `Admin/`, `AI/`, `Infrastructure/`, `Support/`): Speculative; not yet implemented. Structure may change significantly.
 
-The base layer provides framework infrastructure, extension points, and core abstractions.
+---
+
+### `app/Base/` - Framework Infrastructure (Layer0)
+
+**Fluidity:** Less Fluid — under active development.
+
+**Layer Pattern:** `app/Base/{Module}/` — subdirectories are modules (e.g., `Database`, `Events`, `Security`).
+
+The Base layer provides framework infrastructure, extension points, and core abstractions. Modules here are foundational and cannot depend on `app/Modules/`.
 
 ```
 app/Base/
@@ -155,9 +225,13 @@ app/Base/
     └── AuditLogger.php
 ```
 
-### `app/Modules/` - Business Process Modules
+### `app/Modules/` - Business Process Modules (Layer0)
 
-Each module is a self-contained business process (ERP, CRM, HR, etc.).
+**Fluidity:** Less Fluid — under active development.
+
+**Layer Pattern:** `app/Modules/{Layer1}/{Module}/` — Layer1 categories (`Core`, `Business`) contain modules.
+
+Each module is a self-contained business process. Subdirectories within a module (e.g., `Database/`, `Models/`) are module internals, not additional layers.
 
 ```
 app/Modules/
@@ -218,34 +292,36 @@ app/Modules/
     └── Custom/              # Custom business processes
 ```
 
-**Module Structure Template:**
+**Module Structure Template (for `app/Modules/{Layer1}/{Module}/`):**
+
+All subdirectories within a module are **module internals** — they are not assigned layer numbers.
 
 ```
-app/Modules/{ModuleName}/
-├── Database/                 # Module database layer
+app/Modules/{Layer1}/{Module}/
+├── Database/                 # Module internals: database layer
 │   ├── Migrations/           # Module migrations (auto-discovered)
 │   ├── Seeders/              # Module seeders
 │   └── Factories/            # Module factories
-├── Models/                   # Eloquent models
-├── Services/                 # Business logic services
-├── Controllers/              # HTTP controllers
-├── Livewire/                 # Livewire Volt components
-├── Events/                   # Module-specific events
-├── Listeners/                # Event listeners
-├── Hooks/                    # Extension hooks for this module
-├── Routes/                   # Module routes
-├── Views/                    # Module views
-├── Config/                   # Module configuration schema
-└── Tests/                    # Module tests
+├── Models/                   # Module internals: Eloquent models
+├── Services/                 # Module internals: business logic
+├── Controllers/              # Module internals: HTTP controllers
+├── Livewire/                 # Module internals: Livewire Volt components
+├── Events/                   # Module internals: events
+├── Listeners/                # Module internals: event listeners
+├── Hooks/                    # Module internals: extension hooks
+├── Routes/                   # Module internals: routes
+├── Views/                    # Module internals: views
+├── Config/                   # Module internals: configuration schema
+└── Tests/                    # Module internals: tests
 ```
 
-### Core vs Business: Directory Structure Rationale
+### Core vs Business: Layer1 Directory Structure Rationale
 
-The separation of modules into `Core/` and `Business/` directories is a **behavioral distinction**, not just organizational. This design aligns with Ousterhout's principles from "A Philosophy of Software Design."
+The separation of modules into `Core/` and `Business/` Layer1 directories is a **behavioral distinction**, not just organizational. This design aligns with Ousterhout's principles from "A Philosophy of Software Design."
 
 #### Behavioral Differences
 
-Core and Business modules differ in fundamental ways:
+Core and Business (Layer1 categories) differ in fundamental ways:
 
 1. **Loading Order**
    - Core modules: Loaded first, always present
@@ -263,9 +339,9 @@ Core and Business modules differ in fundamental ways:
    - Core modules: Provide foundational extension points
    - Business modules: Extend core modules, provide business-specific hooks
 
-5. **Namespace Organization**
-   - Core modules: `App\Modules\Core\User\`
-   - Business modules: `App\Modules\Business\ERP\`
+5. **Namespace Organization** (Layer0/Layer1/Module)
+   - Core modules: `App\Modules\Core\User\` → `Layer0\Layer1\Module`
+   - Business modules: `App\Modules\Business\ERP\` → `Layer0\Layer1\Module`
 
 #### Why Directory Structure Over Metadata?
 
@@ -323,7 +399,9 @@ Investing in directory structure upfront:
 
 **Note:** The directory structure provides all the behavioral distinction needed. If additional metadata (version, description, etc.) is required in the future, it can be added via `manifest.json` files similar to extensions, but this is not prescribed until there's a concrete need.
 
-### `app/Extensions/` - Extension Integration Layer
+### `app/Extensions/` - Extension Integration Layer (Layer0)
+
+**Fluidity:** Fluid — not yet implemented.
 
 ```
 app/Extensions/
@@ -340,7 +418,9 @@ app/Extensions/
     └── Installer.php
 ```
 
-### `app/Admin/` - Admin Panel
+### `app/Admin/` - Admin Panel (Layer0)
+
+**Fluidity:** Fluid — not yet implemented.
 
 ```
 app/Admin/
@@ -382,7 +462,9 @@ app/Admin/
     └── Backup/
 ```
 
-### `app/AI/` - AI Services
+### `app/AI/` - AI Services (Layer0)
+
+**Fluidity:** Fluid — not yet implemented.
 
 ```
 app/AI/
@@ -412,7 +494,9 @@ app/AI/
     └── Review.php           # Code review workflow
 ```
 
-### `app/Infrastructure/` - Infrastructure Services
+### `app/Infrastructure/` - Infrastructure Services (Layer0)
+
+**Fluidity:** Fluid — not yet implemented.
 
 ```
 app/Infrastructure/
@@ -437,7 +521,9 @@ app/Infrastructure/
     └── UpdateManager.php     # Remote updates
 ```
 
-### `app/Support/` - Support Classes
+### `app/Support/` - Support Classes (Layer0)
+
+**Fluidity:** Fluid — not yet implemented.
 
 ```
 app/Support/

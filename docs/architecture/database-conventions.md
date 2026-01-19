@@ -12,7 +12,7 @@ Belimbing uses layered naming conventions for both migration files and database 
 
 ## Migration Loading and Discovery
 
-**Implementation:** Migrations are auto-discovered from module directories via `App\Base\Database\ServiceProvider` (formerly `DatabaseServiceProvider`). The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
+**Implementation:** Migrations are auto-discovered from module directories via `App\Base\Database\ServiceProvider`. The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
 
 ### Benefits
 
@@ -45,7 +45,7 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 - Allows fine-grained sequencing of related migrations
 
 ```
-0001_01_01_xxxxxx  # Base Layer (app/Base/) - module 01_01
+0001_01_01_xxxxxx  # Base Layer - Database module (01_01)
 0001_01_03_xxxxxx  # Base Layer - Events module (01_03)
 0001_01_10_xxxxxx  # Base Layer - Configuration module (01_10)
 0002_01_03_xxxxxx  # Core Layer - Geonames module (01_03)
@@ -67,13 +67,15 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 
 #### Base Layer (`app/Base/`)
 - **Year:** `0001`
-- **Module (MM_DD):** `01_01` (Base infrastructure is a single "module")
-- **Format:** `0001_01_01_xxxxxx`
-- **Purpose:** Framework infrastructure migrations
+- **Module (MM_DD):** Each Base module gets its own `MM_DD` identifier
+- **Format:** `0001_MM_DD_xxxxxx` where `MM_DD` identifies the module
+- **Purpose:** Framework infrastructure modules (Extensions, Permissions, Config, Audit, etc.)
+- **Module assignments:**
+  - `0001_01_01_xxxxxx` - Database module
+  - `0001_01_02_xxxxxx` - To assign
+  - ... (up to `0001_12_31_xxxxxx` = 365 possible Base modules)
 - **Examples:**
-  - `0001_01_01_000000_create_base_extensions_table.php`
-  - `0001_01_01_000001_create_base_permissions_table.php`
-  - `0001_01_01_000002_create_base_audit_logs_table.php`
+  - `0001_01_01_000000_create_base_database_seeders_table.php` (Database module)
 
 #### Core Modules (`app/Modules/Core/`)
 - **Year:** `0002` (all Core modules share the same year)
@@ -222,53 +224,80 @@ app/Modules/Core/Company/
 
 ### 1. Base Layer Tables (`app/Base/`)
 
-**Prefix:** `base_*`
+**Pattern:** `base_{module}_{entity}`
 
-**Purpose:** Framework infrastructure and meta-systems (not business logic)
+**Purpose:** Framework infrastructure modules (not business logic)
+
+**Structure:** `app/Base/{Module}/` contains framework modules, each with tables prefixed `base_{module}_*`
 
 **Examples:**
 ```
-base_extensions              # Extension registry
-base_extension_hooks         # Hook registrations
-base_config_scopes           # Scope-based configuration
-base_config_values           # Configuration values
-base_permissions             # Permission definitions
-base_roles                   # Role definitions
-base_audit_logs              # Audit trail
-base_workflow_definitions    # Workflow engine definitions
-base_workflow_transitions    # Status transition rules
-base_event_listeners         # Event listener registry
-base_schema_extensions       # Dynamic schema extension metadata
+# Extensions Module (app/Base/Database/)
+base_database_seeders            # Seeders registry
+
+# Permissions Module (app/Base/Permissions/)
+base_permissions_definitions     # Permission definitions
+base_permissions_roles           # Role definitions
+base_permissions_role_users      # Role assignments
+
+# Config Module (app/Base/Config/)
+base_config_scopes              # Scope-based configuration
+base_config_values              # Configuration values
+
+# Audit Module (app/Base/Audit/)
+base_audit_logs                 # Audit trail
+base_audit_changes              # Change tracking
+
+# Workflow Module (app/Base/Workflow/)
+base_workflow_definitions       # Workflow engine definitions
+base_workflow_transitions       # Status transition rules
+
+# Events Module (app/Base/Events/)
+base_events_listeners           # Event listener registry
+base_events_subscriptions       # Event subscriptions
+
+# Schema Module (app/Base/Schema/)
+base_schema_extensions          # Dynamic schema extension metadata
 ```
 
 **Characteristics:**
-- Framework-owned infrastructure
+- Framework-owned infrastructure modules
+- Each module in `app/Base/{Module}/` owns tables with `base_{module}_*` prefix
 - Never created by end users
 - Meta-tables for the framework itself
+- Module name provides namespace within Base layer
 - Should never conflict with business domain tables
 
 ---
 
 ### 2. Core Module Tables (`app/Modules/Core/`)
 
-**Prefix:** Module name only (no `core_` prefix)
+**Pattern:** `{module}_{entity}` (no `core_` prefix)
 
 **Purpose:** Core business domain modules essential to the framework
 
+**Structure:** `app/Modules/Core/{Module}/` contains core business modules
+
 **Examples:**
 ```
-companies                    # Company module
-company_relationships        # Company module
-company_relationship_types   # Company module
-company_external_accesses    # Company module
+# Geonames Module (app/Modules/Core/Geonames/)
+geonames_countries          # Countries
+geonames_admin1             # Administrative divisions
 
-users                        # User module
-user_permissions             # User module (business permissions, not base_permissions)
+# Company Module (app/Modules/Core/Company/)
+companies                    # Main entity
+company_relationships        # Relationships
+company_relationship_types   # Relationship types
+company_external_accesses    # External access
 
-geonames_countries          # Geonames module
-geonames_admin1             # Geonames module
+# User Module (app/Modules/Core/User/)
+users                        # Main entity
+user_permissions             # User-level permissions (business, not base_permissions_*)
+user_profiles                # User profiles
 
-workflow_instances          # Workflow module (business workflows, not base_workflow_definitions)
+# Workflow Module (app/Modules/Core/Workflow/)
+workflow_instances          # Workflow instances (business workflows, not base_workflow_*)
+workflow_steps              # Workflow steps
 ```
 
 **Characteristics:**
@@ -276,57 +305,71 @@ workflow_instances          # Workflow module (business workflows, not base_work
 - Foundational to the framework
 - Module name provides namespace
 - No `core_` prefix (directory location indicates they're core)
+- No `base_` prefix (these are business domain, not infrastructure)
 
 ---
 
 ### 3. Business Module Tables (`app/Modules/Business/`)
 
-**Prefix:** Module name
+**Pattern:** `{module}_{entity}`
 
 **Purpose:** Business-specific modules added by users
 
+**Structure:** `app/Modules/Business/{Module}/` contains user-added business modules
+
 **Examples:**
 ```
-erp_orders                  # ERP module
-erp_invoices                # ERP module
-erp_products                # ERP module
+# ERP Module (app/Modules/Business/ERP/)
+erp_orders                  # Orders
+erp_invoices                # Invoices
+erp_products                # Products
 
-crm_leads                   # CRM module
-crm_opportunities           # CRM module
-crm_campaigns               # CRM module
+# CRM Module (app/Modules/Business/CRM/)
+crm_leads                   # Leads
+crm_opportunities           # Opportunities
+crm_campaigns               # Campaigns
 
-hr_employees                # HR module
-hr_departments              # HR module
-hr_payroll                  # HR module
+# HR Module (app/Modules/Business/HR/)
+hr_employees                # Employees
+hr_departments              # Departments
+hr_payroll                  # Payroll
 ```
 
 **Characteristics:**
 - User-added business modules
 - Can be installed/uninstalled
-- Module name prevents conflicts
+- Module name provides namespace and prevents conflicts
+- Same naming pattern as Core modules (distinction is directory location)
 
 ---
 
 ### 4. Vendor Extension Tables (`extensions/vendor/`)
 
-**Prefix:** `vendor_module_*`
+**Pattern:** `{vendor}_{module}_{entity}`
 
 **Purpose:** Third-party vendor extensions
 
+**Structure:** `extensions/{vendor}/{Module}/` contains vendor-specific modules
+
 **Examples:**
 ```
-sbg_companies               # SBG vendor - company extension
-sbg_company_custom_fields   # SBG vendor - company extension
-sbg_crm_leads               # SBG vendor - CRM extension
+# SBG Vendor Extensions
+sbg_companies_extensions        # SBG vendor - Company module extension
+sbg_companies_custom_fields     # SBG vendor - Company custom fields
+sbg_crm_leads                   # SBG vendor - CRM module extension
 
-acme_integrations           # ACME vendor - integration extension
-acme_workflows              # ACME vendor - workflow extension
+# ACME Vendor Extensions
+acme_integrations_api           # ACME vendor - API integrations
+acme_integrations_webhooks      # ACME vendor - Webhook handlers
+acme_workflows_custom           # ACME vendor - Custom workflows
 ```
 
 **Characteristics:**
-- Clearly marked by vendor name
-- Prevents conflicts between vendors
+- Vendor name provides top-level namespace
+- Module name provides second-level namespace
+- Prevents conflicts between vendors and across modules
 - Easy to identify third-party data
+- Can extend both Base and Module layers
 
 ---
 
@@ -341,41 +384,44 @@ acme_workflows              # ACME vendor - workflow extension
 2026+_MM_DD_xxxxxx          # Extensions (real years) - MM_DD can be actual date or module identifier
 ```
 
-### Table Prefixes by Layer
+### Table Naming Patterns by Layer
 
 ```
-base_*                      # Framework infrastructure (app/Base/)
-├── [module_name]*          # Core business modules (app/Modules/Core/)
-├── [module_name]*          # Business modules (app/Modules/Business/)
-└── vendor_module_*         # Vendor extensions (extensions/vendor/)
+Base Layer: base_{module}_{entity}        # Base Layer: Framework infrastructure (app/Base/{Module}/)
+Modules/Core Layer: {module}_{entity}     # Core Modules: Foundational business (app/Modules/Core/{Module}/)
+Modules/Business Layer: {module}_{entity} # Business Modules: User-added business (app/Modules/Business/{Module}/)
+Vendor Extensions Layer: {vendor}_{module}_{entity}    # Vendor Extensions: Third-party (extensions/{vendor}/{Module}/)
 ```
+
+**Key Points:**
+- **Base modules** use `base_{module}_*` to clearly distinguish infrastructure from business
+- **Core & Business modules** use `{module}_*` (directory location provides layer context)
+- **Vendor extensions** use `{vendor}_{module}_*` to prevent conflicts
+- Module name always provides namespace within its layer
 
 ### Visual Example
 
-**Migration Files:**
-```
-0001_01_01_000000_create_base_extensions_table.php          # Base layer
-0001_01_01_000001_create_base_permissions_table.php         # Base layer
-0002_01_03_000000_create_geonames_countries_table.php       # Core - Geonames module (runs first)
-0002_01_03_000001_create_geonames_admin1_table.php         # Core - Geonames module
-0002_01_10_000000_create_companies_table.php                # Core - Company module (depends on Geonames)
-0002_01_10_000001_create_company_relationships_table.php    # Core - Company module
-0002_01_20_000000_create_users_table.php                   # Core - User module
-0010_01_01_000000_create_erp_orders_table.php               # Business - ERP module
-0030_01_01_000000_create_hr_employees_table.php             # Business - HR module
-2026_01_15_120000_create_sbg_companies_table.php            # Extension
-```
-
 **Tables:**
 ```
-base_extensions             # Framework's extension registry
-base_permissions            # Framework's permission system
-companies                   # Core Company module
-users                       # Core User module
-erp_orders                  # Business ERP module
-crm_leads                   # Business CRM module
-sbg_companies               # SBG vendor extension
-acme_integrations           # ACME vendor extension
+# Base Layer - Framework infrastructure modules
+base_database_seeders               # Database module
+base_extensions_hooks               # Extensions module
+base_permissions_definitions        # Permissions module
+base_permissions_roles              # Permissions module
+
+# Core Modules - Foundational business
+geonames_countries                  # Geonames module
+companies                           # Company module
+company_relationships               # Company module
+users                               # User module
+
+# Business Modules - User-added business
+erp_orders                          # ERP module
+crm_leads                           # CRM module
+
+# Vendor Extensions - Third-party
+sbg_companies_extensions            # SBG vendor
+acme_integrations_api               # ACME vendor
 ```
 
 ---
@@ -390,12 +436,14 @@ acme_integrations           # ACME vendor extension
 4. **No Tooling Required**: Works with Laravel's default behavior
 5. **Define Errors Out of Existence**: Prevents accidental wrong ordering
 
-### Why `base_*` for Framework Infrastructure?
+### Why `base_{module}_*` for Framework Infrastructure?
 
 1. **Semantic Clarity**: `base_*` clearly indicates foundational framework layer
-2. **Consistency**: Matches `app/Base/` directory structure
-3. **Distinction**: Framework infrastructure ≠ business modules
-4. **Protection**: Users will never create `base_*` tables, avoiding conflicts
+2. **Consistency**: Matches `app/Base/{Module}/` directory structure
+3. **Module Namespace**: Second segment provides module-level namespace (e.g., `base_permissions_*`, `base_extensions_*`)
+4. **Distinction**: Framework infrastructure ≠ business modules
+5. **Protection**: Users will never create `base_*` tables, avoiding conflicts
+6. **Scalability**: Base layer can contain multiple modules, each with clear table ownership
 
 ### Why No `core_` for Core Modules?
 
@@ -404,7 +452,7 @@ acme_integrations           # ACME vendor extension
 3. **Business Domain First**: Even core modules are business domains, not framework plumbing
 4. **Cleaner Schema**: Shorter table names, less redundancy
 
-### Why `vendor_` for Extensions?
+### Why `{vendor}_` for Extensions?
 
 1. **Clear Ownership**: Immediately obvious who owns the data
 2. **Conflict Prevention**: Multiple vendors can extend same domains
