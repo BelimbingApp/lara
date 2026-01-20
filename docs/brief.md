@@ -2,9 +2,9 @@
 
 **Document Type:** Project Brief
 **Purpose:** High-level overview of Belimbing's vision, principles, and approach
-**Audience:** Team members, contributors, potential users, and stakeholders
-**Version:** 1.0.0
-**Last Updated:** 2025-11-10
+**Audience:** AI Coding Agents, contributors, potential adopters and adoptees, and stakeholders
+**Specific:** Laravel
+**Last Updated:** 2026-01-20
 
 ---
 
@@ -12,11 +12,13 @@
 
 Belimbing is a **business process framework** designed to democratize enterprise-grade capabilities for businesses of all sizes. Born from the recognition that the current ERP/BPM landscape is fundamentally broken — expensive, inflexible, and riddled with vendor lock-in — Belimbing provides a radically different approach: an open-source, AI-native framework that empowers businesses to build, customize, and own their operational systems.
 
+Belimbing exists to remove the SMB digitization bottleneck: making it practical to ship production-grade operational systems without hiring a large software team.
+
 **What Belimbing Is:**
 - A **framework** for building customizable business processes (ERP, CRM, HR, logistics, or custom processes)
-- **Not** a pre-built application that you configure
 - **Not** a SaaS platform that hosts your data
 - **Not** chasing speed to market at the expense of quality
+- **DIY-enabling** - Businesses (and the developers they partner with) build their own operational systems instead of buying inflexible off-the-shelf solutions
 
 **What Makes Belimbing Different:**
 - **Open Source Forever (AGPLv3)**: Self-hosted, transparent, free from licensing fees and vendor lock-in
@@ -42,6 +44,11 @@ The current business process management landscape is fundamentally broken:
 - Endless expensive customization cycles
 - Heavy maintenance burden requiring specialized IT teams
 - Escalating subscription fees with cloud platforms
+
+**Digitization Bottleneck:**
+- SMBs often cannot hire and manage a full software team to digitize operations
+- Off-the-shelf software rarely matches unique processes without painful workarounds
+- Custom software is too slow and costly for day-to-day operational change
 
 **Vendor Lock-In:**
 - Trapped in proprietary ecosystems
@@ -70,8 +77,8 @@ The current business process management landscape is fundamentally broken:
 
 ### The Market Gap
 
-What businesses actually need is not another ERP application, but a **framework** that enables them to build business processes with:
-- Modern AI assistance
+What businesses actually need is a **framework that lets them DIY their own business processes** at low costs while still reaching production-grade quality. They need:
+- Modern AI assistance (making sophisticated customization accessible without deep technical expertise)
 - Clean, maintainable architecture
 - Full ownership and control
 - Incremental adoption
@@ -138,7 +145,7 @@ Belimbing addresses these problems through five immutable core principles:
 
 **Code Quality:**
 - Type-safe with full inference
-- > 80% test coverage for critical paths
+- Test coverage for critical paths
 - Automated static analysis (linting, type checking, security scanning)
 - Domain-Driven Design for business logic
 - Beautiful, accessible, responsive UI with design system
@@ -155,7 +162,7 @@ Belimbing addresses these problems through five immutable core principles:
 
 ---
 
-## Target Users
+## Target Market
 
 ### Primary: Businesses Seeking Operational Freedom
 
@@ -163,6 +170,7 @@ Belimbing addresses these problems through five immutable core principles:
 - Currently priced out of enterprise-grade capabilities
 - Want to escape expensive ERP/SaaS ecosystems
 - Need cost-effective, flexible solutions
+- Need to digitize and iterate on operations without building a large IT org
 - Value infrastructure and data control
 
 **Enterprises with Technical Vision:**
@@ -174,6 +182,7 @@ Belimbing addresses these problems through five immutable core principles:
 ### Secondary: Independent Developers & Software Agencies
 
 **Value Proposition:**
+- **Enable SMB DIY:** Bridge the gap between non-technical businesses and sophisticated business system building
 - Build custom business solutions efficiently on solid foundation
 - Deliver exceptional value to clients cost-effectively
 - Differentiate through implementation excellence
@@ -185,6 +194,8 @@ Belimbing addresses these problems through five immutable core principles:
 
 ### For Businesses
 
+- **Transition from buying software to building their own operational systems**
+- Ship faster than traditional ERP projects, aiming to match or exceed commercial systems in quality
 - Implement enterprise-grade business processes at 10% of traditional costs
 - Own infrastructure and data completely
 - Adopt modern development practices (git, dev/staging/prod environments)
@@ -218,6 +229,11 @@ Belimbing addresses these problems through five immutable core principles:
 
 ### Architecture Foundations
 
+**Current Implementation (Laravel-Based)**
+- PHP 8.2+ on Laravel 12+ (Livewire Volt + MaryUI)
+- Deep modular structure under `app/Modules/*/*` (domain modules with models, migrations, seeders)
+- Base framework extensions under `app/Base/*` (e.g., module-aware migrations and seeding)
+
 **1. Git-Native Architecture**
 - All code management through git (development → staging → production → main for upstream)
 - Built-in CI/CD in admin panel
@@ -239,26 +255,23 @@ Belimbing addresses these problems through five immutable core principles:
 **4. Extension Management System**
 - Pre-installation validation (compatibility, dependencies, security)
 - Runtime safety (resource limits, permissions, crash isolation)
+- Laravel-first extension surface area (Service Providers, config overrides, module migrations/seeders)
 - Registry and marketplace integration
 - Rollback capability for failed extensions
 
 ### Performance & Quality
 
-- Near-bare-metal performance through architecture choices
-- WebAssembly for performance-critical frontend operations
+- Performance-first Laravel through architecture choices (query discipline, caching, background jobs)
 - Aggressive caching (memory, disk, distributed)
 - Lazy loading and database optimization
 - Beautiful, accessible UI with 60fps interactions
 
-### Programming Language (TBD)
+### Platform (Current)
 
-**Requirements:**
-- AI-ready ecosystem (mature OR emerging with strong trajectory like Mojo)
-- Close to bare-metal performance (compiled or JIT)
-- Native parallel processing support (GPU + multi-core CPU)
-- Strong type safety
-- Metaprogramming capabilities (reflection, code generation, AST manipulation)
-- Future-ready (AI field evolves rapidly)
+- **Backend:** Laravel 12+ (PHP 8.2+)
+- **UI:** Livewire Volt + MaryUI
+- **Frontend tooling:** Vite
+- **Module system:** `app/Modules` with module-aware migrations/seed registry
 
 ---
 
@@ -295,7 +308,7 @@ Belimbing addresses these problems through five immutable core principles:
 
 **Infrastructure:**
 - Linux server (modest hardware supported)
-- Database (TBD)
+- Database (PostgreSQL likely; any Laravel-supported database possible)
 - Redis for caching
 - Internet connection for git, updates, AI models (works behind corporate firewalls with outbound HTTPS)
 
