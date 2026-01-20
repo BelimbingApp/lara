@@ -1,9 +1,9 @@
-# Belimbing File Structure Guidelines
+# File Structure Conventions
 
 **Document Type:** Architecture Specification
 **Purpose:** Define the file and directory structure for Belimbing framework
 **Based On:** Project Brief v1.0.0, Ousterhout's "A Philosophy of Software Design"
-**Last Updated:** 2026-01-18
+**Last Updated:** 2026-01-19
 
 ---
 
@@ -588,8 +588,7 @@ extensions/
 
 ```
 database/
-├── migrations/               # Base layer migrations only (0001_01_01_*)
-│   ├── 0001_01_01_000000_create_users_table.php
+├── migrations/               # Laravel built-in migrations only (cache, jobs, etc.)
 │   ├── 0001_01_01_000001_create_cache_table.php
 │   └── 0001_01_01_000002_create_jobs_table.php
 │
@@ -598,11 +597,14 @@ database/
 │
 └── .gitignore
 
-# Module migrations are in their respective modules:
-# app/Modules/Core/Geonames/Database/Migrations/0002_01_03_*
-# app/Modules/Core/Company/Database/Migrations/0002_01_10_*
-# app/Modules/Core/User/Database/Migrations/0002_01_20_*
-# app/Modules/Business/ERP/Database/Migrations/0010_01_01_*
+# ALL module migrations are auto-discovered from {Module}/Database/Migrations/
+# by App\Base\Database\ServiceProvider:
+#
+# Base modules:     app/Base/Database/Database/Migrations/0001_01_01_*
+# Core modules:     app/Modules/Core/Geonames/Database/Migrations/0002_01_03_*
+#                   app/Modules/Core/Company/Database/Migrations/0002_01_10_*
+#                   app/Modules/Core/User/Database/Migrations/0002_01_20_*
+# Business modules: app/Modules/Business/ERP/Database/Migrations/0010_01_01_*
 ```
 
 ---

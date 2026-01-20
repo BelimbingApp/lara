@@ -2,7 +2,7 @@
 
 **Document Type:** Architecture Specification
 **Purpose:** Define database table and migration file naming conventions for Belimbing framework
-**Last Updated:** 2026-01-14
+**Last Updated:** 2026-01-19
 
 ## Overview
 
@@ -21,6 +21,30 @@ Belimbing uses layered naming conventions for both migration files and database 
 3. **Self-Contained Modules**: Each module owns its database layer (migrations, seeders, factories)
 4. **Enforced Ordering**: Year-based naming ensures Base → Core → Business → Extensions
 5. **Deep Modules**: Migrations live with the code they support
+
+### Module-Specific Migration Loading
+
+BLB's custom `migrate` command supports a `--module` option to selectively load migrations from specific modules:
+
+```bash
+# Run migrations for a single module (case-sensitive)
+php artisan migrate --module=Geonames
+
+# Run migrations for multiple modules (comma-delimited)
+php artisan migrate --module=Geonames,Users,Company
+
+# Run migrations for all modules (wildcard)
+php artisan migrate --module=*
+```
+
+**Conventions:**
+
+1. **Comma-Delimited:** Multiple modules are separated by commas (e.g., `--module=Foo,Bar,Baz`)
+2. **Case-Sensitive:** Module names must match the directory name exactly (e.g., `Geonames`, not `geonames`)
+3. **Wildcard Support:** Use `*` to load all modules (e.g., `--module=*`)
+4. **Auto-Discovery Paths:** Searches `app/Base/*/Database/Migrations` and `app/Modules/*/*/Database/Migrations`
+
+**Implementation:** See `App\Base\Database\MigrateCommand::getModules()` for parsing logic.
 
 ---
 
@@ -71,11 +95,12 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 - **Format:** `0001_MM_DD_xxxxxx` where `MM_DD` identifies the module
 - **Purpose:** Framework infrastructure modules (Extensions, Permissions, Config, Audit, etc.)
 - **Module assignments:**
-  - `0001_01_01_xxxxxx` - Database module
+  - `0001_01_01_xxxxxx` - Database module (`app/Base/Database/`)
   - `0001_01_02_xxxxxx` - To assign
   - ... (up to `0001_12_31_xxxxxx` = 365 possible Base modules)
+- **Location:** `app/Base/{Module}/Database/Migrations/` (auto-discovered)
 - **Examples:**
-  - `0001_01_01_000000_create_base_database_seeders_table.php` (Database module)
+  - `app/Base/Database/Database/Migrations/0001_01_01_000000_create_base_database_seeders_table.php`
 
 #### Core Modules (`app/Modules/Core/`)
 - **Year:** `0002` (all Core modules share the same year)
@@ -154,10 +179,22 @@ This allows fine-grained ordering within each module while maintaining clear lay
 
 ### Module Database Structure
 
-Each module is self-contained with its own database layer:
+All modules (within Base, Core, Business) are self-contained with their own database layer. Migrations are auto-discovered from `{Module}/Database/Migrations/` by `App\Base\Database\ServiceProvider`.
 
+**Base Module Structure (`app/Base/{Module}/`):**
 ```
-app/Modules/Core/{ModuleName}/
+app/Base/{ModuleName}/
+├── Database/
+│   └── Migrations/           # Module-specific migrations (0001_MM_DD_*)
+│       ├── 0001_MM_DD_000000_create_{table}_table.php
+│       └── ...
+├── ServiceProvider.php       # Module service provider
+└── ...                       # Other module files
+```
+
+**Core/Business Module Structure (`app/Modules/{Layer}/{Module}/`):**
+```
+app/Modules/{Layer}/{ModuleName}/
 ├── Database/
 │   ├── Migrations/           # Module-specific migrations
 │   │   ├── 0002_MM_DD_000000_create_{table}_table.php
@@ -181,7 +218,17 @@ app/Modules/Core/{ModuleName}/
 - **Testability**: Module tests can seed their own data independently
 - **Discovery**: Auto-discovered without manual registration
 
-**Example - Geonames Module:**
+**Example - Database Module (Base):**
+```
+app/Base/Database/
+├── Database/
+│   └── Migrations/
+│       └── 0001_01_01_000000_create_base_database_seeders_table.php
+├── MigrateCommand.php
+└── ServiceProvider.php
+```
+
+**Example - Geonames Module (Core):**
 ```
 app/Modules/Core/Geonames/
 ├── Database/
@@ -378,11 +425,13 @@ acme_workflows_custom           # ACME vendor - Custom workflows
 ### Migration Years by Layer
 
 ```
-0001_01_01_xxxxxx           # Base Layer (app/Base/) - single module
-0002_MM_DD_xxxxxx           # Core Modules (app/Modules/Core/) - MM_DD identifies module
-0010+_MM_DD_xxxxxx          # Business Modules (app/Modules/Business/) - year = category, MM_DD = module
+0001_MM_DD_xxxxxx           # Base Layer (app/Base/{Module}/Database/Migrations/)
+0002_MM_DD_xxxxxx           # Core Modules (app/Modules/Core/{Module}/Database/Migrations/)
+0010+_MM_DD_xxxxxx          # Business Modules (app/Modules/Business/{Module}/Database/Migrations/)
 2026+_MM_DD_xxxxxx          # Extensions (real years) - MM_DD can be actual date or module identifier
 ```
+
+**Note:** All migrations are auto-discovered from `{Module}/Database/Migrations/` directories by `App\Base\Database\ServiceProvider`.
 
 ### Table Naming Patterns by Layer
 
