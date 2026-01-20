@@ -5,6 +5,7 @@
 
 namespace App\Base\Database;
 
+use App\Base\Database\Models\SeederRegistry;
 use Illuminate\Database\Console\Migrations\MigrateCommand as IlluminateMigrateCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputOption;
@@ -22,7 +23,7 @@ class MigrateCommand extends IlluminateMigrateCommand
     /**
      * Configure the command options by adding --module to the parent definition.
      *
-     * @inheritdoc
+     * {@inheritdoc}
      */
     protected function configure(): void
     {
@@ -32,27 +33,47 @@ class MigrateCommand extends IlluminateMigrateCommand
             new InputOption(
                 'module',
                 null,
-                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
-                'Load migrations by module(s)'
-            )
+                InputOption::VALUE_REQUIRED,
+                'Load migrations by module(s) (comma-delimited, case-sensitive)',
+            ),
         );
+    }
+
+    /**
+     * Get the modules specified via --module option.
+     *
+     * Parses comma-delimited module names into an array.
+     * Returns empty array if no modules specified.
+     * Supports "*" wildcard to match all modules.
+     *
+     * @return array Array of case-sensitive module names (or ["*"] for all modules)
+     */
+    protected function getModules(): array
+    {
+        $moduleOption = $this->option('module');
+
+        if (! $moduleOption) {
+            return [];
+        }
+
+        // Split by comma and trim whitespace
+        $modules = array_map('trim', explode(',', $moduleOption));
+
+        // Filter out empty strings
+        return array_filter($modules, fn ($module) => $module !== '');
     }
 
     /**
      * Execute the console command.
      *
-     * @inheritdoc
+     * Extends parent by loading module-specific migrations before running.
+     * If --module option is provided, migrations are loaded from specified modules.
      */
-    public function handle()
+    public function handle(): int
     {
-        // Load module migrations if --module option is provided
-        $modules = $this->option('module');
-        if ($modules) {
-            foreach ((array) $modules as $module) {
-                if ($module !== '') {
-                    $this->loadModuleMigrations($module);
-                }
-            }
+        $modules = $this->getModules();
+        foreach ($modules as $module) {
+            $this->loadModuleMigrations($module);
         }
 
         // Call parent handle() to run migrations
@@ -60,55 +81,108 @@ class MigrateCommand extends IlluminateMigrateCommand
     }
 
     /**
-     * Load migrations for a specific module with case-insensitive matching.
+     * Run the pending migrations.
+     *
+     * Overrides parent to handle module-aware seeding.
+     */
+    protected function runMigrations(): void
+    {
+        $this->migrator->usingConnection(
+            $this->option('database'),
+            function () {
+                $this->prepareDatabase();
+
+                // Next, we will check to see if a path option has been defined. If it has
+                // we will use the path relative to the root of this installation folder
+                // so that migrations may be run for any path within the applications.
+                $this->migrator
+                    ->setOutput($this->output)
+                    ->run($this->getMigrationPaths(), [
+                        'pretend' => $this->option('pretend'),
+                        'step' => $this->option('step'),
+                    ]);
+
+                // Handle seeding with module-aware auto-discovery
+                if ($this->option('seed') && ! $this->option('pretend')) {
+                    $this->runModuleSeeders();
+                }
+            },
+        );
+    }
+
+    /**
+     * Run seeders with module-aware registry-based execution.
+     *
+     * If --seeder is provided, uses that seeder (overrides registry).
+     * If --module is provided, only seeds matching modules.
+     * Otherwise, seeds all pending seeders from registry.
+     */
+    protected function runModuleSeeders(): void
+    {
+        // If --seeder is explicitly provided, use it (overrides registry)
+        if ($this->option('seeder')) {
+            $this->call('db:seed', [
+                '--class' => $this->option('seeder'),
+                '--force' => true,
+            ]);
+
+            return;
+        }
+
+        // Query registry for runnable seeders (pending or failed)
+        // Order by migration_file to ensure correct execution order
+        $seedersToRun = SeederRegistry::runnable()
+            ->forModules($this->getModules())
+            ->inMigrationOrder()
+            ->get();
+
+        // Run each seeder with status tracking
+        foreach ($seedersToRun as $seeder) {
+            // Mark as running, clear previous error if retrying
+            $seeder->markAsRunning();
+
+            try {
+                $this->call('db:seed', [
+                    '--class' => $seeder->seeder_class,
+                    '--force' => true,
+                ]);
+
+                // Mark as completed
+                $seeder->markAsCompleted();
+            } catch (\Exception $e) {
+                // Mark as failed
+                $seeder->markAsFailed($e->getMessage());
+
+                // Re-throw to stop execution
+                throw $e;
+            }
+        }
+    }
+
+    /**
+     * Load migrations for a specific module with case-sensitive matching.
      * Searches in Base and Modules layers for the specified module name.
      *
-     * @param string $moduleName case-insensitive, "*" for all modules
+     * @param  string  $moduleName  case-sensitive, "*" for all modules
      */
     protected function loadModuleMigrations(string $moduleName): void
     {
         $migrationPaths = [];
 
         $layers = [
-            app_path('Base') => '/*',
-            app_path('Modules') => '/*/*',
+            app_path('Base') => "/$moduleName/Database/Migrations",
+            app_path('Modules') => "/*/$moduleName/Database/Migrations",
         ];
         foreach ($layers as $appPath => $pattern) {
-            if (is_dir($appPath)) {
-                $moduleDirs = glob($appPath . $pattern, GLOB_ONLYDIR);
-                $this->addMigrationPaths($migrationPaths, $moduleDirs, $moduleName);
+            $paths = glob($appPath.$pattern, GLOB_ONLYDIR);
+            if (! $paths) {
+                continue;
             }
+            $migrationPaths = array_merge($migrationPaths, $paths);
         }
 
         foreach ($migrationPaths as $path) {
             $this->migrator->path($path);
-        }
-    }
-
-    /**
-     * Add migration paths for matching modules to the given array.
-     *
-     * Searches through module directories and adds migration paths for directories
-     * that match the specified module name (case-insensitive). Supports "*" wildcard
-     * to include all modules. Migration paths are added as: {moduleDir}/Database/Migrations
-     *
-     * @param array $migrationPaths Reference to array that will be populated with paths
-     * @param array $moduleDirs Array of module directory paths to search
-     * @param string $moduleName Module name to match (case-insensitive), or "*" for all modules
-     */
-    protected function addMigrationPaths(array &$migrationPaths, array $moduleDirs, string $moduleName): void
-    {
-        foreach ($moduleDirs as $moduleDir) {
-            // If not wildcard, skip directories that don't match module name (case-insensitive)
-            if ($moduleName !== '*' && strcasecmp(basename($moduleDir), $moduleName) !== 0) {
-                continue;
-            }
-
-            // Check if migrations directory exists for this module
-            $migrationPath = "$moduleDir/Database/Migrations";
-            if (is_dir($migrationPath)) {
-                $migrationPaths[] = $migrationPath;
-            }
         }
     }
 }
