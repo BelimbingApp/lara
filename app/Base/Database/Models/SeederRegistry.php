@@ -132,16 +132,14 @@ class SeederRegistry extends Model
 
     /**
      * Scope to filter seeders by module name(s).
-     *
-     * @param  array|string  $modules
      */
     #[Scope]
     protected function forModules(Builder $query, array|string $modules): Builder
     {
         $modules = (array) $modules;
 
-        // If wildcard "*" is present, don't filter
-        if (in_array('*', $modules)) {
+        // If empty array or wildcard '*' is present, don't filter
+        if ($modules === [] || in_array('*', $modules, true)) {
             return $query;
         }
 
@@ -161,18 +159,18 @@ class SeederRegistry extends Model
      * Register a seeder in the registry.
      *
      * @param  string  $seederClass  Fully qualified seeder class name
-     * @param  string  $moduleName  Module name (e.g., 'Geonames')
-     * @param  string  $modulePath  Module path (e.g., 'app/Modules/Core/Geonames')
+     * @param  string|null  $moduleName  Module name (e.g., 'Geonames')
+     * @param  string|null  $modulePath  Module path (e.g., 'app/Modules/Core/Geonames')
      * @param  string  $migrationFile  Migration file that registered this seeder
      */
     public static function register(
         string $seederClass,
-        string $moduleName,
-        string $modulePath,
+        ?string $moduleName,
+        ?string $modulePath,
         string $migrationFile
     ): void {
         // Use updateOrCreate to handle rollback/re-run: reset status to pending
-        self::updateOrCreate(
+        self::query()->updateOrCreate(
             ['seeder_class' => $seederClass],
             [
                 'module_name' => $moduleName,
@@ -192,7 +190,7 @@ class SeederRegistry extends Model
      */
     public static function unregister(string $seederClass): void
     {
-        self::where('seeder_class', $seederClass)->delete();
+        self::query()->where('seeder_class', $seederClass)->delete();
     }
 
     /**

@@ -5,6 +5,7 @@
 
 namespace App\Base\Database;
 
+use App\Base\Database\Concerns\InteractsWithModuleMigrations;
 use App\Base\Database\Models\SeederRegistry;
 use Illuminate\Database\Console\Migrations\MigrateCommand as IlluminateMigrateCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -13,6 +14,8 @@ use Symfony\Component\Console\Input\InputOption;
 #[AsCommand(name: 'migrate')]
 class MigrateCommand extends IlluminateMigrateCommand
 {
+    use InteractsWithModuleMigrations;
+
     /**
      * The console command description.
      *
@@ -40,30 +43,6 @@ class MigrateCommand extends IlluminateMigrateCommand
     }
 
     /**
-     * Get the modules specified via --module option.
-     *
-     * Parses comma-delimited module names into an array.
-     * Returns empty array if no modules specified.
-     * Supports "*" wildcard to match all modules.
-     *
-     * @return array Array of case-sensitive module names (or ["*"] for all modules)
-     */
-    protected function getModules(): array
-    {
-        $moduleOption = $this->option('module');
-
-        if (! $moduleOption) {
-            return [];
-        }
-
-        // Split by comma and trim whitespace
-        $modules = array_map('trim', explode(',', $moduleOption));
-
-        // Filter out empty strings
-        return array_filter($modules, fn ($module) => $module !== '');
-    }
-
-    /**
      * Execute the console command.
      *
      * Extends parent by loading module-specific migrations before running.
@@ -71,12 +50,8 @@ class MigrateCommand extends IlluminateMigrateCommand
      */
     public function handle(): int
     {
-        $modules = $this->getModules();
-        foreach ($modules as $module) {
-            $this->loadModuleMigrations($module);
-        }
+        $this->loadAllModuleMigrations();
 
-        // Call parent handle() to run migrations
         return parent::handle();
     }
 
@@ -156,33 +131,6 @@ class MigrateCommand extends IlluminateMigrateCommand
                 // Re-throw to stop execution
                 throw $e;
             }
-        }
-    }
-
-    /**
-     * Load migrations for a specific module with case-sensitive matching.
-     * Searches in Base and Modules layers for the specified module name.
-     *
-     * @param  string  $moduleName  case-sensitive, "*" for all modules
-     */
-    protected function loadModuleMigrations(string $moduleName): void
-    {
-        $migrationPaths = [];
-
-        $layers = [
-            app_path('Base') => "/$moduleName/Database/Migrations",
-            app_path('Modules') => "/*/$moduleName/Database/Migrations",
-        ];
-        foreach ($layers as $appPath => $pattern) {
-            $paths = glob($appPath.$pattern, GLOB_ONLYDIR);
-            if (! $paths) {
-                continue;
-            }
-            $migrationPaths = array_merge($migrationPaths, $paths);
-        }
-
-        foreach ($migrationPaths as $path) {
-            $this->migrator->path($path);
         }
     }
 }

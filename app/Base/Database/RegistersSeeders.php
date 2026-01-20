@@ -62,9 +62,10 @@ trait RegistersSeeders
      */
     protected function extractModuleName(?string $modulePath): ?string
     {
-        if (!$modulePath) {
+        if (! $modulePath) {
             return null;
         }
+
         return basename($modulePath);
     }
 }
