@@ -3,12 +3,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-namespace App\Base\Database;
+namespace App\Base\Database\Console\Commands;
 
 use App\Base\Database\Concerns\InteractsWithModuleMigrations;
-use Illuminate\Database\Console\Migrations\StatusCommand as IlluminateStatusCommand;
+use Illuminate\Database\Console\Migrations\ResetCommand as IlluminateResetCommand;
 
-class StatusCommand extends IlluminateStatusCommand
+class ResetCommand extends IlluminateResetCommand
 {
     use InteractsWithModuleMigrations;
 
@@ -17,12 +17,12 @@ class StatusCommand extends IlluminateStatusCommand
      *
      * @var string
      */
-    protected $description = 'Show the status of each migration (with module support)';
+    protected $description = 'Rollback all database migrations (with module support)';
 
     /**
      * Execute the console command.
      *
-     * Extends parent by loading module-specific migrations before reporting status.
+     * Extends parent by loading module-specific migrations before resetting.
      */
     public function handle(): int
     {

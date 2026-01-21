@@ -5,6 +5,11 @@
 
 namespace App\Base\Database;
 
+use App\Base\Database\Console\Commands\MigrateCommand;
+use App\Base\Database\Console\Commands\RefreshCommand;
+use App\Base\Database\Console\Commands\ResetCommand;
+use App\Base\Database\Console\Commands\RollbackCommand;
+use App\Base\Database\Console\Commands\StatusCommand;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Console\Migrations\MigrateCommand as LaravelMigrateCommand;
 use Illuminate\Database\Console\Migrations\RefreshCommand as LaravelRefreshCommand;
@@ -32,9 +37,6 @@ class ServiceProvider extends BaseServiceProvider
             );
         });
 
-        // Override Laravel's RollbackCommand by extending the binding
-        // Laravel's MigrationServiceProvider (deferred) binds RollbackCommand::class as a singleton,
-        // so we extend the class name. The extend() callback runs when the binding is resolved.
         $this->app->extend(LaravelRollbackCommand::class, function ($command, $app) {
             return new RollbackCommand($app->make(Migrator::class));
         });
