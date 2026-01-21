@@ -2,7 +2,7 @@
 
 **Document Type:** Architecture Specification
 **Purpose:** Define database table and migration file naming conventions for Belimbing framework
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-01-20
 
 ## Overview
 
@@ -12,15 +12,14 @@ Belimbing uses layered naming conventions for both migration files and database 
 
 ## Migration Loading and Discovery
 
-**Implementation:** Migrations are auto-discovered from module directories via `App\Base\Database\ServiceProvider`. The service provider looks for the directories `Database/Migrations` in each module to load the migrations files, which will be sorted by filename (timestamp prefix) order by Laravel.
+**Implementation:** Migrations are auto-discovered from module directories when migration commands execute. The `App\Base\Database\ServiceProvider` registers custom migration commands that use `InteractsWithModuleMigrations` trait to discover `Database/Migrations` directories via glob patterns. Migration files are sorted by filename (timestamp prefix) order by Laravel.
 
 ### Benefits
 
-1. **Zero HTTP Overhead**: Auto-discovery only runs during console commands (`runningInConsole()`)
-2. **No Manual Registration**: Glob-based discovery finds all module migrations automatically
-3. **Self-Contained Modules**: Each module owns its database layer (migrations, seeders, factories)
-4. **Enforced Ordering**: Year-based naming ensures Base → Core → Business → Extensions
-5. **Deep Modules**: Migrations live with the code they support
+1. **No Manual Registration**: Glob-based discovery finds all module migrations automatically
+2. **Self-Contained Modules**: Each module owns its database layer (migrations, seeders, factories)
+3. **Enforced Ordering**: Year-based naming ensures Base → Core → Business → Extensions
+4. **Deep Modules**: Migrations live with the code they support
 
 ### Module-Specific Migration Loading
 
@@ -44,8 +43,6 @@ php artisan migrate --module=*
 3. **Wildcard Support:** Use `*` to load all modules (e.g., `--module=*`)
 4. **Auto-Discovery Paths:** Searches `app/Base/*/Database/Migrations` and `app/Modules/*/*/Database/Migrations`
 
-**Implementation:** See `App\Base\Database\MigrateCommand::getModules()` for parsing logic.
-
 ---
 
 ## Migration File Naming Conventions
@@ -68,7 +65,7 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 - **Time (`HHMMSS`)**: Used for ordering migrations within each module
 - Allows fine-grained sequencing of related migrations
 
-```
+```bash
 0001_01_01_xxxxxx  # Base Layer - Database module (01_01)
 0001_01_03_xxxxxx  # Base Layer - Events module (01_03)
 0001_01_10_xxxxxx  # Base Layer - Configuration module (01_10)
@@ -182,7 +179,7 @@ This allows fine-grained ordering within each module while maintaining clear lay
 All modules (within Base, Core, Business) are self-contained with their own database layer. Migrations are auto-discovered from `{Module}/Database/Migrations/` by `App\Base\Database\ServiceProvider`.
 
 **Base Module Structure (`app/Base/{Module}/`):**
-```
+```bash
 app/Base/{ModuleName}/
 ├── Database/
 │   └── Migrations/           # Module-specific migrations (0001_MM_DD_*)
@@ -193,7 +190,7 @@ app/Base/{ModuleName}/
 ```
 
 **Core/Business Module Structure (`app/Modules/{Layer}/{Module}/`):**
-```
+```bash
 app/Modules/{Layer}/{ModuleName}/
 ├── Database/
 │   ├── Migrations/           # Module-specific migrations
@@ -219,7 +216,7 @@ app/Modules/{Layer}/{ModuleName}/
 - **Discovery**: Auto-discovered without manual registration
 
 **Example - Database Module (Base):**
-```
+```bash
 app/Base/Database/
 ├── Database/
 │   └── Migrations/
@@ -229,7 +226,7 @@ app/Base/Database/
 ```
 
 **Example - Geonames Module (Core):**
-```
+```bash
 app/Modules/Core/Geonames/
 ├── Database/
 │   ├── Migrations/
@@ -244,7 +241,7 @@ app/Modules/Core/Geonames/
 ```
 
 **Example - Company Module:**
-```
+```bash
 app/Modules/Core/Company/
 ├── Database/
 │   ├── Migrations/
@@ -278,7 +275,7 @@ app/Modules/Core/Company/
 **Structure:** `app/Base/{Module}/` contains framework modules, each with tables prefixed `base_{module}_*`
 
 **Examples:**
-```
+```bash
 # Extensions Module (app/Base/Database/)
 base_database_seeders            # Seeders registry
 
@@ -326,7 +323,7 @@ base_schema_extensions          # Dynamic schema extension metadata
 **Structure:** `app/Modules/Core/{Module}/` contains core business modules
 
 **Examples:**
-```
+```bash
 # Geonames Module (app/Modules/Core/Geonames/)
 geonames_countries          # Countries
 geonames_admin1             # Administrative divisions
@@ -365,7 +362,7 @@ workflow_steps              # Workflow steps
 **Structure:** `app/Modules/Business/{Module}/` contains user-added business modules
 
 **Examples:**
-```
+```bash
 # ERP Module (app/Modules/Business/ERP/)
 erp_orders                  # Orders
 erp_invoices                # Invoices
@@ -399,7 +396,7 @@ hr_payroll                  # Payroll
 **Structure:** `extensions/{vendor}/{Module}/` contains vendor-specific modules
 
 **Examples:**
-```
+```bash
 # SBG Vendor Extensions
 sbg_companies_extensions        # SBG vendor - Company module extension
 sbg_companies_custom_fields     # SBG vendor - Company custom fields
@@ -424,7 +421,7 @@ acme_workflows_custom           # ACME vendor - Custom workflows
 
 ### Migration Years by Layer
 
-```
+```bash
 0001_MM_DD_xxxxxx           # Base Layer (app/Base/{Module}/Database/Migrations/)
 0002_MM_DD_xxxxxx           # Core Modules (app/Modules/Core/{Module}/Database/Migrations/)
 0010+_MM_DD_xxxxxx          # Business Modules (app/Modules/Business/{Module}/Database/Migrations/)
@@ -435,7 +432,7 @@ acme_workflows_custom           # ACME vendor - Custom workflows
 
 ### Table Naming Patterns by Layer
 
-```
+```bash
 Base Layer: base_{module}_{entity}        # Base Layer: Framework infrastructure (app/Base/{Module}/)
 Modules/Core Layer: {module}_{entity}     # Core Modules: Foundational business (app/Modules/Core/{Module}/)
 Modules/Business Layer: {module}_{entity} # Business Modules: User-added business (app/Modules/Business/{Module}/)
@@ -451,7 +448,7 @@ Vendor Extensions Layer: {vendor}_{module}_{entity}    # Vendor Extensions: Thir
 ### Visual Example
 
 **Tables:**
-```
+```bash
 # Base Layer - Framework infrastructure modules
 base_database_seeders               # Database module
 base_extensions_hooks               # Extensions module
@@ -512,6 +509,4 @@ acme_integrations_api               # ACME vendor
 ## Related Documentation
 
 - `docs/architecture/file-structure.md` - Complete file structure and module organization
-- `docs/development/module-migration-restructure-summary.md` - Module-based migration restructure summary (2026-01-14)
-- `database/AGENTS.md` - Database migration guidelines and best practices
 - `docs/todo/architecture-migration.md` - Migration roadmap
