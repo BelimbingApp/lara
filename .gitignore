@@ -4,9 +4,7 @@
 /public/build
 /public/hot
 /public/storage
-/storage/*.key
-/storage/pail
-/storage/app/ssl
+/storage
 Homestead.json
 Homestead.yaml
 
