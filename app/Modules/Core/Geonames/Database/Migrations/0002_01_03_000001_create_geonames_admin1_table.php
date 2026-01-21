@@ -17,12 +17,12 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create("geonames_admin1", function (Blueprint $table) {
+        Schema::create('geonames_admin1', function (Blueprint $table) {
             $table->id();
-            $table->string("code", 20)->unique()->index();
-            $table->string("name");
-            $table->string("alt_name")->nullable();
-            $table->unsignedInteger("geoname_id")->nullable()->unique();
+            $table->string('code', 20)->unique()->index();
+            $table->string('name');
+            $table->string('alt_name')->nullable();
+            $table->unsignedInteger('geoname_id')->nullable()->unique();
             $table->timestamps();
         });
 
@@ -35,7 +35,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists("geonames_admin1");
+        Schema::dropIfExists('geonames_admin1');
         $this->unregisterSeeder(Admin1Seeder::class);
     }
 };
