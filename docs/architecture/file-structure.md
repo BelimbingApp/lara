@@ -238,7 +238,7 @@ app/Modules/
 ├── Core/                    # Core framework modules
 │   ├── Company/             # Company management module
 │   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_10_*)
+│   │   │   ├── Migrations/  # Module-specific migrations
 │   │   │   ├── Seeders/     # Module-specific seeders
 │   │   │   └── Factories/   # Module-specific factories
 │   │   ├── Models/
@@ -249,13 +249,13 @@ app/Modules/
 │   │
 │   ├── Geonames/            # Geonames module
 │   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_03_*)
+│   │   │   ├── Migrations/  # Module-specific migrations
 │   │   │   └── Seeders/
 │   │   └── Models/
 │   │
 │   ├── User/                # User management module
 │   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations (0002_01_20_*)
+│   │   │   ├── Migrations/  # Module-specific migrations
 │   │   │   ├── Seeders/
 │   │   │   └── Factories/
 │   │   ├── Models/
@@ -280,15 +280,15 @@ app/Modules/
 └── Business/                # Business process modules (examples)
     ├── ERP/                 # ERP module
     │   └── Database/
-    │       ├── Migrations/  # Module-specific migrations (0010_01_01_*)
+    │       ├── Migrations/  # Module-specific migrations
     │       ├── Seeders/
     │       └── Factories/
     ├── CRM/                 # CRM module
     │   └── Database/
-    │       └── Migrations/  # Module-specific migrations (0020_01_01_*)
+    │       └── Migrations/  # Module-specific migrations
     ├── HR/                  # HR module
     │   └── Database/
-    │       └── Migrations/  # Module-specific migrations (0030_01_01_*)
+    │       └── Migrations/  # Module-specific migrations
     └── Custom/              # Custom business processes
 ```
 
@@ -600,11 +600,11 @@ database/
 # ALL module migrations are auto-discovered from {Module}/Database/Migrations/
 # by App\Base\Database\ServiceProvider:
 #
-# Base modules:     app/Base/Database/Database/Migrations/0001_01_01_*
-# Core modules:     app/Modules/Core/Geonames/Database/Migrations/0002_01_03_*
-#                   app/Modules/Core/Company/Database/Migrations/0002_01_10_*
-#                   app/Modules/Core/User/Database/Migrations/0002_01_20_*
-# Business modules: app/Modules/Business/ERP/Database/Migrations/0010_01_01_*
+# Base modules:     app/Base/Database/Database/Migrations/*
+# Core modules:     app/Modules/Core/Geonames/Database/Migrations/*
+#                   app/Modules/Core/Company/Database/Migrations/*
+#                   app/Modules/Core/User/Database/Migrations/*
+# Business modules: app/Modules/Business/ERP/Database/Migrations/*
 ```
 
 ---

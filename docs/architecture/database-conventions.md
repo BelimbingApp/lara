@@ -66,74 +66,77 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 - Allows fine-grained sequencing of related migrations
 
 ```bash
-0001_01_01_xxxxxx  # Base Layer - Database module (01_01)
-0001_01_03_xxxxxx  # Base Layer - Events module (01_03)
-0001_01_10_xxxxxx  # Base Layer - Configuration module (01_10)
-0002_01_03_xxxxxx  # Core Layer - Geonames module (01_03)
-0002_01_10_xxxxxx  # Core Layer - Company module (01_02)
-0002_01_20_xxxxxx  # Core Layer - User module (01_01)
-0002_02_01_xxxxxx  # Core Layer - reserved for future module
-0010_01_01_xxxxxx  # Business Layer - ERP module (01_01)
-0010_01_02_xxxxxx  # Business Layer - CRM module (01_02)
+0100_01_01_xxxxxx  # Base Layer - Database module (01_01)
+0100_01_03_xxxxxx  # Base Layer - Events module (01_03)
+0100_01_10_xxxxxx  # Base Layer - Configuration module (01_10)
+0200_01_03_xxxxxx  # Core Layer - Geonames module (01_03)
+0200_01_10_xxxxxx  # Core Layer - Company module (01_02)
+0200_01_20_xxxxxx  # Core Layer - User module (01_01)
+0200_02_01_xxxxxx  # Core Layer - reserved for future module
+0300_01_01_xxxxxx  # Business Layer - ERP module (01_01)
+0300_01_02_xxxxxx  # Business Layer - CRM module (01_02)
 2026_01_01_xxxxxx  # Extensions (use real years)
 ```
 
-**Rationale:**
-- The year part provides architectural layer separation (Base → Core → Business → Extensions)
-- The `MM_DD` part provides module-level identification within each layer, allowing up to 365 modules per architectural layer (far more than needed, but provides flexibility)
-- The time part provides fine-grained ordering within each module
-- This design scales well: if Core modules exceed 8 (years 0002-0009), `MM_DD` provides ample room for expansion without needing additional years
+### Reserved `0001_01_01_*`
+
+The `0001_01_01_*` prefix is **reserved for Laravel's internal migrations**:
+- `0001_01_01_000000_create_users_table.php`
+- `0001_01_01_000001_create_cache_table.php`
+- `0001_01_01_000002_create_jobs_table.php`
+
+These files are published in `./database/migrations` directory.
 
 ### Reserved Year Ranges
 
 #### Base Layer (`app/Base/`)
-- **Year:** `0001`
+- **Year:** `0100`
 - **Module (MM_DD):** Each Base module gets its own `MM_DD` identifier
-- **Format:** `0001_MM_DD_xxxxxx` where `MM_DD` identifies the module
+- **Format:** `0100_MM_DD_xxxxxx` where `MM_DD` identifies the module
 - **Purpose:** Framework infrastructure modules (Extensions, Permissions, Config, Audit, etc.)
 - **Module assignments:**
-  - `0001_01_01_xxxxxx` - Database module (`app/Base/Database/`)
-  - `0001_01_02_xxxxxx` - To assign
-  - ... (up to `0001_12_31_xxxxxx` = 365 possible Base modules)
+  - `0100_01_01_xxxxxx` - Database module (`app/Base/Database/`)
+  - `0100_01_02_xxxxxx` - To assign
+  - ... (up to `0100_12_31_xxxxxx` = 365 possible Base modules)
 - **Location:** `app/Base/{Module}/Database/Migrations/` (auto-discovered)
 - **Examples:**
-  - `app/Base/Database/Database/Migrations/0001_01_01_000000_create_base_database_seeders_table.php`
+  - `app/Base/Database/Database/Migrations/0100_01_01_000000_create_base_database_seeders_table.php`
 
 #### Core Modules (`app/Modules/Core/`)
-- **Year:** `0002` (all Core modules share the same year)
+- **Year:** `0200` (all Core modules share the same year)
 - **Module (MM_DD):** Each module gets its own `MM_DD` identifier
-- **Format:** `0002_MM_DD_xxxxxx` where `MM_DD` identifies the module
+- **Format:** `0200_MM_DD_xxxxxx` where `MM_DD` identifies the module
 - **Purpose:** Core business domain module migrations
 - **Module assignments:**
-  - `0002_01_03_xxxxxx` - Geonames module (must come first - other modules depend on it)
-  - `0002_01_10_xxxxxx` - Company module (depends on Geonames for country/admin1 data)
-  - `0002_01_20_xxxxxx` - User module
-  - `0002_02_01_xxxxxx` - Reserved for future core module (e.g., Workflow)
-  - `0002_02_02_xxxxxx` - Reserved for future core module (e.g., Admin)
-  - ... (up to `0002_12_31_xxxxxx` = 365 possible modules)
+  - `0200_01_03_xxxxxx` - Geonames module (must come first - other modules depend on it)
+  - `0200_01_10_xxxxxx` - Company module (depends on Geonames for country/admin1 data)
+  - `0200_01_20_xxxxxx` - User module
+  - `0200_02_01_xxxxxx` - Reserved for future core module (e.g., Workflow)
+  - `0200_02_02_xxxxxx` - Reserved for future core module (e.g., Admin)
+  - ... (up to `0200_12_31_xxxxxx` = 365 possible modules)
 - **Examples:**
-  - `0002_01_03_000000_create_geonames_countries_table.php` (Geonames module - runs first)
-  - `0002_01_03_000001_create_geonames_admin1_table.php` (Geonames module)
-  - `0002_01_10_000000_create_companies_table.php` (Company module - depends on Geonames)
-  - `0002_01_10_000001_create_company_relationships_table.php` (Company module)
-  - `0002_01_20_000000_create_users_table.php` (User module)
+  - `0200_01_03_000000_create_geonames_countries_table.php` (Geonames module - runs first)
+  - `0200_01_03_000001_create_geonames_admin1_table.php` (Geonames module)
+  - `0200_01_10_000000_create_companies_table.php` (Company module - depends on Geonames)
+  - `0200_01_10_000001_create_company_relationships_table.php` (Company module)
+  - `0200_01_20_000000_create_users_table.php` (User module)
 
 #### Business Modules (`app/Modules/Business/`)
-- **Year:** `0010` and above (reserve years per major category, use MM_DD for modules within category)
+- **Year:** `0300` and above (reserve years per major category, use MM_DD for modules within category)
 - **Module (MM_DD):** Each module gets its own `MM_DD` identifier within the year
 - **Format:** `YYYY_MM_DD_xxxxxx` where year identifies category, `MM_DD` identifies module
 - **Purpose:** Business-specific module migrations
 - **Year assignments (with MM_DD for modules within each year):**
-  - `0010_01_01_xxxxxx` - ERP module (first module in year 0010)
-  - `0010_01_02_xxxxxx` - Reserved for future ERP-related module
-  - `0020_01_01_xxxxxx` - CRM module (first module in year 0020)
-  - `0020_01_02_xxxxxx` - Reserved for future CRM-related module
-  - `0030_01_01_xxxxxx` - HR module (first module in year 0030)
-  - `0100_01_01_xxxxxx` - Custom business modules (first module in year 0100)
+  - `0300_01_01_xxxxxx` - ERP module (first module in year 0300)
+  - `0300_01_02_xxxxxx` - Reserved for future ERP-related module
+  - `0400_01_01_xxxxxx` - CRM module (first module in year 0400)
+  - `0400_01_02_xxxxxx` - Reserved for future CRM-related module
+  - `0500_01_01_xxxxxx` - HR module (first module in year 0500)
+  - `0930_01_01_xxxxxx` - Custom business modules (first module in year 0930)
 - **Examples:**
-  - `0010_01_01_000000_create_erp_orders_table.php` (ERP module)
-  - `0010_01_01_000001_create_erp_invoices_table.php` (ERP module)
-  - `0030_01_01_000000_create_hr_employees_table.php` (HR module)
+  - `0300_01_01_000000_create_erp_orders_table.php` (ERP module)
+  - `0300_01_01_000001_create_erp_invoices_table.php` (ERP module)
+  - `0500_01_01_000000_create_hr_employees_table.php` (HR module)
 
 #### Extensions (`extensions/vendor/` or `extensions/custom/`)
 - **Years:** Real years (e.g., `2026`, `2027`)
@@ -148,18 +151,18 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 
 The time part (`xxxxxx` = `HHMMSS`) is used for ordering **within each module**:
 
-- Within Base: `0001_01_01_000000`, `0001_01_01_000001`, etc.
-- Within User module: `0002_01_01_000000`, `0002_01_01_000010`, etc.
-- Within Company module: `0002_01_02_000000`, `0002_01_02_000100`, etc.
+- Within Base: `0100_01_01_000000`, `0100_01_01_000001`, etc.
+- Within User module: `0200_01_01_000000`, `0200_01_01_000010`, etc.
+- Within Company module: `0200_01_02_000000`, `0200_01_02_000100`, etc.
 
 This allows fine-grained ordering within each module while maintaining clear layer and module separation.
 
 ### Benefits of Year-Based Ordering
 
 1. **Visual Clarity:** The layer is immediately obvious from the filename
-   - `0001_01_01_*` = Base
-   - `0002_01_01_*` = Core
-   - `0010_01_01_*` = Business
+   - `0100_01_01_*` = Base
+   - `0200_01_01_*` = Core
+   - `0300_01_01_*` = Business
 
 2. **Scalability:** Easy to add new modules without timestamp conflicts
    - Reserve years per module
@@ -172,7 +175,7 @@ This allows fine-grained ordering within each module while maintaining clear lay
 
 4. **Works with Laravel:** No additional tooling required
    - Laravel sorts migrations by filename prefix
-   - `0001 < 0002 < 0010 < 0030` maintains correct order
+   - `0100 < 0200 < 0300` maintains correct order
 
 ### Module Database Structure
 
@@ -182,8 +185,8 @@ All modules (within Base, Core, Business) are self-contained with their own data
 ```bash
 app/Base/{ModuleName}/
 ├── Database/
-│   └── Migrations/           # Module-specific migrations (0001_MM_DD_*)
-│       ├── 0001_MM_DD_000000_create_{table}_table.php
+│   └── Migrations/           # Module-specific migrations (0100_MM_DD_*)
+│       ├── 0100_MM_DD_000000_create_{table}_table.php
 │       └── ...
 ├── ServiceProvider.php       # Module service provider
 └── ...                       # Other module files
@@ -194,8 +197,8 @@ app/Base/{ModuleName}/
 app/Modules/{Layer}/{ModuleName}/
 ├── Database/
 │   ├── Migrations/           # Module-specific migrations
-│   │   ├── 0002_MM_DD_000000_create_{table}_table.php
-│   │   ├── 0002_MM_DD_000001_create_{related}_table.php
+│   │   ├── 0200_MM_DD_000000_create_{table}_table.php
+│   │   ├── 0200_MM_DD_000001_create_{related}_table.php
 │   │   └── ...
 │   ├── Seeders/              # Module-specific seeders
 │   │   ├── {ModuleName}Seeder.php
@@ -220,7 +223,7 @@ app/Modules/{Layer}/{ModuleName}/
 app/Base/Database/
 ├── Database/
 │   └── Migrations/
-│       └── 0001_01_01_000000_create_base_database_seeders_table.php
+│       └── 0100_01_01_000000_create_base_database_seeders_table.php
 ├── MigrateCommand.php
 └── ServiceProvider.php
 ```
@@ -230,8 +233,8 @@ app/Base/Database/
 app/Modules/Core/Geonames/
 ├── Database/
 │   ├── Migrations/
-│   │   ├── 0002_01_03_000000_create_geonames_countries_table.php
-│   │   └── 0002_01_03_000001_create_geonames_admin1_table.php
+│   │   ├── 0200_01_03_000000_create_geonames_countries_table.php
+│   │   └── 0200_01_03_000001_create_geonames_admin1_table.php
 │   └── Seeders/
 │       ├── CountrySeeder.php
 │       └── Admin1Seeder.php
@@ -245,11 +248,11 @@ app/Modules/Core/Geonames/
 app/Modules/Core/Company/
 ├── Database/
 │   ├── Migrations/
-│   │   ├── 0002_01_10_000000_create_companies_table.php
-│   │   ├── 0002_01_10_000001_create_company_relationship_types_table.php
-│   │   ├── 0002_01_10_000002_create_company_relationships_table.php
-│   │   ├── 0002_01_10_000003_create_company_external_accesses_table.php
-│   │   └── 0002_01_10_000004_add_company_id_to_users_table.php
+│   │   ├── 0200_01_10_000000_create_companies_table.php
+│   │   ├── 0200_01_10_000001_create_company_relationship_types_table.php
+│   │   ├── 0200_01_10_000002_create_company_relationships_table.php
+│   │   ├── 0200_01_10_000003_create_company_external_accesses_table.php
+│   │   └── 0200_01_10_000004_add_company_id_to_users_table.php
 │   ├── Seeders/
 │   │   └── RelationshipTypeSeeder.php
 │   └── Factories/
@@ -422,9 +425,9 @@ acme_workflows_custom           # ACME vendor - Custom workflows
 ### Migration Years by Layer
 
 ```bash
-0001_MM_DD_xxxxxx           # Base Layer (app/Base/{Module}/Database/Migrations/)
-0002_MM_DD_xxxxxx           # Core Modules (app/Modules/Core/{Module}/Database/Migrations/)
-0010+_MM_DD_xxxxxx          # Business Modules (app/Modules/Business/{Module}/Database/Migrations/)
+0100_MM_DD_xxxxxx           # Base Layer (app/Base/{Module}/Database/Migrations/)
+0200_MM_DD_xxxxxx           # Core Modules (app/Modules/Core/{Module}/Database/Migrations/)
+0300+_MM_DD_xxxxxx          # Business Modules (app/Modules/Business/{Module}/Database/Migrations/)
 2026+_MM_DD_xxxxxx          # Extensions (real years) - MM_DD can be actual date or module identifier
 ```
 
@@ -459,7 +462,6 @@ base_permissions_roles              # Permissions module
 geonames_countries                  # Geonames module
 companies                           # Company module
 company_relationships               # Company module
-users                               # User module
 
 # Business Modules - User-added business
 erp_orders                          # ERP module

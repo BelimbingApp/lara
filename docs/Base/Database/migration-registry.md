@@ -14,9 +14,9 @@ This registry tracks the YYYY_MM_DD prefixes assigned to each module to prevent 
 
 | Layer | Year Range | Purpose | Location |
 |-------|------------|---------|----------|
-| Base | `0001` | Framework infrastructure | `app/Base/Database/Migrations/` |
-| Core | `0002` | Core business modules | `app/Modules/Core/{Module}/Database/Migrations/` |
-| Business | `0010-0099` | Business process modules | `app/Modules/Business/{Module}/Database/Migrations/` |
+| Base | `0100` | Framework infrastructure | `app/Base/Database/Migrations/` |
+| Core | `0200` | Core business modules | `app/Modules/Core/{Module}/Database/Migrations/` |
+| Business | `0300-0999` | Business process modules | `app/Modules/Business/{Module}/Database/Migrations/` |
 | Extensions | `2026+` | Third-party extensions | `extensions/{vendor}/{module}/Database/Migrations/` |
 
 ---
@@ -28,15 +28,13 @@ This keeps track of all the migration files and their dependencies.
 
 | Prefix | Layer | Module | Dependencies |
 |--------|-------|--------|--------------|
-| `0001_01_01_*` | Base | Database | None |
-| `0002_01_03_*` | Modules/Core | Geonames | None |
-| `0002_01_05_*` | Modules/Core | Address | Geonames |
-| `0002_01_11_*` | Modules/Core | Company | Geonames, Address |
-| `0002_01_13_*` | Modules/Core | Employee | Company, Address |
-| `0002_01_17_*` | Modules/Core | User | Company, Employee |
+| `0100_01_01_*` | Base | Database | None |
+| `0200_01_03_*` | Modules/Core | Geonames | None |
+| `0200_01_05_*` | Modules/Core | Address | Geonames |
+| `0200_01_11_*` | Modules/Core | Company | Geonames, Address |
+| `0200_01_13_*` | Modules/Core | Employee | Company, Address |
 
-
-## [Fluid] Business Modules (0010+)
+## [Fluid] Business Modules (0300+)
 
 **Format:** `YYYY_MM_DD_HHMMSS_description.php`
 
@@ -46,16 +44,16 @@ Years are grouped by business domain category.
 
 | Year Range | Category | Reserved For | Status |
 |------------|----------|--------------|--------|
-| `0010` | ERP | Enterprise Resource Planning | 📂 Available |
-| `0020` | CRM | Customer Relationship Management | 📂 Available |
-| `0030` | HR | Human Resources | 📂 Available |
-| `0040` | Finance | Financial Management | 📂 Available |
-| `0050` | Inventory | Inventory Management | 📂 Available |
-| `0060` | Manufacturing | Manufacturing/Production | 📂 Available |
-| `0070` | Logistics | Shipping/Logistics | 📂 Available |
-| `0080` | Analytics | Business Intelligence | 📂 Available |
-| `0090` | Marketing | Marketing Automation | 📂 Available |
-| `0100+` | Custom | Custom Business Modules | 📂 Available |
+| `0300` | ERP | Enterprise Resource Planning | 📂 Available |
+| `0400` | CRM | Customer Relationship Management | 📂 Available |
+| `0500` | HR | Human Resources | 📂 Available |
+| `0600` | Finance | Financial Management | 📂 Available |
+| `0700` | Inventory | Inventory Management | 📂 Available |
+| `0800` | Manufacturing | Manufacturing/Production | 📂 Available |
+| `0900` | Logistics | Shipping/Logistics | 📂 Available |
+| `0910` | Analytics | Business Intelligence | 📂 Available |
+| `0920` | Marketing | Marketing Automation | 📂 Available |
+| `0930+` | Custom | Custom Business Modules | 📂 Available |
 
 
 ---
@@ -79,16 +77,16 @@ Extensions use real calendar years. The MM_DD can be the actual date or a module
 ## [Fluid] Dependency Graph
 
 ```bash
-Base Layer (0001)
+Base Layer (0100)
   └─ cache, jobs (no dependencies)
 
-Core Layer (0002)
+Core Layer (0200)
   ├─ Geonames (01_03) → [no dependencies, runs first]
   ├─ Company (01_10) → depends on: Geonames
   └─ User (01_20) → [no dependencies]
        └─ Company adds FK to users (01_10_000004)
 
-Business Layer (0010+)
+Business Layer (0300+)
   └─ (modules depend on Core modules)
 ```
 ---
@@ -98,8 +96,8 @@ Business Layer (0010+)
 ### Process
 
 1. **Choose Layer**
-   - Core business logic → Layer `0002`
-   - Business process → Layer `0010+`
+   - Core business logic → Layer `0200`
+   - Business process → Layer `0300+`
    - Extension → Real year (e.g., `2026`)
 
 2. **Select MM_DD**
