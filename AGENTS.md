@@ -19,9 +19,20 @@ Think of Laravel as the Level 0 foundation and BLB as a Level 1 framework built 
 - **Destructive Evolution:** Prioritize the best current design over backward compatibility. Drop tables, refactor schemas, and rewrite APIs freely; do not create migration paths for data.
 - **Strategic Programming:** Invest in design quality to lower future development costs. Refactor immediately upon discovering design flaws (Zero Tolerance for Technical Debt).
 - **Deep Modules:** Modules should provide powerful functionality through simple interfaces. Hide complexity; do not leak implementation details.
-- **Design Iteratively:** You rarely get it right the first time. It is acceptable to "design it twice" to achieve a cleaner interface.
+- **Prefer strategic thinking over tactical patches.** Resist quick fixes; aim for structural simplicity.
 
-## 3. PHP Coding Conventions
+## 3. Top-Down Planning
+When you are tasked to create a plan:
+- **State the problem’s essence in one sentence.** If you cannot, the design is fuzzy.
+- **Define the public interface first.** What operations exist, what they promise, and what they will not do.
+- **Decompose into major responsibilities.** Identify 2–4 top-level components; defer internal details.
+- **Sketch each component’s contract.** Inputs, outputs, invariants; avoid implementation details.
+- **Define module-level policies.** Document whether the module retries, propagates, or wraps errors.
+- **Identify expected uses and call patterns.** Understanding callers helps you choose interfaces that feel obvious.
+- **Spot potential “complexity hotspots.”** Note inputs that may grow, error cases, or cross-cutting concerns.
+- **Stop before coding.** Planning ends at contracts and structure; implementation comes after approval.
+
+## 4. PHP Coding Conventions
 
 ### PHPDoc
 
@@ -226,5 +237,5 @@ $filtered = $collection->filter(fn($item) => $item > 1);
 
 **Rationale:** Direct method calls provide better IDE autocomplete, "Go to Definition" support, type checking, and static analysis. This improves code clarity, reduces the need for `@method` PHPDoc annotations, and makes refactoring safer. While Laravel's magic methods are convenient, they come at the cost of developer experience and tooling support.
 
-## 4. Nested AGENTS.md Files
+## 5. Nested AGENTS.md Files
 This project uses nested AGENTS.md files for specialized guidance. Agents should read the nearest AGENTS.md in the directory tree for context-specific instructions:
