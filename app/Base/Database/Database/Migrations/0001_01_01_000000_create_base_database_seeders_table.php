@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Run the migrations.
+     * 0001_01_01_000000_create_base_database_seeders_table runs before all other migrations
      */
     public function up(): void
     {

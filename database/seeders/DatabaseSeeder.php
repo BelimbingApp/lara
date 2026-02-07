@@ -2,18 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Core\User\Seeders\UserSeeder;
 use Illuminate\Database\Seeder;
 
+/**
+ * Laravel uses this class when db:seed is run without --class.
+ * This file is required for `php artisan db:seed`.
+ *
+ * For Belimbing seeding (registry, app-level, ad-hoc).
+ * @see app/Base/Database/AGENTS.md
+ */
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
     public function run(): void
     {
-        $this->call([
-            UserSeeder::class,
-        ]);
+        // Run is intentionally empty.
     }
 }

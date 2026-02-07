@@ -59,15 +59,21 @@ trait InteractsWithModuleMigrations
     /**
      * Get all of the migration paths.
      *
-     * Overrides parent when --module is provided to avoid including the default
-     * `database/migrations` directory.
+     * Always includes `database/migrations/` for Laravel core tables (cache, jobs, sessions),
+     * plus module migration paths when modules are specified.
      *
      * @return string[]
      */
     protected function getMigrationPaths(): array
     {
-        return $this->getModules() === []
-            ? parent::getMigrationPaths()
-            : $this->migrator->paths();
+        $paths = $this->migrator->paths();
+
+        // Always include database/migrations for Laravel core tables (cache, jobs, sessions)
+        $corePath = $this->laravel->databasePath('migrations');
+        if (!in_array($corePath, $paths)) {
+            $paths[] = $corePath;
+        }
+
+        return $paths;
     }
 }

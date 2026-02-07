@@ -19,13 +19,15 @@ All commands support `--module=<name>` for selective operation:
 | `StatusCommand` | Shows migration status, optionally filtered by module |
 
 ```bash
+# Default: all modules (module-first architecture)
+php artisan migrate
+# Or the following, which is equivalent:
+php artisan migrate --module=*
+
 # Module-specific operations (case-sensitive)
 php artisan migrate --module=Geonames
 php artisan migrate --module=Geonames,Company
 php artisan migrate:rollback --module=Geonames
-
-# Wildcard for all modules
-php artisan migrate --module=*
 ```
 
 ### SeederRegistry Model
@@ -54,6 +56,8 @@ return new class extends Migration
     }
 };
 ```
+
+**App-level seeders** (non-module): Same pattern as modules — the migration that creates the tables registers the seeder in `up()` and unregisters in `down()` (use `RegistersSeeders`). Migration in `database/migrations/`, seeder class in `database/seeders/`. They get `module_name`/`module_path` = null and run with `migrate --seed` in migration order. Do not add seeders to `DatabaseSeeder::run()`.
 
 ### Concerns
 

@@ -13,17 +13,18 @@ trait InteractsWithModuleOption
      * Get the modules specified via --module option.
      *
      * Parses comma-delimited module names into an array.
-     * Returns empty array if no modules specified.
+     * Defaults to ["*"] (all modules) if no modules specified (BLB's module-first architecture).
      * Supports "*" wildcard to match all modules.
      *
-     * @return array Array of case-sensitive module names (or ["*"] for all modules)
+     * @return array Array of case-sensitive module names (defaults to ["*"] for all modules)
      */
     protected function getModules(): array
     {
         $moduleOption = $this->option('module');
 
+        // Default to all modules if not specified (BLB's module-first architecture)
         if (! $moduleOption) {
-            return [];
+            return ['*'];
         }
 
         // Split by comma and trim whitespace

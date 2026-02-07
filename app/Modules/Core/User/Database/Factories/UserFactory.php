@@ -1,9 +1,9 @@
 <?php
 
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Ng Kiat Siong
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-namespace App\Modules\Core\User\Factories;
+namespace App\Modules\Core\User\Database\Factories;
 
 use App\Modules\Core\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -18,7 +18,7 @@ class UserFactory extends Factory
     /**
      * The name of the factory's corresponding model.
      *
-     * @var class-string<\Illuminate\Database\Eloquent\Model>
+     * @var string
      */
     protected $model = User::class;
 
@@ -35,11 +35,11 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
-            'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
-            'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            "name" => fake()->name(),
+            "email" => fake()->unique()->safeEmail(),
+            "email_verified_at" => now(),
+            "password" => static::$password ??= Hash::make("password"),
+            "remember_token" => Str::random(10),
         ];
     }
 
@@ -48,9 +48,10 @@ class UserFactory extends Factory
      */
     public function unverified(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
-        ]);
+        return $this->state(
+            fn(array $attributes) => [
+                "email_verified_at" => null,
+            ],
+        );
     }
 }
-

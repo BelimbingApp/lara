@@ -2,7 +2,7 @@
 
 **Document Type:** Architecture Specification
 **Purpose:** Define database table and migration file naming conventions for Belimbing framework
-**Last Updated:** 2026-01-20
+**Last Updated:** 2026-02-07
 
 ## Overview
 
@@ -34,6 +34,8 @@ php artisan migrate --module=Geonames,Users,Company
 
 # Run migrations for all modules (wildcard)
 php artisan migrate --module=*
+# Or simply:
+php artisan migrate
 ```
 
 **Conventions:**
@@ -66,7 +68,7 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 - Allows fine-grained sequencing of related migrations
 
 ```bash
-0100_01_01_xxxxxx  # Base Layer - Database module (01_01)
+0100_01_01_xxxxxx  # Base Layer - Database module (01_01) except the seeders table
 0100_01_03_xxxxxx  # Base Layer - Events module (01_03)
 0100_01_10_xxxxxx  # Base Layer - Configuration module (01_10)
 0200_01_03_xxxxxx  # Core Layer - Geonames module (01_03)
@@ -80,12 +82,16 @@ Laravel migrations use the format `YYYY_MM_DD_HHMMSS`. Belimbing uses this forma
 
 ### Reserved `0001_01_01_*`
 
-The `0001_01_01_*` prefix is **reserved for Laravel's internal migrations**:
-- `0001_01_01_000000_create_users_table.php`
+The `0001_01_01_*` prefix is **reserved for Laravel's core infrastructure migrations only**:
 - `0001_01_01_000001_create_cache_table.php`
 - `0001_01_01_000002_create_jobs_table.php`
+- `0001_01_01_000003_create_sessions_table.php`
 
 These files are published in `./database/migrations` directory.
+
+**Note:** The `users` table is **NOT** a Laravel core table - it belongs to the User module and should be in `app/Modules/Core/User/Database/Migrations/0200_01_20_000000_create_users_table.php`. Laravel's installer (`laravel new`) creates `0001_01_01_000000_create_users_table.php` as a convenience, but BLB restructures this into User module migrations to align with module-based architecture.
+
+Exception: `0001_01_01_000000_create_base_database_seeders_table.php` uses the same prefix so that it runs before all other migrations.
 
 ### Reserved Year Ranges
 
@@ -119,7 +125,8 @@ These files are published in `./database/migrations` directory.
   - `0200_01_03_000001_create_geonames_admin1_table.php` (Geonames module)
   - `0200_01_10_000000_create_companies_table.php` (Company module - depends on Geonames)
   - `0200_01_10_000001_create_company_relationships_table.php` (Company module)
-  - `0200_01_20_000000_create_users_table.php` (User module)
+  - `0200_01_20_000000_create_users_table.php` (User module - depends on Company for `company_id` FK)
+  - `0200_01_20_000001_create_password_reset_tokens_table.php` (User module)
 
 #### Business Modules (`app/Modules/Business/`)
 - **Year:** `0300` and above (reserve years per major category, use MM_DD for modules within category)
