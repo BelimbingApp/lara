@@ -1,0 +1,230 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Modules\Core\Company\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class CompanyRelationship extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    /**
+     * The table associated with the model.
+     *
+     * @var string
+     */
+    protected $table = "company_relationships";
+
+    /**
+     * The attributes that are mass assignable.
+     *
+     * @var array<int, string>
+     */
+    protected $fillable = [
+        "company_id",
+        "related_company_id",
+        "relationship_type_id",
+        "effective_from",
+        "effective_to",
+        "metadata",
+    ];
+
+    /**
+     * The attributes that should be cast.
+     *
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            "effective_from" => "date",
+            "effective_to" => "date",
+            "metadata" => "array",
+            "created_at" => "datetime",
+            "updated_at" => "datetime",
+            "deleted_at" => "datetime",
+        ];
+    }
+
+    /**
+     * Get the primary company in this relationship.
+     */
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, "company_id");
+    }
+
+    /**
+     * Get the related company in this relationship.
+     */
+    public function relatedCompany(): BelongsTo
+    {
+        return $this->belongsTo(Company::class, "related_company_id");
+    }
+
+    /**
+     * Get the relationship type.
+     */
+    public function type(): BelongsTo
+    {
+        return $this->belongsTo(
+            RelationshipType::class,
+            "relationship_type_id",
+        );
+    }
+
+    /**
+     * Get external accesses granted through this relationship.
+     */
+    public function externalAccesses(): HasMany
+    {
+        return $this->hasMany(ExternalAccess::class, "relationship_id");
+    }
+
+    /**
+     * Check if the relationship is currently active based on temporal validity.
+     */
+    public function isActive(): bool
+    {
+        $now = now();
+
+        $afterStart =
+            is_null($this->effective_from) || $this->effective_from->lte($now);
+        $beforeEnd =
+            is_null($this->effective_to) || $this->effective_to->gte($now);
+
+        return $afterStart && $beforeEnd;
+    }
+
+    /**
+     * Check if the relationship has started.
+     */
+    public function hasStarted(): bool
+    {
+        return is_null($this->effective_from) ||
+            $this->effective_from->lte(now());
+    }
+
+    /**
+     * Check if the relationship has ended.
+     */
+    public function hasEnded(): bool
+    {
+        return !is_null($this->effective_to) && $this->effective_to->lt(now());
+    }
+
+    /**
+     * Check if the relationship is pending (future start date).
+     */
+    public function isPending(): bool
+    {
+        return !is_null($this->effective_from) &&
+            $this->effective_from->gt(now());
+    }
+
+    /**
+     * End the relationship by setting effective_to to today.
+     */
+    public function end(): bool
+    {
+        $this->effective_to = now()->toDateString();
+        return $this->save();
+    }
+
+    /**
+     * Extend the relationship by setting a new end date.
+     */
+    public function extendTo(string $date): bool
+    {
+        $this->effective_to = $date;
+        return $this->save();
+    }
+
+    /**
+     * Remove the end date (make relationship indefinite).
+     */
+    public function makeIndefinite(): bool
+    {
+        $this->effective_to = null;
+        return $this->save();
+    }
+
+    /**
+     * Scope a query to only include active relationships.
+     */
+    public function scopeActive($query)
+    {
+        return $query
+            ->where(function ($q) {
+                $q->whereNull("effective_from")->orWhere(
+                    "effective_from",
+                    "<=",
+                    now(),
+                );
+            })
+            ->where(function ($q) {
+                $q->whereNull("effective_to")->orWhere(
+                    "effective_to",
+                    ">=",
+                    now(),
+                );
+            });
+    }
+
+    /**
+     * Scope a query to only include relationships of a specific type code.
+     */
+    public function scopeOfType($query, string $typeCode)
+    {
+        return $query->whereHas("type", function ($q) use ($typeCode) {
+            $q->where("code", $typeCode);
+        });
+    }
+
+    /**
+     * Scope a query to only include ended relationships.
+     */
+    public function scopeEnded($query)
+    {
+        return $query
+            ->whereNotNull("effective_to")
+            ->where("effective_to", "<", now());
+    }
+
+    /**
+     * Scope a query to only include pending relationships.
+     */
+    public function scopePending($query)
+    {
+        return $query
+            ->whereNotNull("effective_from")
+            ->where("effective_from", ">", now());
+    }
+
+    /**
+     * Scope a query to only include external relationships.
+     */
+    public function scopeExternal($query)
+    {
+        return $query->whereHas("type", function ($q) {
+            $q->where("is_external", true);
+        });
+    }
+
+    /**
+     * Scope a query to only include internal relationships.
+     */
+    public function scopeInternal($query)
+    {
+        return $query->whereHas("type", function ($q) {
+            $q->where("is_external", false);
+        });
+    }
+}

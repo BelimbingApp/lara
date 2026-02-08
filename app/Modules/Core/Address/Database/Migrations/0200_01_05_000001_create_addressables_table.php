@@ -1,0 +1,50 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('addressables', function (Blueprint $table) {
+            $table->id();
+
+            $table
+                ->foreignId('address_id')
+                ->constrained('addresses')
+                ->cascadeOnDelete();
+
+            $table->morphs('addressable');
+
+            // Relationship metadata (role + ordering + lifecycle)
+            $table->string('kind')->index(); // office, factory, billing, shipping, home, current, mailbox
+            $table->boolean('is_primary')->default(false)->index();
+            $table->unsignedSmallInteger('priority')->default(0);
+            $table->date('valid_from')->nullable();
+            $table->date('valid_to')->nullable();
+
+            $table->timestamps();
+
+            // morphs('addressable') already indexes (addressable_type, addressable_id)
+            $table->unique(
+                ['addressable_type', 'addressable_id', 'kind', 'priority'],
+                'addressables_owner_kind_priority_unique'
+            );
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('addressables');
+    }
+};
