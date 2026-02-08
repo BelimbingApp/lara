@@ -3,7 +3,7 @@
 **Document Type:** Architecture Specification
 **Purpose:** Define the file and directory structure for Belimbing framework
 **Based On:** Project Brief v1.0.0, Ousterhout's "A Philosophy of Software Design"
-**Last Updated:** 2026-01-19
+**Last Updated:** 2026-02-07
 
 ---
 
@@ -55,6 +55,11 @@ app/Modules/Core/Geonames/
 ├── Models/                      # Module internals
 └── Services/                    # Module internals
 ```
+
+### Module directory and config file naming
+
+- **Directory names** inside a module use **PascalCase**: `Database/`, `Models/`, `Config/`, `Services/`, `Migrations/`, `Seeders/`, `Factories/`, etc. This aligns with PHP namespace segments and keeps module structure consistent.
+- **Config directory**: Use `Config/` (PascalCase). **Config file names** inside `Config/` use **lowercase** (e.g. `company.php`, `workflow.php`) to match the Laravel config key and framework convention. The module's ServiceProvider registers them with `mergeConfigFrom(__DIR__.'/Config/company.php', 'company')` so `config('company')` works.
 
 ### Namespace Alignment
 
@@ -231,31 +236,15 @@ app/Base/
 
 **Layer Pattern:** `app/Modules/{Layer1}/{Module}/` — Layer1 categories (`Core`, `Business`) contain modules.
 
-Each module is a self-contained business process. Subdirectories within a module (e.g., `Database/`, `Models/`) are module internals, not additional layers.
+Each module is a self-contained business process. Subdirectories are **module internals** (see [Module Structure Template](#module-structure-template-for-appmoduleslayer1module) for the full list). Modules include only the internals they need.
 
 ```
 app/Modules/
 ├── Core/                    # Core framework modules
 │   ├── Company/             # Company management module
+│   │   ├── Config/          # Module config (e.g. company.php)
 │   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations
-│   │   │   ├── Seeders/     # Module-specific seeders
-│   │   │   └── Factories/   # Module-specific factories
-│   │   ├── Models/
-│   │   ├── Services/
-│   │   ├── Controllers/
-│   │   ├── Livewire/
-│   │   └── Hooks/           # Extension hooks for this module
-│   │
-│   ├── Geonames/            # Geonames module
-│   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations
-│   │   │   └── Seeders/
-│   │   └── Models/
-│   │
-│   ├── User/                # User management module
-│   │   ├── Database/
-│   │   │   ├── Migrations/  # Module-specific migrations
+│   │   │   ├── Migrations/
 │   │   │   ├── Seeders/
 │   │   │   └── Factories/
 │   │   ├── Models/
@@ -264,32 +253,20 @@ app/Modules/
 │   │   ├── Livewire/
 │   │   └── Hooks/
 │   │
-│   ├── Workflow/            # Workflow management module
-│   │   ├── Database/
-│   │   │   └── Migrations/
-│   │   ├── Models/
-│   │   ├── Services/
-│   │   └── Livewire/
-│   │
+│   ├── Geonames/            # Database/, Models/
+│   ├── User/                # Database/, Models/, Services/, Controllers/, Livewire/, Hooks/
+│   ├── Workflow/            # Database/, Models/, Services/, Livewire/
 │   └── Admin/               # Admin panel module
-│       ├── Git/             # Git workflow management
-│       ├── Extensions/      # Extension management UI
-│       ├── Configuration/   # Configuration UI
-│       └── Deployment/      # CI/CD UI
+│       ├── Git/
+│       ├── Extensions/
+│       ├── Configuration/
+│       └── Deployment/
 │
 └── Business/                # Business process modules (examples)
-    ├── ERP/                 # ERP module
-    │   └── Database/
-    │       ├── Migrations/  # Module-specific migrations
-    │       ├── Seeders/
-    │       └── Factories/
-    ├── CRM/                 # CRM module
-    │   └── Database/
-    │       └── Migrations/  # Module-specific migrations
-    ├── HR/                  # HR module
-    │   └── Database/
-    │       └── Migrations/  # Module-specific migrations
-    └── Custom/              # Custom business processes
+    ├── ERP/                 # Database/ (Migrations/, Seeders/, Factories/)
+    ├── CRM/                 # Database/Migrations/
+    ├── HR/                  # Database/Migrations/
+    └── Custom/
 ```
 
 **Module Structure Template (for `app/Modules/{Layer1}/{Module}/`):**
@@ -311,7 +288,7 @@ app/Modules/{Layer1}/{Module}/
 ├── Hooks/                    # Module internals: extension hooks
 ├── Routes/                   # Module internals: routes
 ├── Views/                    # Module internals: views
-├── Config/                   # Module internals: configuration schema
+├── Config/                   # Module internals: config files (PascalCase dir; filenames lowercase, e.g. company.php)
 └── Tests/                    # Module internals: tests
 ```
 

@@ -19,9 +19,9 @@ This document outlines the requirements for validating migration file names in t
 ### Migration Layers
 
 ```
-0001  Base       Framework infrastructure (cache, jobs)
-0002  Core       Core business modules (Geonames, Company, User)
-0010+ Business   Business process modules (ERP, CRM, HR)
+0100  Base       Framework infrastructure (cache, jobs) except the seeders table
+0200  Core       Core business modules (Geonames, Company, User)
+0300+ Business   Business process modules (ERP, CRM, HR)
 2026+ Extensions Third-party vendor extensions
 ```
 
@@ -40,7 +40,7 @@ app/Modules/{Layer}/{ModuleName}/
 ### Naming Convention
 
 **Migration files:** `YYYY_MM_DD_HHMMSS_description.php`
-- `YYYY` = Layer (0001, 0002, 0010+)
+- `YYYY` = Layer (0100, 0200, 0300+)
 - `MM_DD` = Module identifier within layer
 - `HHMMSS` = Ordering within module
 
@@ -54,7 +54,7 @@ app/Modules/{Layer}/{ModuleName}/
 
 | Layer | Module | Prefix | Migrations | Status |
 |-------|--------|--------|------------|--------|
-| Base | Infrastructure | `0001_01_01_*` | 2 | ✅ Active |
-| Modules/Core | Geonames | `0002_01_03_*` | 2 | ✅ Active |
-| Modules/Core | Company | `0002_01_10_*` | 5 | ✅ Active |
-| Modules/Core | User | `0002_01_20_*` | 1 | ✅ Active |
+| Base | Infrastructure | `0100_01_01_*` | 2 | ✅ Active |
+| Modules/Core | Geonames | `0200_01_03_*` | 2 | ✅ Active |
+| Modules/Core | Company | `0200_01_10_*` | 5 | ✅ Active |
+| Modules/Core | User | `0200_01_20_*` | 1 | ✅ Active |

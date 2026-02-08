@@ -28,7 +28,8 @@ This keeps track of all the migration files and their dependencies.
 
 | Prefix | Layer | Module | Dependencies |
 |--------|-------|--------|--------------|
-| `0100_01_01_*` | Base | Database | None |
+| `0001_01_01_*` | Base | Database | None |
+| `0100_01_01_*` | Base | Other module | None |
 | `0200_01_03_*` | Modules/Core | Geonames | None |
 | `0200_01_05_*` | Modules/Core | Address | Geonames |
 | `0200_01_11_*` | Modules/Core | Company | Geonames, Address |
@@ -82,9 +83,10 @@ Base Layer (0100)
 
 Core Layer (0200)
   ├─ Geonames (01_03) → [no dependencies, runs first]
-  ├─ Company (01_10) → depends on: Geonames
-  └─ User (01_20) → [no dependencies]
-       └─ Company adds FK to users (01_10_000004)
+  ├─ Address (01_05) → [depends on: Geonames]
+  ├─ Company (01_07) → [depends on: Address]
+  ├─ User (01_20) → [depends on: Company]
+  └─ Workflow (01_21) → [to do depends on: User]
 
 Business Layer (0300+)
   └─ (modules depend on Core modules)
@@ -134,7 +136,7 @@ Business Layer (0300+)
 
 ## Related Documentation
 
-- `docs/architecture/database-conventions.md` - Complete database naming conventions
+- `docs/architecture/database.md` - Complete database architecture, naming conventions, and seeding behaviors.
 - `docs/development/creating-module-migrations.md` - Guide for creating migrations
 - `docs/architecture/file-structure.md` - Module structure reference
 - `app/Base/Database/AGENTS.md` - Database migration guidelines

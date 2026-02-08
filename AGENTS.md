@@ -239,3 +239,5 @@ $filtered = $collection->filter(fn($item) => $item > 1);
 
 ## 5. Nested AGENTS.md Files
 This project uses nested AGENTS.md files for specialized guidance. Agents should read the nearest AGENTS.md in the directory tree for context-specific instructions:
+
+- **Database (migrations, seeding, schema):** For database-related tasks, refer to `app/Base/Database/AGENTS.md`.
