@@ -148,11 +148,12 @@ class SeederRegistry extends Model
 
     /**
      * Scope to order seeders by migration file for execution order.
+     * Seeders with null migration_file (discovered) sort after and by seeder_class.
      */
     #[Scope]
     protected function inMigrationOrder(Builder $query): Builder
     {
-        return $query->orderBy('migration_file');
+        return $query->orderBy('migration_file')->orderBy('seeder_class');
     }
 
     /**
@@ -161,13 +162,13 @@ class SeederRegistry extends Model
      * @param  string  $seederClass  Fully qualified seeder class name
      * @param  string|null  $moduleName  Module name (e.g., 'Geonames')
      * @param  string|null  $modulePath  Module path (e.g., 'app/Modules/Core/Geonames')
-     * @param  string  $migrationFile  Migration file that registered this seeder
+     * @param  string|null  $migrationFile  Migration file that registered this seeder (null for discovered seeders)
      */
     public static function register(
         string $seederClass,
         ?string $moduleName,
         ?string $modulePath,
-        string $migrationFile
+        ?string $migrationFile = null
     ): void {
         // Use updateOrCreate to handle rollback/re-run: reset status to pending
         self::query()->updateOrCreate(
@@ -181,6 +182,32 @@ class SeederRegistry extends Model
                 'error_message' => null,
             ]
         );
+    }
+
+    /**
+     * Ensure all BLB seeders under app/Modules/ * / * /Database/Seeders are in the registry.
+     * Only inserts when seeder_class is missing; does not overwrite migration-registered rows.
+     */
+    public static function ensureDiscoveredRegistered(): void
+    {
+        $pattern = app_path('Modules').'/*/*/Database/Seeders/*.php';
+        $files = glob($pattern) ?: [];
+
+        foreach ($files as $file) {
+            $rel = str_replace([base_path().DIRECTORY_SEPARATOR, '\\'], ['', '/'], $file);
+            if (! str_starts_with($rel, 'app/Modules/') || ! str_ends_with($rel, '.php')) {
+                continue;
+            }
+            $fqcn = 'App\\'.str_replace(['/', '.php'], ['\\', ''], substr($rel, 4));
+            if (self::query()->where('seeder_class', $fqcn)->exists()) {
+                continue;
+            }
+            $beforeSeeders = '/Database/Seeders/';
+            $pos = strpos($rel, $beforeSeeders);
+            $modulePath = $pos !== false ? substr($rel, 0, $pos) : null;
+            $moduleName = $modulePath ? basename($modulePath) : null;
+            self::register($fqcn, $moduleName, $modulePath, null);
+        }
     }
 
     /**

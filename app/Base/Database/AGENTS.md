@@ -85,9 +85,20 @@ $this->app->extend('command.migrate', fn ($command, $app) =>
 
 ### Seeding Behavior
 
-- `migrate --seed` runs seeders from `SeederRegistry` in migration order
-- `migrate --seed --module=X` only runs seeders for module X
-- `migrate --seed --seeder=Class` overrides registry (uses explicit seeder)
+Seeder registration is done in migrations via `registerSeeder()`. Seeders under `app/Modules/*/*/Database/Seeders/` are also discovered when you pass `--seed`: any not yet in the registry are added then, so they run even if the migration did not call `registerSeeder()`. Plain `migrate` (no `--seed`) never runs seeders. If a migration does not register its seeder, pass `--seed` (e.g. below).
+
+```bash
+# Run all pending seeders (after migrations)
+php artisan migrate --seed
+
+# Seed only one module (case-sensitive)
+php artisan migrate --seed --module=Company
+
+# Run a single seeder (short form: ModuleName/SeederClass)
+php artisan migrate --seed --seeder=Company/RelationshipTypeSeeder
+# Or FQCN with single quotes so backslashes are preserved
+php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\RelationshipTypeSeeder'
+```
 
 ## Database ID Standards
 

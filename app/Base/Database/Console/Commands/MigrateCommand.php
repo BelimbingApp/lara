@@ -96,13 +96,16 @@ class MigrateCommand extends IlluminateMigrateCommand
     {
         // If --seeder is explicitly provided, use it (overrides registry)
         if ($this->option('seeder')) {
+            $class = $this->normalizeSeederClass($this->option('seeder'));
             $this->call('db:seed', [
-                '--class' => $this->option('seeder'),
+                '--class' => $class,
                 '--force' => true,
             ]);
 
             return;
         }
+
+        SeederRegistry::ensureDiscoveredRegistered();
 
         // Query registry for runnable seeders (pending or failed)
         // Order by migration_file to ensure correct execution order
@@ -132,5 +135,21 @@ class MigrateCommand extends IlluminateMigrateCommand
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Normalize seeder class so FQCN reaches db:seed (avoids shell stripping backslashes).
+     * If value contains backslash, treat as FQCN. Else if Module/SeederClass, resolve to App\Modules\Core\Module\Database\Seeders\SeederClass.
+     */
+    private function normalizeSeederClass(string $value): string
+    {
+        if (str_contains($value, '\\')) {
+            return $value;
+        }
+        if (preg_match('#^([A-Za-z0-9_]+)/([A-Za-z0-9_]+)$#', $value, $m)) {
+            return 'App\\Modules\\Core\\'.$m[1].'\\Database\\Seeders\\'.$m[2];
+        }
+
+        return $value;
     }
 }
