@@ -34,14 +34,14 @@ class User extends Authenticatable
      *
      * @var list<string>
      */
-    protected $fillable = ["company_id", "name", "email", "password"];
+    protected $fillable = ['company_id', 'name', 'email', 'password'];
 
     /**
      * The attributes that should be hidden for serialization.
      *
      * @var list<string>
      */
-    protected $hidden = ["password", "remember_token"];
+    protected $hidden = ['password', 'remember_token'];
 
     /**
      * Get the attributes that should be cast.
@@ -51,8 +51,8 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            "email_verified_at" => "datetime",
-            "password" => "hashed",
+            'email_verified_at' => 'datetime',
+            'password' => 'hashed',
         ];
     }
 
@@ -62,10 +62,10 @@ class User extends Authenticatable
     public function initials(): string
     {
         return Str::of($this->name)
-            ->explode(" ")
+            ->explode(' ')
             ->take(2)
             ->map(fn($word) => Str::substr($word, 0, 1))
-            ->implode("");
+            ->implode('');
     }
 
     /**
@@ -73,7 +73,7 @@ class User extends Authenticatable
      */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class, "company_id");
+        return $this->belongsTo(Company::class, 'company_id');
     }
 
     /**
@@ -81,7 +81,7 @@ class User extends Authenticatable
      */
     public function externalAccesses(): HasMany
     {
-        return $this->hasMany(ExternalAccess::class, "user_id");
+        return $this->hasMany(ExternalAccess::class, 'user_id');
     }
 
     /**

@@ -130,3 +130,21 @@ php artisan migrate --seed
 php artisan migrate:rollback --module=Geonames
 php artisan migrate --module=Geonames --seed
 ```
+
+### Refactoring Dependencies
+
+**Key Principles:**
+1. Base modules first
+2. Core modules next
+3. Business modules next
+4. Extension modules last
+5. Migration dates enforce load order
+6. Foreign key constraints respect dependency order
+7. No circular dependencies allowed
+
+If you need to break a circular dependency:
+
+1. **Use nullable foreign keys** with deferred constraints
+2. **Split into two migrations** (create table, then add constraint)
+3. **Use pivot tables** for many-to-many relationships
+4. **Redesign the relationship** if truly circular

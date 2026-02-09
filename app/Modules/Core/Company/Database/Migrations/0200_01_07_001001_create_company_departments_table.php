@@ -1,0 +1,46 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+use App\Base\Database\Concerns\RegistersSeeders;
+use App\Modules\Core\Company\Database\Seeders\DepartmentSeeder;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    use RegistersSeeders;
+
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('company_departments', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
+            $table->foreignId('department_type_id')->constrained('company_department_types')->cascadeOnDelete();
+            $table->unsignedBigInteger('head_id')->nullable()->index();
+
+            $table->string('status')->default('active')->index(); // active, inactive, archived
+            $table->json('metadata')->nullable(); // Budget code, location, etc.
+
+            $table->timestamps();
+
+            // One department type per company
+            $table->unique(['company_id', 'department_type_id']);
+        });
+
+        $this->registerSeeder(DepartmentSeeder::class);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('company_departments');
+        $this->unregisterSeeder(DepartmentSeeder::class);
+    }
+};

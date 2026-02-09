@@ -30,37 +30,37 @@ class CompanyFactory extends Factory
         $companyName = fake()->company();
 
         return [
-            "name" => $companyName,
-            "slug" => null, // Will be auto-generated from name
-            "status" => "active",
-            "legal_name" => $companyName . " " . fake()->companySuffix(),
-            "registration_number" => fake()->numerify("##########"),
-            "tax_id" => fake()->numerify("##-#######"),
-            "legal_entity_type" => fake()->randomElement([
-                "LLC",
-                "Corporation",
-                "Partnership",
-                "Sole Proprietorship",
-                "Private Limited",
+            'name' => $companyName,
+            'slug' => null, // Will be auto-generated from name
+            'status' => 'active',
+            'legal_name' => $companyName . ' ' . fake()->companySuffix(),
+            'registration_number' => fake()->numerify('##########'),
+            'tax_id' => fake()->numerify('##-#######'),
+            'legal_entity_type' => fake()->randomElement([
+                'LLC',
+                'Corporation',
+                'Partnership',
+                'Sole Proprietorship',
+                'Private Limited',
             ]),
-            "jurisdiction" => fake()->country(),
-            "email" => fake()->companyEmail(),
-            "website" => fake()->domainName(),
-            "scope_activities" => [
-                "industry" => fake()->randomElement([
-                    "Manufacturing",
-                    "Technology",
-                    "Retail",
-                    "Services",
-                    "Healthcare",
-                    "Finance",
+            'jurisdiction' => fake()->country(),
+            'email' => fake()->companyEmail(),
+            'website' => fake()->domainName(),
+            'scope_activities' => [
+                'industry' => fake()->randomElement([
+                    'Manufacturing',
+                    'Technology',
+                    'Retail',
+                    'Services',
+                    'Healthcare',
+                    'Finance',
                 ]),
-                "services" => fake()->words(3),
-                "business_focus" => fake()->sentence(),
+                'services' => fake()->words(3),
+                'business_focus' => fake()->sentence(),
             ],
-            "metadata" => [
-                "employee_count" => fake()->optional()->numberBetween(1, 10000),
-                "founded_year" => fake()->optional()->numberBetween(1950, 2026),
+            'metadata' => [
+                'employee_count' => fake()->optional()->numberBetween(1, 10000),
+                'founded_year' => fake()->optional()->numberBetween(1950, 2026),
             ],
         ];
     }
@@ -72,7 +72,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "parent_id" => null,
+                'parent_id' => null,
             ],
         );
     }
@@ -84,7 +84,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "parent_id" => $parentId ?? Company::factory()->parent(),
+                'parent_id' => $parentId ?? Company::factory()->parent(),
             ],
         );
     }
@@ -96,7 +96,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "status" => "active",
+                'status' => 'active',
             ],
         );
     }
@@ -108,7 +108,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "status" => "suspended",
+                'status' => 'suspended',
             ],
         );
     }
@@ -120,7 +120,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "status" => "pending",
+                'status' => 'pending',
             ],
         );
     }
@@ -132,7 +132,7 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "status" => "archived",
+                'status' => 'archived',
             ],
         );
     }
@@ -144,15 +144,15 @@ class CompanyFactory extends Factory
     {
         return $this->state(
             fn(array $attributes) => [
-                "legal_name" => null,
-                "registration_number" => null,
-                "tax_id" => null,
-                "legal_entity_type" => null,
-                "jurisdiction" => null,
-                "email" => null,
-                "website" => null,
-                "scope_activities" => null,
-                "metadata" => null,
+                'legal_name' => null,
+                'registration_number' => null,
+                'tax_id' => null,
+                'legal_entity_type' => null,
+                'jurisdiction' => null,
+                'email' => null,
+                'website' => null,
+                'scope_activities' => null,
+                'metadata' => null,
             ],
         );
     }

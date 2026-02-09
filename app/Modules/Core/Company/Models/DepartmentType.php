@@ -5,12 +5,11 @@
 
 namespace App\Modules\Core\Company\Models;
 
-use App\Modules\Core\Company\Factories\RelationshipTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class RelationshipType extends Model
+class DepartmentType extends Model
 {
     use HasFactory;
 
@@ -19,7 +18,7 @@ class RelationshipType extends Model
      *
      * @var string
      */
-    protected $table = 'company_relationship_types';
+    protected $table = 'company_department_types';
 
     /**
      * The attributes that are mass assignable.
@@ -29,19 +28,11 @@ class RelationshipType extends Model
     protected $fillable = [
         'code',
         'name',
+        'category',
         'description',
-        'is_external',
         'is_active',
         'metadata',
     ];
-
-    /**
-     * Create a new factory instance for the model.
-     */
-    protected static function newFactory(): RelationshipTypeFactory
-    {
-        return new RelationshipTypeFactory();
-    }
 
     /**
      * The attributes that should be cast.
@@ -51,7 +42,6 @@ class RelationshipType extends Model
     protected function casts(): array
     {
         return [
-            'is_external' => 'boolean',
             'is_active' => 'boolean',
             'metadata' => 'array',
             'created_at' => 'datetime',
@@ -60,26 +50,15 @@ class RelationshipType extends Model
     }
 
     /**
-     * Get all company relationships using this type.
+     * Get all departments using this type.
      */
-    public function companyRelationships(): HasMany
+    public function departments(): HasMany
     {
-        return $this->hasMany(
-            CompanyRelationship::class,
-            'relationship_type_id'
-        );
+        return $this->hasMany(Department::class, 'department_type_id');
     }
 
     /**
-     * Check if this relationship type allows external access.
-     */
-    public function allowsExternalAccess(): bool
-    {
-        return $this->is_external;
-    }
-
-    /**
-     * Check if this relationship type is active.
+     * Check if this department type is active.
      */
     public function isActive(): bool
     {
@@ -87,7 +66,7 @@ class RelationshipType extends Model
     }
 
     /**
-     * Activate the relationship type.
+     * Activate the department type.
      */
     public function activate(): bool
     {
@@ -96,7 +75,7 @@ class RelationshipType extends Model
     }
 
     /**
-     * Deactivate the relationship type.
+     * Deactivate the department type.
      */
     public function deactivate(): bool
     {
@@ -105,7 +84,7 @@ class RelationshipType extends Model
     }
 
     /**
-     * Scope a query to only include active relationship types.
+     * Scope a query to only include active department types.
      */
     public function scopeActive($query): void
     {
@@ -113,23 +92,17 @@ class RelationshipType extends Model
     }
 
     /**
-     * Scope a query to only include external relationship types.
+     * Scope a query to filter by category.
+     *
+     * @param  string  $category  Department category to filter by
      */
-    public function scopeExternal($query): void
+    public function scopeCategory($query, string $category): void
     {
-        $query->where('is_external', true);
+        $query->where('category', $category);
     }
 
     /**
-     * Scope a query to only include internal relationship types.
-     */
-    public function scopeInternal($query): void
-    {
-        $query->where('is_external', false);
-    }
-
-    /**
-     * Get a relationship type by code.
+     * Get a department type by code.
      */
     public static function findByCode(string $code): ?self
     {

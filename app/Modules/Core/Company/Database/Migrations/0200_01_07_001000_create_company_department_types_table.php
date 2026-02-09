@@ -4,7 +4,7 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 use App\Base\Database\Concerns\RegistersSeeders;
-use App\Modules\Core\Company\Database\Seeders\RelationshipTypeSeeder;
+use App\Modules\Core\Company\Database\Seeders\DepartmentTypeSeeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -17,21 +17,21 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('company_relationship_types', function (Blueprint $table): void {
+        Schema::create('company_department_types', function (Blueprint $table): void {
             $table->id();
-            $table->string('code')->unique(); // internal, customer, supplier, partner, agency
+            $table->string('code')->unique();
             $table->string('name');
+            $table->string('category')->index(); // administrative, operational, revenue, support
             $table->text('description')->nullable();
-            $table->boolean('is_external')->default(false); // Whether this relationship type allows external access
             $table->boolean('is_active')->default(true);
-            $table->json('metadata')->nullable(); // Additional configuration
+            $table->json('metadata')->nullable();
             $table->timestamps();
 
             // Indexes
-            $table->index(['is_active', 'code']);
+            $table->index(['is_active', 'category']);
         });
 
-        $this->registerSeeder(RelationshipTypeSeeder::class);
+        $this->registerSeeder(DepartmentTypeSeeder::class);
     }
 
     /**
@@ -39,7 +39,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('company_relationship_types');
-        $this->unregisterSeeder(RelationshipTypeSeeder::class);
+        Schema::dropIfExists('company_department_types');
+        $this->unregisterSeeder(DepartmentTypeSeeder::class);
     }
 };

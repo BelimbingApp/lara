@@ -21,7 +21,26 @@ Think of Laravel as the Level 0 foundation and BLB as a Level 1 framework built 
 - **Deep Modules:** Modules should provide powerful functionality through simple interfaces. Hide complexity; do not leak implementation details.
 - **Prefer strategic thinking over tactical patches.** Resist quick fixes; aim for structural simplicity.
 
-## 3. Top-Down Planning
+## 3. Laravel Customization: Embrace When Needed
+
+**BLB is NOT a pure Laravel application.** It's a framework built on Laravel.
+
+### When to Customize Laravel
+
+**BLB will diverge from Laravel defaults when necessary to uphold architectural principles.**
+
+**Example (Already Implemented):** Module-aware migrations
+- Laravel: Migrations in `database/migrations/` only
+- BLB: Auto-discover from module directories, support `--module` flag, seeder registry
+
+### Agent Responsibility
+
+**When you see opportunities to improve Laravel defaults for framework needs:**
+1. **Flag it immediately** - Discuss with user before implementing
+2. **Consider framework perspective** - How does this help adopters?
+3. **Document the divergence** - Why BLB does it differently
+
+## 4. Top-Down Planning
 When you are tasked to create a plan:
 - **State the problem’s essence in one sentence.** If you cannot, the design is fuzzy.
 - **Define the public interface first.** What operations exist, what they promise, and what they will not do.
@@ -32,7 +51,7 @@ When you are tasked to create a plan:
 - **Spot potential “complexity hotspots.”** Note inputs that may grow, error cases, or cross-cutting concerns.
 - **Stop before coding.** Planning ends at contracts and structure; implementation comes after approval.
 
-## 4. PHP Coding Conventions
+## 5. PHP Coding Conventions
 
 ### PHPDoc
 
@@ -237,7 +256,7 @@ $filtered = $collection->filter(fn($item) => $item > 1);
 
 **Rationale:** Direct method calls provide better IDE autocomplete, "Go to Definition" support, type checking, and static analysis. This improves code clarity, reduces the need for `@method` PHPDoc annotations, and makes refactoring safer. While Laravel's magic methods are convenient, they come at the cost of developer experience and tooling support.
 
-## 5. Nested AGENTS.md Files
+## 6. Nested AGENTS.md Files
 This project uses nested AGENTS.md files for specialized guidance. Agents should read the nearest AGENTS.md in the directory tree for context-specific instructions:
 
 - **Database (migrations, seeding, schema):** For database-related tasks, refer to `app/Base/Database/AGENTS.md`.

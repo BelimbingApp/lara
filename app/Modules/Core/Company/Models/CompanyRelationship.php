@@ -20,7 +20,7 @@ class CompanyRelationship extends Model
      *
      * @var string
      */
-    protected $table = "company_relationships";
+    protected $table = 'company_relationships';
 
     /**
      * The attributes that are mass assignable.
@@ -28,12 +28,12 @@ class CompanyRelationship extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        "company_id",
-        "related_company_id",
-        "relationship_type_id",
-        "effective_from",
-        "effective_to",
-        "metadata",
+        'company_id',
+        'related_company_id',
+        'relationship_type_id',
+        'effective_from',
+        'effective_to',
+        'metadata',
     ];
 
     /**
@@ -44,12 +44,12 @@ class CompanyRelationship extends Model
     protected function casts(): array
     {
         return [
-            "effective_from" => "date",
-            "effective_to" => "date",
-            "metadata" => "array",
-            "created_at" => "datetime",
-            "updated_at" => "datetime",
-            "deleted_at" => "datetime",
+            'effective_from' => 'date',
+            'effective_to' => 'date',
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -58,7 +58,7 @@ class CompanyRelationship extends Model
      */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class, "company_id");
+        return $this->belongsTo(Company::class, 'company_id');
     }
 
     /**
@@ -66,7 +66,7 @@ class CompanyRelationship extends Model
      */
     public function relatedCompany(): BelongsTo
     {
-        return $this->belongsTo(Company::class, "related_company_id");
+        return $this->belongsTo(Company::class, 'related_company_id');
     }
 
     /**
@@ -76,7 +76,7 @@ class CompanyRelationship extends Model
     {
         return $this->belongsTo(
             RelationshipType::class,
-            "relationship_type_id",
+            'relationship_type_id'
         );
     }
 
@@ -85,7 +85,7 @@ class CompanyRelationship extends Model
      */
     public function externalAccesses(): HasMany
     {
-        return $this->hasMany(ExternalAccess::class, "relationship_id");
+        return $this->hasMany(ExternalAccess::class, 'relationship_id');
     }
 
     /**
@@ -159,72 +159,74 @@ class CompanyRelationship extends Model
     /**
      * Scope a query to only include active relationships.
      */
-    public function scopeActive($query)
+    public function scopeActive($query): void
     {
-        return $query
-            ->where(function ($q) {
-                $q->whereNull("effective_from")->orWhere(
-                    "effective_from",
-                    "<=",
-                    now(),
+        $query
+            ->where(function ($q): void {
+                $q->whereNull('effective_from')->orWhere(
+                    'effective_from',
+                    '<=',
+                    now()
                 );
             })
-            ->where(function ($q) {
-                $q->whereNull("effective_to")->orWhere(
-                    "effective_to",
-                    ">=",
-                    now(),
+            ->where(function ($q): void {
+                $q->whereNull('effective_to')->orWhere(
+                    'effective_to',
+                    '>=',
+                    now()
                 );
             });
     }
 
     /**
      * Scope a query to only include relationships of a specific type code.
+     *
+     * @param  string  $typeCode  Relationship type code to filter by
      */
-    public function scopeOfType($query, string $typeCode)
+    public function scopeOfType($query, string $typeCode): void
     {
-        return $query->whereHas("type", function ($q) use ($typeCode) {
-            $q->where("code", $typeCode);
+        $query->whereHas('type', function ($q) use ($typeCode): void {
+            $q->where('code', $typeCode);
         });
     }
 
     /**
      * Scope a query to only include ended relationships.
      */
-    public function scopeEnded($query)
+    public function scopeEnded($query): void
     {
-        return $query
-            ->whereNotNull("effective_to")
-            ->where("effective_to", "<", now());
+        $query
+            ->whereNotNull('effective_to')
+            ->where('effective_to', '<', now());
     }
 
     /**
      * Scope a query to only include pending relationships.
      */
-    public function scopePending($query)
+    public function scopePending($query): void
     {
-        return $query
-            ->whereNotNull("effective_from")
-            ->where("effective_from", ">", now());
+        $query
+            ->whereNotNull('effective_from')
+            ->where('effective_from', '>', now());
     }
 
     /**
      * Scope a query to only include external relationships.
      */
-    public function scopeExternal($query)
+    public function scopeExternal($query): void
     {
-        return $query->whereHas("type", function ($q) {
-            $q->where("is_external", true);
+        $query->whereHas('type', function ($q): void {
+            $q->where('is_external', true);
         });
     }
 
     /**
      * Scope a query to only include internal relationships.
      */
-    public function scopeInternal($query)
+    public function scopeInternal($query): void
     {
-        return $query->whereHas("type", function ($q) {
-            $q->where("is_external", false);
+        $query->whereHas('type', function ($q): void {
+            $q->where('is_external', false);
         });
     }
 }

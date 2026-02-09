@@ -20,7 +20,7 @@ class ExternalAccess extends Model
      *
      * @var string
      */
-    protected $table = "company_external_accesses";
+    protected $table = 'company_external_accesses';
 
     /**
      * The attributes that are mass assignable.
@@ -28,14 +28,14 @@ class ExternalAccess extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        "company_id",
-        "relationship_id",
-        "user_id",
-        "permissions",
-        "is_active",
-        "access_granted_at",
-        "access_expires_at",
-        "metadata",
+        'company_id',
+        'relationship_id',
+        'user_id',
+        'permissions',
+        'is_active',
+        'access_granted_at',
+        'access_expires_at',
+        'metadata',
     ];
 
     /**
@@ -46,14 +46,14 @@ class ExternalAccess extends Model
     protected function casts(): array
     {
         return [
-            "permissions" => "array",
-            "is_active" => "boolean",
-            "access_granted_at" => "datetime",
-            "access_expires_at" => "datetime",
-            "metadata" => "array",
-            "created_at" => "datetime",
-            "updated_at" => "datetime",
-            "deleted_at" => "datetime",
+            'permissions' => 'array',
+            'is_active' => 'boolean',
+            'access_granted_at' => 'datetime',
+            'access_expires_at' => 'datetime',
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -62,7 +62,7 @@ class ExternalAccess extends Model
      */
     public function company(): BelongsTo
     {
-        return $this->belongsTo(Company::class, "company_id");
+        return $this->belongsTo(Company::class, 'company_id');
     }
 
     /**
@@ -70,7 +70,7 @@ class ExternalAccess extends Model
      */
     public function relationship(): BelongsTo
     {
-        return $this->belongsTo(CompanyRelationship::class, "relationship_id");
+        return $this->belongsTo(CompanyRelationship::class, 'relationship_id');
     }
 
     /**
@@ -78,7 +78,7 @@ class ExternalAccess extends Model
      */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class, "user_id");
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
@@ -214,22 +214,22 @@ class ExternalAccess extends Model
     /**
      * Scope a query to only include valid accesses.
      */
-    public function scopeValid($query)
+    public function scopeValid($query): void
     {
-        return $query
-            ->where("is_active", true)
-            ->where(function ($q) {
-                $q->whereNull("access_granted_at")->orWhere(
-                    "access_granted_at",
-                    "<=",
-                    now(),
+        $query
+            ->where('is_active', true)
+            ->where(function ($q): void {
+                $q->whereNull('access_granted_at')->orWhere(
+                    'access_granted_at',
+                    '<=',
+                    now()
                 );
             })
-            ->where(function ($q) {
-                $q->whereNull("access_expires_at")->orWhere(
-                    "access_expires_at",
-                    ">=",
-                    now(),
+            ->where(function ($q): void {
+                $q->whereNull('access_expires_at')->orWhere(
+                    'access_expires_at',
+                    '>=',
+                    now()
                 );
             });
     }
@@ -237,28 +237,28 @@ class ExternalAccess extends Model
     /**
      * Scope a query to only include active accesses.
      */
-    public function scopeActive($query)
+    public function scopeActive($query): void
     {
-        return $query->where("is_active", true);
+        $query->where('is_active', true);
     }
 
     /**
      * Scope a query to only include expired accesses.
      */
-    public function scopeExpired($query)
+    public function scopeExpired($query): void
     {
-        return $query
-            ->whereNotNull("access_expires_at")
-            ->where("access_expires_at", "<", now());
+        $query
+            ->whereNotNull('access_expires_at')
+            ->where('access_expires_at', '<', now());
     }
 
     /**
      * Scope a query to only include pending accesses.
      */
-    public function scopePending($query)
+    public function scopePending($query): void
     {
-        return $query
-            ->whereNotNull("access_granted_at")
-            ->where("access_granted_at", ">", now());
+        $query
+            ->whereNotNull('access_granted_at')
+            ->where('access_granted_at', '>', now());
     }
 }

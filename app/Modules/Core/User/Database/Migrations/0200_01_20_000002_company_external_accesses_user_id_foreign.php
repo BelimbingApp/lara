@@ -17,7 +17,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::table('company_external_accesses', function (Blueprint $table) {
+        Schema::table('company_external_accesses', function (Blueprint $table): void {
             $table
                 ->foreignId('user_id')
                 ->nullable()
@@ -33,7 +33,7 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::table('company_external_accesses', function (Blueprint $table) {
+        Schema::table('company_external_accesses', function (Blueprint $table): void {
             $table->dropIndex(['user_id', 'is_active']);
             $table->dropForeign(['user_id']);
             $table->dropColumn('user_id');

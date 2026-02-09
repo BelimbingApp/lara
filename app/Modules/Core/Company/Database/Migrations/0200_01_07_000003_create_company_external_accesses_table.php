@@ -13,36 +13,34 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create("company_external_accesses", function (
-            Blueprint $table,
-        ) {
+        Schema::create('company_external_accesses', function (Blueprint $table): void {
             $table->id();
             $table
-                ->foreignId("company_id")
-                ->constrained("companies")
+                ->foreignId('company_id')
+                ->constrained('companies')
                 ->cascadeOnDelete();
             $table
-                ->foreignId("relationship_id")
-                ->constrained("company_relationships")
+                ->foreignId('relationship_id')
+                ->constrained('company_relationships')
                 ->cascadeOnDelete();
 
             // Access configuration
-            $table->json("permissions")->nullable(); // Granular permissions for what data is visible
-            $table->boolean("is_active")->default(true);
+            $table->json('permissions')->nullable(); // Granular permissions for what data is visible
+            $table->boolean('is_active')->default(true);
 
             // Access validity period
-            $table->timestamp("access_granted_at")->nullable();
-            $table->timestamp("access_expires_at")->nullable();
+            $table->timestamp('access_granted_at')->nullable();
+            $table->timestamp('access_expires_at')->nullable();
 
             // Metadata
-            $table->json("metadata")->nullable();
+            $table->json('metadata')->nullable();
 
             $table->timestamps();
             $table->softDeletes();
 
             // Indexes for common queries
-            $table->index(["company_id", "is_active"]);
-            $table->index(["access_expires_at"]);
+            $table->index(['company_id', 'is_active']);
+            $table->index(['access_expires_at']);
         });
     }
 
@@ -51,6 +49,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists("company_external_accesses");
+        Schema::dropIfExists('company_external_accesses');
     }
 };

@@ -23,6 +23,123 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Department Types
+    |--------------------------------------------------------------------------
+    |
+    | Define the default department types available to companies.
+    | Each deployment can customize these types to match their organizational structure.
+    |
+    | Structure:
+    | - code: Unique identifier (lowercase, no spaces)
+    | - name: Display name
+    | - category: Classification (administrative, operational, revenue, support)
+    | - description: Human-readable description
+    | - is_active: Whether this type is active by default
+    | - metadata: Additional configuration
+    |
+    */
+
+    'department_types' => [
+        [
+            'code' => 'exec',
+            'name' => 'Executive Office',
+            'category' => 'administrative',
+            'description' => 'Executive leadership and strategic management',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'hr',
+            'name' => 'Human Resources',
+            'category' => 'administrative',
+            'description' => 'HR management, recruitment, employee relations',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'finance',
+            'name' => 'Finance & Accounting',
+            'category' => 'administrative',
+            'description' => 'Financial management, accounting, auditing',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'legal',
+            'name' => 'Legal & Compliance',
+            'category' => 'administrative',
+            'description' => 'Legal affairs, compliance, risk management',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'sales',
+            'name' => 'Sales',
+            'category' => 'revenue',
+            'description' => 'Sales operations and customer acquisition',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'marketing',
+            'name' => 'Marketing',
+            'category' => 'revenue',
+            'description' => 'Marketing, branding, and customer engagement',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'operations',
+            'name' => 'Operations',
+            'category' => 'operational',
+            'description' => 'Day-to-day operations and process management',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'production',
+            'name' => 'Production / Manufacturing',
+            'category' => 'operational',
+            'description' => 'Manufacturing, production, and quality control',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'it',
+            'name' => 'Information Technology',
+            'category' => 'support',
+            'description' => 'IT infrastructure, systems, and support',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'customer_support',
+            'name' => 'Customer Support',
+            'category' => 'support',
+            'description' => 'Customer service and technical support',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'facilities',
+            'name' => 'Facilities Management',
+            'category' => 'support',
+            'description' => 'Facilities, maintenance, and workplace management',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'rnd',
+            'name' => 'Research & Development',
+            'category' => 'operational',
+            'description' => 'Research, development, and innovation',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+    ],
+
     'relationship_types' => [
         [
             'code' => 'internal',

@@ -13,36 +13,36 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create("companies", function (Blueprint $table) {
+        Schema::create('companies', function (Blueprint $table): void {
             $table->id();
-            $table->foreignId("parent_id")->nullable()->index();
-            $table->string("name");
-            $table->string("slug")->unique();
-            $table->string("status")->default("active")->index(); // active, suspended, pending, archived
+            $table->foreignId('parent_id')->nullable()->index();
+            $table->string('name');
+            $table->string('slug')->unique();
+            $table->string('status')->default('active')->index(); // active, suspended, pending, archived
 
             // Registration details
-            $table->string("legal_name")->nullable();
-            $table->string("registration_number")->nullable();
-            $table->string("tax_id")->nullable();
-            $table->string("legal_entity_type")->nullable();
-            $table->string("jurisdiction")->nullable();
+            $table->string('legal_name')->nullable();
+            $table->string('registration_number')->nullable();
+            $table->string('tax_id')->nullable();
+            $table->string('legal_entity_type')->nullable();
+            $table->string('jurisdiction')->nullable();
 
             // Contact information (phone is on Address; use primary address for phone)
-            $table->string("email")->nullable();
-            $table->string("website")->nullable();
+            $table->string('email')->nullable();
+            $table->string('website')->nullable();
 
             // Addresses: use Address module via addressables (morphToMany)
 
             // Business context (JSON for flexibility)
-            $table->json("scope_activities")->nullable(); // Industry, services, business focus
-            $table->json("metadata")->nullable(); // Additional AI inference metadata
+            $table->json('scope_activities')->nullable(); // Industry, services, business focus
+            $table->json('metadata')->nullable(); // Additional AI inference metadata
 
             $table->timestamps();
             $table->softDeletes();
 
             // Indexes for common queries
-            $table->index(["parent_id", "status"]);
-            $table->index("created_at");
+            $table->index(['parent_id', 'status']);
+            $table->index('created_at');
         });
     }
 
@@ -51,6 +51,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists("companies");
+        Schema::dropIfExists('companies');
     }
 };

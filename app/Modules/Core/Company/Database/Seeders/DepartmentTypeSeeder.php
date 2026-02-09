@@ -5,10 +5,10 @@
 
 namespace App\Modules\Core\Company\Database\Seeders;
 
-use App\Modules\Core\Company\Models\RelationshipType;
+use App\Modules\Core\Company\Models\DepartmentType;
 use Illuminate\Database\Seeder;
 
-class RelationshipTypeSeeder extends Seeder
+class DepartmentTypeSeeder extends Seeder
 {
     /**
      * Run the database seeds.
@@ -16,10 +16,10 @@ class RelationshipTypeSeeder extends Seeder
     public function run(): void
     {
         /** @see app/Modules/Core/Company/Config/company.php */
-        $types = config('company.relationship_types', []);
+        $types = config('company.department_types', []);
 
         foreach ($types as $type) {
-            RelationshipType::firstOrCreate(['code' => $type['code']], $type);
+            DepartmentType::query()->firstOrCreate(['code' => $type['code']], $type);
         }
     }
 }

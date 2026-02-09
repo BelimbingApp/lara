@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class Company extends Model
@@ -24,7 +25,7 @@ class Company extends Model
      *
      * @var string
      */
-    protected $table = "companies";
+    protected $table = 'companies';
 
     /**
      * The attributes that are mass assignable.
@@ -32,19 +33,19 @@ class Company extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        "parent_id",
-        "name",
-        "slug",
-        "status",
-        "legal_name",
-        "registration_number",
-        "tax_id",
-        "legal_entity_type",
-        "jurisdiction",
-        "email",
-        "website",
-        "scope_activities",
-        "metadata",
+        'parent_id',
+        'name',
+        'slug',
+        'status',
+        'legal_name',
+        'registration_number',
+        'tax_id',
+        'legal_entity_type',
+        'jurisdiction',
+        'email',
+        'website',
+        'scope_activities',
+        'metadata',
     ];
 
     /**
@@ -55,11 +56,11 @@ class Company extends Model
     protected function casts(): array
     {
         return [
-            "scope_activities" => "array",
-            "metadata" => "array",
-            "created_at" => "datetime",
-            "updated_at" => "datetime",
-            "deleted_at" => "datetime",
+            'scope_activities' => 'array',
+            'metadata' => 'array',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -78,7 +79,7 @@ class Company extends Model
     {
         parent::boot();
 
-        static::creating(function ($company) {
+        static::creating(function ($company): void {
             if (empty($company->slug)) {
                 $company->slug = Str::slug($company->name);
             }
@@ -90,7 +91,7 @@ class Company extends Model
      */
     public function parent(): BelongsTo
     {
-        return $this->belongsTo(Company::class, "parent_id");
+        return $this->belongsTo(Company::class, 'parent_id');
     }
 
     /**
@@ -98,7 +99,7 @@ class Company extends Model
      */
     public function children(): HasMany
     {
-        return $this->hasMany(Company::class, "parent_id");
+        return $this->hasMany(Company::class, 'parent_id');
     }
 
     /**
@@ -106,15 +107,21 @@ class Company extends Model
      */
     public function descendants(): HasMany
     {
-        return $this->children()->with("descendants");
+        return $this->children()->with('descendants');
+    }
+
+    /**
+     * Get the departments belonging to the company.
+     */
+    public function departments(): HasMany
+    {
+        return $this->hasMany(Department::class, 'company_id');
     }
 
     /**
      * Get all ancestors up to the root.
-     *
-     * @return \Illuminate\Support\Collection
      */
-    public function ancestors()
+    public function ancestors(): Collection
     {
         $ancestors = collect();
         $parent = $this->parent;
@@ -160,7 +167,7 @@ class Company extends Model
      */
     public function relationships(): HasMany
     {
-        return $this->hasMany(CompanyRelationship::class, "company_id");
+        return $this->hasMany(CompanyRelationship::class, 'company_id');
     }
 
     /**
@@ -168,21 +175,18 @@ class Company extends Model
      */
     public function inverseRelationships(): HasMany
     {
-        return $this->hasMany(CompanyRelationship::class, "related_company_id");
+        return $this->hasMany(CompanyRelationship::class, 'related_company_id');
     }
 
     /**
      * Get all relationships of a specific type.
      *
-     * @param string $typeCode
-     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     * @param  string  $typeCode  The relationship type code
      */
     public function relationshipsOfType(string $typeCode): HasMany
     {
-        return $this->relationships()->whereHas("type", function ($query) use (
-            $typeCode,
-        ) {
-            $query->where("code", $typeCode);
+        return $this->relationships()->whereHas('type', function ($query) use ($typeCode): void {
+            $query->where('code', $typeCode);
         });
     }
 
@@ -192,15 +196,15 @@ class Company extends Model
     public function activeRelationships(): HasMany
     {
         return $this->relationships()
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query
-                    ->whereNull("effective_to")
-                    ->orWhere("effective_to", ">=", now());
+                    ->whereNull('effective_to')
+                    ->orWhere('effective_to', '>=', now());
             })
-            ->where(function ($query) {
+            ->where(function ($query): void {
                 $query
-                    ->whereNull("effective_from")
-                    ->orWhere("effective_from", "<=", now());
+                    ->whereNull('effective_from')
+                    ->orWhere('effective_from', '<=', now());
             });
     }
 
@@ -209,7 +213,7 @@ class Company extends Model
      */
     public function externalAccesses(): HasMany
     {
-        return $this->hasMany(ExternalAccess::class, "company_id");
+        return $this->hasMany(ExternalAccess::class, 'company_id');
     }
 
     /**
@@ -235,7 +239,7 @@ class Company extends Model
     /**
      * Get phone from primary address (phone is tied to address).
      */
-    public function getPhoneAttribute(): ?string
+    public function phone(): ?string
     {
         return $this->primaryAddress()?->phone;
     }
@@ -245,7 +249,7 @@ class Company extends Model
      */
     public function isActive(): bool
     {
-        return $this->status === "active";
+        return $this->status === 'active';
     }
 
     /**
@@ -253,7 +257,7 @@ class Company extends Model
      */
     public function isSuspended(): bool
     {
-        return $this->status === "suspended";
+        return $this->status === 'suspended';
     }
 
     /**
@@ -261,7 +265,7 @@ class Company extends Model
      */
     public function isPending(): bool
     {
-        return $this->status === "pending";
+        return $this->status === 'pending';
     }
 
     /**
@@ -269,7 +273,7 @@ class Company extends Model
      */
     public function isArchived(): bool
     {
-        return $this->status === "archived";
+        return $this->status === 'archived';
     }
 
     /**
@@ -277,7 +281,7 @@ class Company extends Model
      */
     public function activate(): bool
     {
-        $this->status = "active";
+        $this->status = 'active';
         return $this->save();
     }
 
@@ -286,7 +290,7 @@ class Company extends Model
      */
     public function suspend(): bool
     {
-        $this->status = "suspended";
+        $this->status = 'suspended';
         return $this->save();
     }
 
@@ -295,14 +299,14 @@ class Company extends Model
      */
     public function archive(): bool
     {
-        $this->status = "archived";
+        $this->status = 'archived';
         return $this->save();
     }
 
     /**
      * Get the full address as a formatted string (from primary address via Address module).
      */
-    public function getFullAddressAttribute(): ?string
+    public function fullAddress(): ?string
     {
         $address = $this->primaryAddress();
         if (! $address) {
@@ -324,7 +328,7 @@ class Company extends Model
     /**
      * Get the display name (legal name if available, otherwise name).
      */
-    public function getDisplayNameAttribute(): string
+    public function displayName(): string
     {
         return $this->legal_name ?? $this->name;
     }
@@ -332,24 +336,24 @@ class Company extends Model
     /**
      * Scope a query to only include active companies.
      */
-    public function scopeActive($query)
+    public function scopeActive($query): void
     {
-        return $query->where("status", "active");
+        $query->where('status', 'active');
     }
 
     /**
      * Scope a query to only include root companies (no parent).
      */
-    public function scopeRoot($query)
+    public function scopeRoot($query): void
     {
-        return $query->whereNull("parent_id");
+        $query->whereNull('parent_id');
     }
 
     /**
      * Scope a query to only include subsidiaries (has parent).
      */
-    public function scopeSubsidiaries($query)
+    public function scopeSubsidiaries($query): void
     {
-        return $query->whereNotNull("parent_id");
+        $query->whereNotNull('parent_id');
     }
 }
