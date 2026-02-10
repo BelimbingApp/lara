@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -23,10 +22,10 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('users', 'users.index')->name('users.index');
     Volt::route('users/create', 'users.create')->name('users.create');
     Volt::route('users/{user}/edit', 'users.edit')->name('users.edit');
-});
 
-// Health check endpoints
-Route::get('/health', [HealthController::class, 'health']);
-Route::get('/api/health/dashboard', [HealthController::class, 'dashboard'])->middleware('auth');
+    // Admin: Geonames (placeholder routes for menu testing)
+    Route::get('admin/geonames/countries', fn() => view('placeholder', ['title' => 'Geonames Countries']))->name('admin.geonames.countries.index');
+    Route::get('admin/geonames/postcodes', fn() => view('placeholder', ['title' => 'Geonames Postcodes']))->name('admin.geonames.postcodes.index');
+});
 
 require __DIR__.'/auth.php';

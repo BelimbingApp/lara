@@ -1,6 +1,6 @@
 <?php
 // SPDX-License-Identifier: AGPL-3.0-only
-// Copyright (c) 2025 Ng Kiat Siong
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 ?>
 
 <aside class="w-64 min-h-full bg-base-200 dark:bg-zinc-800 border-r border-base-300 dark:border-base-700 flex flex-col sidebar-container">

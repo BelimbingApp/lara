@@ -1,8 +1,8 @@
-{$APP_DOMAIN}:{$HTTPS_PORT:443} {
+{$APP_DOMAIN:local.blb.lara}:{$HTTPS_PORT:443} {
 	# TLS Configuration
 	# Local: "internal"
 	# Prod:  email address or "internal" if behind another proxy (though usually real email)
-	tls {$TLS_MODE}
+	tls {$TLS_MODE:internal}
 
 	# Logging
 	log {
@@ -10,13 +10,20 @@
 		format console
 	}
 
+	# Vite HMR WebSocket
+	@vite_ws {
+		path /?token=*
+		header Upgrade websocket
+	}
+	handle @vite_ws {
+		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT}
+	}
+
 	# Vite / Frontend Config (dev mode paths + production builds)
 	# Try Vite first for dev assets, fallback to Laravel for built assets
 	@vite_dev path /@vite/* /@fs/* /node_modules/* /resources/*
 	handle @vite_dev {
-		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT} {
-			header_up Host {host}
-		}
+		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT}
 	}
 
 	# Built assets (CSS/JS from public/build) - serve from Laravel
@@ -43,11 +50,11 @@
 	}
 }
 
-{$BACKEND_DOMAIN}:{$HTTPS_PORT:443} {
+{$BACKEND_DOMAIN:local.api.blb.lara}:{$HTTPS_PORT:443} {
 	# TLS Configuration
 	# Local: "internal"
 	# Prod:  email address or "internal" if behind another proxy (though usually real email)
-	tls {$TLS_MODE}
+	tls {$TLS_MODE:internal}
 
 	# Logging
 	log {

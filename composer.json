@@ -13,10 +13,10 @@
     "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.46.0",
+        "laravel/framework": "^12.48.1",
         "laravel/tinker": "^2.11.2",
         "livewire/volt": "^1.10.1",
-        "robsontenorio/mary": "^2.5.0"
+        "robsontenorio/mary": "^2.6.0"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",

@@ -9,9 +9,9 @@
 
 ## 1. Executive Summary
 
-**What:** A dynamic, auto-discovered, hierarchical menu system where modules self-register navigation via convention. Supports two contexts (Business, Admin), VS Code-inspired UI, and cache-only storage.
+**What:** A dynamic, auto-discovered, hierarchical menu system where modules self-register navigation via convention. VS Code-inspired tree UI with cache-only storage.
 
-**Why:** Replace hardcoded Blade sidebar to scale cleanly to 100–500+ items without merge conflicts, enable module isolation, and align with BLB's strategic programming philosophy.
+**Why:** Replace hardcoded Blade sidebar to scale cleanly to 100+ items, eliminate merge conflicts, enable module isolation, and align with BLB's strategic programming philosophy.
 
 ---
 
@@ -19,16 +19,18 @@
 
 ### Phase Goals (Now)
 - Auto-discovery of module and extension menus via convention
-- Two-context design: Business (default) and Admin
-- Hierarchical tree with position-based ordering
-- VS Code-inspired UI (Activity Bar + Sidebar tree)
-- Cache-only storage; rebuild via Artisan
+- Hierarchical tree with position-based ordering (sections: Administration, Business Operations)
+- VS Code-inspired collapsible tree UI
+- Cache-only storage with environment-aware caching (local = always fresh, production = cached)
+- Artisan commands for cache management
 
 ### Non-Goals (Deferred)
-- Permission-based visibility
+- Permission-based visibility (add field to schema, but don't filter yet)
+- Context switching (Business/Admin toggle) - may add later if menu exceeds 50+ items
 - Drag-and-drop reordering
 - `before`/`after` positioning
-- AI panel, badges, favorites
+- Search/filter (add in Phase 2 if needed)
+- Badges, favorites, AI panel
 
 ### Success Targets
 - 100% of core modules use discovery; 0 hardcoded items
@@ -39,14 +41,14 @@
 
 ## 3. Users and Stories
 
-### Administrators
-- Switch between Business and Admin menus
+### All Users (Employees, Admins)
 - Navigate via collapsible tree; parent of active auto-expands
-- Search to quickly locate items (P1)
+- Sections organize menu (Administration, Business Operations)
+- Find items quickly in organized hierarchy
 
 ### Developers (Modules, Extensions)
 - Define items in a `menu.php` with parent-child and position
-- Items appear in correct context and order
+- Items appear in correct order within menu tree
 - Extend or override existing items (ID-based, last-wins)
 
 ---
@@ -55,25 +57,25 @@
 
 ### Registration and Discovery
 - System scans menu definition files by convention:
-  - `app/Modules/{Layer}/{Module}/Menu/menu.php`
-  - `extensions/{vendor}/{extension}/Menu/menu.php`
-- Discovery runs on cache clear or explicit command; invalid files log warnings (non-fatal)
+  - `app/Modules/{Layer}/{Module}/Config/menu.php`
+  - `extensions/{vendor}/{extension}/Config/menu.php`
+- Discovery runs on cache miss; invalid files log warnings (non-fatal)
 
 ### Structure and Schema
 - Each item has:
   - `id` (unique, e.g., `admin.geonames.postcodes`)
   - `label` (string or translation key)
-  - `context` (`'admin'` or `'business'`)
-  - Optional: `icon`, `route` or `url`, `parent`, `position` (integer, default: 1000)
-- ID naming: `{context}.{module}[.{submodule}...]`
+  - Optional: `icon`, `route` or `url`, `parent`, `position` (integer, default: 1000), `permission` (string, ignored for now)
+- ID naming: `{section}.{module}[.{submodule}...]` (e.g., `admin.modules.install` or `business.customers.list`)
 - Duplicate IDs: last definition wins (enables extension override)
 - Items without route are containers (toggle only)
 - Items may have both route and children only if UX affordance is clear; default: container OR link
 
-### Context Switching
-- UI toggle (Activity Bar) between Business and Admin
-- Default context: Business
-- Context persisted (session); UI state (expanded nodes) persisted locally (localStorage)
+### Menu Organization
+- Single unified menu with logical sections (Administration, Business Operations)
+- Root-level containers organize related items
+- Collapsed by default; expand on demand
+- Expanded/collapsed state persisted locally (localStorage)
 
 ### Rendering and Interaction
 - Collapsible tree; active item highlighted; parent chain auto-expands
@@ -111,11 +113,11 @@
 - 1000–9999: business modules
 - 10000+: extensions
 
-**Cache-only storage;** source of truth in code (`menu.php`)
+**Cache-only storage;** source of truth in code (`menu.php`); environment-aware caching
 
-**VS Code-inspired UI:** Activity Bar + Sidebar tree
+**VS Code-inspired collapsible tree UI**
 
-**Context state via session** (not URL)
+**Single unified menu** with sections; defer context switching until menu exceeds 50+ items
 
 **Blade + Alpine** for UI state; Livewire not required for menu shell
 
@@ -130,42 +132,44 @@
 - Stores raw normalized items in cache (registry cache)
 
 **Builder:**
-- Filters by context; resolves parent-child tree
+- Resolves parent-child tree
 - Sorts siblings by position; computes active and has-active-child flags
-- Caches per-context built tree
+- Caches built tree
 
 ### Directory Conventions
 
 **Framework code:**
 - `app/Base/Menu/`: MenuServiceProvider, MenuRegistry, MenuBuilder, Services/MenuDiscoveryService
-- Console/Commands: `menu:discover`, `menu:clear`, `menu:list`
-- Blade components: `resources/views/components/menu/{activity-bar,sidebar,tree,item,search,user-profile}.blade.php`
+- Blade components: `resources/views/components/menu/{sidebar,tree,item}.blade.php`
 
 ---
 
 ## 7. UI/UX Specifications
 
-### Activity Bar (Left)
-- Icons: Business (building), Admin (cog)
-- Active has left border and highlight
-- Click switches context; preference persisted
-
-### Sidebar
-- **Sections:** Search (P1), Menu Tree (scrollable), Quick actions (Settings, Logout), User profile
+### Sidebar Layout
+- **Width:** 256px (fixed, left side)
+- **Sections:** Menu Tree (scrollable), Quick actions (Settings, Logout), User profile
 - **Interaction:** Click link navigates; click container toggles expand/collapse; chevron toggles
 - **Accessibility:** Tree roles and ARIA; keyboard navigation (arrows, Enter/Space, Home/End)
 
+### Menu Tree
+- **Root containers:** Administration, Business Operations (collapsed by default)
+- **Hierarchy:** Unlimited depth, practical max ~3 levels
+- **Active item:** Highlighted with bg-primary/10, auto-expand parent chain
+- **Collapsed state:** Persisted to localStorage
+
 ### Responsive Behavior
-- **Desktop (lg+):** Activity Bar + Sidebar visible
-- **Tablet (md):** Activity Bar visible; Sidebar collapsible
-- **Mobile (sm):** Hamburger triggers full-screen overlay; focus management and backdrop
+- **Desktop (lg+):** Sidebar always visible
+- **Tablet (md):** Sidebar collapsible (toggle button in header)
+- **Mobile (sm):** Hamburger triggers full-screen overlay with backdrop
 
 ### Visual Design
-- **VS Code-inspired layout:** Fixed Activity Bar (48px) + Sidebar (256px) + Main content
+- **Layout:** Sidebar (256px) + Main content (flex-1)
 - **Color tokens:** Base colors from daisyUI/MaryUI; active uses primary
 - **Typography:** Menu items text-sm; active font-medium
-- **Icons:** Heroicons outline (menu items w-4 h-4, Activity Bar w-6 h-6)
-- **Animation:** Expand/collapse 200ms ease-out; hover 150ms; context switch 150ms crossfade
+- **Icons:** Heroicons outline (menu items w-4 h-4)
+- **Animation:** Expand/collapse 200ms ease-out; hover 150ms
+- **Indentation:** depth × 16px (max visible: 64px/4 levels, then scroll indent)
 
 ---
 
@@ -173,21 +177,33 @@
 
 ### Layers and Keys
 - **Registry cache:** Raw normalized items (`blb.menu.registry`)
-- **Built tree cache:** Per-context resolved trees (`blb.menu.tree.admin`, `blb.menu.tree.business`)
+- **Built tree cache:** Resolved tree (`blb.menu.tree`)
 
-### Invalidation Triggers
-- `php artisan menu:discover` — scan + rebuild registry; clear built trees
-- `php artisan menu:clear` — clear all menu caches
-- Deploy hook runs `menu:discover`
+### Environment-Aware Caching
+- **Development (local):** Skip cache entirely; always discover fresh on page load
+- **Production/Staging:** Use cache; require explicit invalidation
 
-### Local Development
-- Optional config to bypass cache in local for instant feedback
+**Implementation:**
+```php
+if (app()->environment('local')) {
+    // Always discover, no cache - instant feedback during development
+    $items = $discovery->discover();
+} else {
+    // Use cache - performance in production
+    $items = Cache::remember('menu.registry', fn() => $discovery->discover());
+}
+```
+
+### Cache Invalidation
+- **Production/Staging:** Deploy runs `php artisan cache:clear` (standard Laravel)
+- **Auto-rebuild:** Next request after cache clear automatically discovers and rebuilds menu
+- **Debug command (deferred):** `php artisan menu:list` to inspect discovered items
 
 ---
 
 ## 9. Menu Definition Format
 
-**File:** `app/Modules/{Layer}/{Module}/Menu/menu.php`
+**File:** `app/Modules/{Layer}/{Module}/Config/menu.php`
 
 **Structure (minimal example):**
 
@@ -197,14 +213,13 @@ return [
         [
             'id' => 'admin.geonames',
             'label' => 'Geonames',
-            'context' => 'admin',
             'icon' => 'heroicon-o-globe-alt',
             'position' => 100,
+            'parent' => 'admin',  // Under Administration section
         ],
         [
             'id' => 'admin.geonames.postcodes',
             'label' => 'Postcodes',
-            'context' => 'admin',
             'route' => 'admin.geonames.postcodes.index',
             'parent' => 'admin.geonames',
             'position' => 20,
@@ -216,32 +231,37 @@ return [
 **Field Notes:**
 - `label` accepts translation key or plain string
 - `route` or `url` optional; container if neither provided
+- `parent` typically references root sections (`admin` or `business`) or other menu items
 - `permission` field may exist but is ignored until permission system ships (deferred)
+
+**Root Sections (Framework-Provided):**
+- `admin` - Administration section (modules, git, config, system)
+- `business` - Business Operations section (customers, invoices, orders, etc.)
 
 ---
 
 ## 10. Implementation Phases
 
 ### Phase 1 (MVP) — S (1–2 days)
-- Auto-discovery (modules + extensions), registry, validation (duplicate IDs, circular parents), builder (context filter, position sort, active chain)
-- Cache-only storage and Artisan commands (`menu:discover`, `menu:clear`, `menu:list`)
-- VS Code-inspired shell: Activity Bar (Business/Admin), Sidebar tree (collapsible), active highlighting
-- Context in session; default Business
-- **Deliverable:** Functional menu system with Geonames example
+- Auto-discovery (modules + extensions), registry, validation (duplicate IDs, circular parents)
+- Builder (position sort, parent-child tree, active chain)
+- Environment-aware caching (local = no cache, production = cached; auto-rebuild on cache miss)
+- Sidebar with collapsible tree, active highlighting
+- Framework-provided root sections (Administration, Business Operations)
+- **Deliverable:** Functional menu with Geonames example; refresh page = see changes in local
 
-### Phase 2 (UX Polish) — M (1–3 days)
-- Search/filter in sidebar
+### Phase 2 (Extensions and Hardening) — M (1–2 days)
+- Extension override tests
+- Edge-case validations (missing parents/routes) with clear logs
 - Persist expanded/collapsed state (localStorage)
 - Auto-expand to active item on load
-- Responsive mobile overlay with focus management
-- Performance hardening and UX accessibility passes
-- **Deliverable:** Production-ready menu with search and mobile support
+- **Deliverable:** Production-ready menu system
 
-### Phase 3 (Extensions and Hardening) — M (1–3 days)
-- Robust extension override tests
-- Edge-case validations (missing parents/routes) with clear logs
-- Benchmarks at 500+ items; profiling
-- **Deliverable:** Battle-tested menu system ready for extension ecosystem
+### Phase 3 (Polish - If Needed) — S-M (1–2 days)
+- Search/filter (if menu exceeds 30+ items)
+- Responsive mobile overlay
+- Context switching (if menu exceeds 50+ items and clear Business/Admin split emerges)
+- **Deliverable:** Enhanced UX based on actual usage patterns
 
 ---
 
