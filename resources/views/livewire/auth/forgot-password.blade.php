@@ -30,7 +30,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="sendPasswordResetLink" class="flex flex-col gap-6">
         <!-- Email Address -->
-        <x-mary-input
+        <x-ui.input
             wire:model="email"
             label="{{ __('Email Address') }}"
             type="email"
@@ -39,9 +39,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
             placeholder="email@example.com"
         />
 
-        <x-mary-button type="submit" class="w-full btn-primary" data-test="email-password-reset-link-button">
+        <x-ui.button type="submit" variant="primary" class="w-full" data-test="email-password-reset-link-button">
             {{ __('Email password reset link') }}
-        </x-mary-button>
+        </x-ui.button>
     </form>
 
     <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-400">

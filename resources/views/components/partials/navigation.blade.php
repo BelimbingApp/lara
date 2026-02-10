@@ -5,7 +5,7 @@
 
 @props(['items' => []])
 
-<ul class="menu menu-vertical w-full gap-1">
+<ul class="flex flex-col space-y-1 w-full gap-1">
     @foreach($items as $item)
         <li>
             <a

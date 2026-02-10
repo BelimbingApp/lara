@@ -81,7 +81,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="login" class="flex flex-col gap-6">
         <!-- Email Address -->
-        <x-mary-input
+        <x-ui.input
             wire:model="email"
             label="{{ __('Email address') }}"
             type="email"
@@ -93,7 +93,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         <!-- Password -->
         <div class="relative">
-            <x-mary-input
+            <x-ui.input
                 wire:model="password"
                 label="{{ __('Password') }}"
                 type="password"
@@ -110,12 +110,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
 
         <!-- Remember Me -->
-        <x-mary-checkbox wire:model="remember" label="{{ __('Remember me') }}" />
+        <x-ui.checkbox wire:model="remember" label="{{ __('Remember me') }}" />
 
         <div class="flex items-center justify-end">
-            <x-mary-button type="submit" class="w-full btn-primary" data-test="login-button">
+            <x-ui.button type="submit" variant="primary" class="w-full" data-test="login-button">
                 {{ __('Log in') }}
-            </x-mary-button>
+            </x-ui.button>
         </div>
     </form>
 

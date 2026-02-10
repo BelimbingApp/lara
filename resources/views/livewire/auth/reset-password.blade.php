@@ -76,7 +76,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="resetPassword" class="flex flex-col gap-6">
         <!-- Email Address -->
-        <x-mary-input
+        <x-ui.input
             wire:model="email"
             label="{{ __('Email') }}"
             type="email"
@@ -85,7 +85,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         />
 
         <!-- Password -->
-        <x-mary-input
+        <x-ui.input
             wire:model="password"
             label="{{ __('Password') }}"
             type="password"
@@ -95,7 +95,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         />
 
         <!-- Confirm Password -->
-        <x-mary-input
+        <x-ui.input
             wire:model="password_confirmation"
             label="{{ __('Confirm password') }}"
             type="password"
@@ -105,9 +105,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
         />
 
         <div class="flex items-center justify-end">
-            <x-mary-button type="submit" class="w-full btn-primary" data-test="reset-password-button">
+            <x-ui.button type="submit" variant="primary" class="w-full" data-test="reset-password-button">
                 {{ __('Reset password') }}
-            </x-mary-button>
+            </x-ui.button>
         </div>
     </form>
 </div>

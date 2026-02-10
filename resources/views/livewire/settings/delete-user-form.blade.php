@@ -29,11 +29,11 @@ new class extends Component {
         <p class="text-zinc-600 dark:text-zinc-400">{{ __('Delete your account and all of its resources') }}</p>
     </div>
 
-    <x-mary-button wire:click="$set('showDeleteModal', true)" class="btn-error" data-test="delete-user-button">
+    <x-ui.button wire:click="$set('showDeleteModal', true)" variant="danger" data-test="delete-user-button">
             {{ __('Delete account') }}
-    </x-mary-button>
+    </x-ui.button>
 
-    <x-mary-modal wire:model="showDeleteModal" class="max-w-lg">
+    <x-ui.modal wire:model="showDeleteModal" class="max-w-lg">
         <form method="POST" wire:submit="deleteUser" class="space-y-6">
             <div>
                 <h3 class="text-xl font-semibold">{{ __('Are you sure you want to delete your account?') }}</h3>
@@ -43,17 +43,17 @@ new class extends Component {
                 </p>
             </div>
 
-            <x-mary-input wire:model="password" label="{{ __('Password') }}" type="password" />
+            <x-ui.input wire:model="password" label="{{ __('Password') }}" type="password" />
 
             <div class="flex justify-end space-x-2 rtl:space-x-reverse">
-                <x-mary-button wire:click="$set('showDeleteModal', false)" class="btn-ghost">
+                <x-ui.button wire:click="$set('showDeleteModal', false)" variant="ghost">
                     {{ __('Cancel') }}
-                </x-mary-button>
+                </x-ui.button>
 
-                <x-mary-button type="submit" class="btn-error" data-test="confirm-delete-user-button">
+                <x-ui.button type="submit" variant="danger" data-test="confirm-delete-user-button">
                     {{ __('Delete account') }}
-                </x-mary-button>
+                </x-ui.button>
             </div>
         </form>
-    </x-mary-modal>
+    </x-ui.modal>
 </section>

@@ -11,13 +11,13 @@
         {{-- Quick Actions --}}
         <div class="space-y-1">
             <a href="{{ route('profile.edit') }}" class="flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition">
-                <x-icon name="heroicon-o-cog-6-tooth" class="w-4 h-4" />
+                <span>⚙️</span>
                 <span>Settings</span>
             </a>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-lg text-zinc-900 dark:text-zinc-100 hover:bg-zinc-200 dark:hover:bg-zinc-800 transition">
-                    <x-icon name="heroicon-o-arrow-right-on-rectangle" class="w-4 h-4" />
+                    <span>🚪</span>
                     <span>Logout</span>
                 </button>
             </form>

@@ -53,9 +53,9 @@ new #[Layout('components.layouts.auth')] class extends Component {
     @endif
 
     <div class="flex flex-col items-center justify-between space-y-3">
-        <x-mary-button wire:click="sendVerification" class="w-full btn-primary">
+        <x-ui.button wire:click="sendVerification" variant="primary" class="w-full">
             {{ __('Resend verification email') }}
-        </x-mary-button>
+        </x-ui.button>
 
         <button wire:click="logout" class="text-sm text-primary hover:underline cursor-pointer" data-test="logout-button">
             {{ __('Log out') }}

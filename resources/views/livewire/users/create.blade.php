@@ -39,19 +39,19 @@ new class extends Component {
     <div class="space-y-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold">{{ __('Create User') }}</h1>
-                <p class="text-sm text-base-content/70 mt-1">{{ __('Add a new user to the system') }}</p>
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ __('Create User') }}</h1>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{{ __('Add a new user to the system') }}</p>
             </div>
-            <a href="{{ route('users.index') }}" wire:navigate class="btn btn-ghost">
+            <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors">
                 <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                 {{ __('Back') }}
             </a>
         </div>
 
-        <div class="card bg-base-100 shadow">
-            <div class="card-body">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-lg">
+            <div class="p-6">
                 <form wire:submit="store" class="space-y-6">
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="name"
                         label="{{ __('Name') }}"
                         type="text"
@@ -59,40 +59,44 @@ new class extends Component {
                         autofocus
                         autocomplete="name"
                         placeholder="{{ __('Enter user name') }}"
+                        :error="$errors->first('name')"
                     />
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="email"
                         label="{{ __('Email') }}"
                         type="email"
                         required
                         autocomplete="email"
                         placeholder="{{ __('Enter email address') }}"
+                        :error="$errors->first('email')"
                     />
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="password"
                         label="{{ __('Password') }}"
                         type="password"
                         required
                         autocomplete="new-password"
                         placeholder="{{ __('Enter password') }}"
+                        :error="$errors->first('password')"
                     />
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="password_confirmation"
                         label="{{ __('Confirm Password') }}"
                         type="password"
                         required
                         autocomplete="new-password"
                         placeholder="{{ __('Confirm password') }}"
+                        :error="$errors->first('password_confirmation')"
                     />
 
                     <div class="flex items-center gap-4">
-                        <x-mary-button type="submit" class="btn-primary">
+                        <x-ui.button type="submit" variant="primary">
                             {{ __('Create User') }}
-                        </x-mary-button>
-                        <a href="{{ route('users.index') }}" wire:navigate class="btn btn-ghost">
+                        </x-ui.button>
+                        <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors">
                             {{ __('Cancel') }}
                         </a>
                     </div>

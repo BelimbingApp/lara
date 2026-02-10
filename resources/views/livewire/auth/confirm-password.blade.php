@@ -43,7 +43,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
     <form method="POST" wire:submit="confirmPassword" class="flex flex-col gap-6">
         <!-- Password -->
-        <x-mary-input
+        <x-ui.input
             wire:model="password"
             label="{{ __('Password') }}"
             type="password"
@@ -52,8 +52,8 @@ new #[Layout('components.layouts.auth')] class extends Component {
             placeholder="{{ __('Password') }}"
         />
 
-        <x-mary-button type="submit" class="w-full btn-primary" data-test="confirm-password-button">
+        <x-ui.button type="submit" variant="primary" class="w-full" data-test="confirm-password-button">
             {{ __('Confirm') }}
-        </x-mary-button>
+        </x-ui.button>
     </form>
 </div>

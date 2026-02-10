@@ -74,10 +74,10 @@ new class extends Component {
 
     <x-settings.layout :heading="__('Profile')" :subheading="__('Update your name and email address')">
         <form wire:submit="updateProfileInformation" class="my-6 w-full space-y-6">
-            <x-mary-input wire:model="name" label="{{ __('Name') }}" type="text" required autofocus autocomplete="name" />
+            <x-ui.input wire:model="name" label="{{ __('Name') }}" type="text" required autofocus autocomplete="name" />
 
             <div>
-                <x-mary-input wire:model="email" label="{{ __('Email') }}" type="email" required autocomplete="email" />
+                <x-ui.input wire:model="email" label="{{ __('Email') }}" type="email" required autocomplete="email" />
 
                 @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
                     <div>
@@ -100,9 +100,9 @@ new class extends Component {
 
             <div class="flex items-center gap-4">
                 <div class="flex items-center justify-end">
-                    <x-mary-button type="submit" class="w-full btn-primary" data-test="update-profile-button">
+                    <x-ui.button type="submit" variant="primary" class="w-full" data-test="update-profile-button">
                         {{ __('Save') }}
-                    </x-mary-button>
+                    </x-ui.button>
                 </div>
 
                 <x-action-message class="me-3" on="profile-updated">

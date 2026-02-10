@@ -2,12 +2,12 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "belimbing/blb",
     "type": "project",
-    "description": "Belimbing (BLB) - Laravel application with Livewire Volt and MaryUI",
+    "description": "Belimbing (BLB) - Laravel application with Livewire Volt and Tailwind CSS",
     "keywords": [
         "laravel",
         "livewire",
         "volt",
-        "mary-ui",
+        "tailwindcss",
         "tall-stack"
     ],
     "license": "AGPL-3.0-only",
@@ -15,8 +15,7 @@
         "php": "^8.2",
         "laravel/framework": "^12.48.1",
         "laravel/tinker": "^2.11.2",
-        "livewire/volt": "^1.10.1",
-        "robsontenorio/mary": "^2.6.0"
+        "livewire/volt": "^1.10.1"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6",

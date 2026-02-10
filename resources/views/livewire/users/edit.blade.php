@@ -74,19 +74,19 @@ new class extends Component {
     <div class="space-y-6">
         <div class="flex items-center justify-between">
             <div>
-                <h1 class="text-2xl font-bold">{{ __('Edit User') }}</h1>
-                <p class="text-sm text-base-content/70 mt-1">{{ __('Update user information') }}</p>
+                <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ __('Edit User') }}</h1>
+                <p class="text-sm text-zinc-600 dark:text-zinc-400 mt-1">{{ __('Update user information') }}</p>
             </div>
-            <a href="{{ route('users.index') }}" wire:navigate class="btn btn-ghost">
+            <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors">
                 <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                 {{ __('Back') }}
             </a>
         </div>
 
-        <div class="card bg-base-100 shadow">
-            <div class="card-body">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-lg">
+            <div class="p-6">
                 <form wire:submit="update" class="space-y-6">
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="name"
                         label="{{ __('Name') }}"
                         type="text"
@@ -94,40 +94,46 @@ new class extends Component {
                         autofocus
                         autocomplete="name"
                         placeholder="{{ __('Enter user name') }}"
+                        :error="$errors->first('name')"
                     />
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="email"
                         label="{{ __('Email') }}"
                         type="email"
                         required
                         autocomplete="email"
                         placeholder="{{ __('Enter email address') }}"
+                        :error="$errors->first('email')"
                     />
 
-                    <div class="divider">{{ __('Change Password (Optional)') }}</div>
+                    <div class="border-t border-zinc-300 dark:border-zinc-700 my-6 pt-6">
+                        <h3 class="text-sm font-medium text-zinc-900 dark:text-zinc-100 mb-4">{{ __('Change Password (Optional)') }}</h3>
+                    </div>
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="password"
                         label="{{ __('New Password') }}"
                         type="password"
                         autocomplete="new-password"
                         placeholder="{{ __('Leave blank to keep current password') }}"
+                        :error="$errors->first('password')"
                     />
 
-                    <x-mary-input
+                    <x-ui.input
                         wire:model="password_confirmation"
                         label="{{ __('Confirm New Password') }}"
                         type="password"
                         autocomplete="new-password"
                         placeholder="{{ __('Confirm new password') }}"
+                        :error="$errors->first('password_confirmation')"
                     />
 
                     <div class="flex items-center gap-4">
-                        <x-mary-button type="submit" class="btn-primary">
+                        <x-ui.button type="submit" variant="primary">
                             {{ __('Update User') }}
-                        </x-mary-button>
-                        <a href="{{ route('users.index') }}" wire:navigate class="btn btn-ghost">
+                        </x-ui.button>
+                        <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors">
                             {{ __('Cancel') }}
                         </a>
                     </div>

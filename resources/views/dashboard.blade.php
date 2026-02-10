@@ -9,22 +9,22 @@
 
         <!-- Dashboard Widgets Grid -->
         <div class="grid gap-6 md:grid-cols-3">
-            <div class="card bg-base-100 border border-base-300 dark:border-base-700 shadow-sm rounded-xl">
-                <div class="card-body p-6">
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl">
+                <div class="p-6">
                     <div class="relative aspect-video overflow-hidden rounded-lg">
                         <x-placeholder-pattern class="absolute inset-0 size-full stroke-gray-900/20 dark:stroke-neutral-100/20" />
                     </div>
                 </div>
             </div>
-            <div class="card bg-base-100 border border-base-300 dark:border-base-700 shadow-sm rounded-xl">
-                <div class="card-body p-6">
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl">
+                <div class="p-6">
                     <div class="relative aspect-video overflow-hidden rounded-lg">
                         <x-placeholder-pattern class="absolute inset-0 size-full stroke-gray-900/20 dark:stroke-neutral-100/20" />
                     </div>
                 </div>
             </div>
-            <div class="card bg-base-100 border border-base-300 dark:border-base-700 shadow-sm rounded-xl">
-                <div class="card-body p-6">
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl">
+                <div class="p-6">
                     <div class="relative aspect-video overflow-hidden rounded-lg">
                         <x-placeholder-pattern class="absolute inset-0 size-full stroke-gray-900/20 dark:stroke-neutral-100/20" />
                     </div>
@@ -33,8 +33,8 @@
         </div>
 
         <!-- Main Content Card -->
-        <div class="card bg-base-100 border border-base-300 dark:border-base-700 shadow-sm rounded-xl">
-            <div class="card-body p-6">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl">
+            <div class="p-6">
                 <div class="relative min-h-[400px] overflow-hidden rounded-lg">
                     <x-placeholder-pattern class="absolute inset-0 size-full stroke-gray-900/20 dark:stroke-neutral-100/20" />
                 </div>

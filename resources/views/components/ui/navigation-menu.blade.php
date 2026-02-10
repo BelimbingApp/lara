@@ -1,6 +1,6 @@
 @props(['items' => []])
 
-<ul class="menu menu-vertical bg-base-200 w-full p-2 rounded-box">
+<ul class="flex flex-col space-y-1 bg-zinc-50 dark:bg-zinc-800 w-full p-2 rounded-box">
     @foreach($items as $item)
         <li>
             <a

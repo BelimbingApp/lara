@@ -5,7 +5,7 @@
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
         <!-- Header -->
-        <div class="navbar bg-base-100 border-b border-base-300 dark:border-base-700">
+        <div class="navbar bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
             <a href="{{ route('dashboard') }}" class="flex items-center space-x-2 me-5" wire:navigate>
                 <x-app-logo />
             </a>
@@ -26,13 +26,13 @@
 
             <!-- Action Buttons -->
             <div class="hidden lg:flex gap-2">
-                <a href="#" class="btn btn-ghost btn-sm" title="{{ __('Search') }}">
+                <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors" title="{{ __('Search') }}">
                     <x-icon name="heroicon-o-magnifying-glass" class="w-5 h-5" />
                 </a>
-                <a href="https://github.com/BelimbingApp/lara" target="_blank" class="btn btn-ghost btn-sm" title="{{ __('Repository') }}">
+                <a href="https://github.com/BelimbingApp/lara" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors" title="{{ __('Repository') }}">
                     <x-icon name="heroicon-o-folder" class="w-5 h-5" />
                 </a>
-                <a href="https://laravel.com/docs/starter-kits#livewire" target="_blank" class="btn btn-ghost btn-sm" title="{{ __('Documentation') }}">
+                <a href="https://laravel.com/docs/starter-kits#livewire" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors" title="{{ __('Documentation') }}">
                     <x-icon name="heroicon-o-book-open" class="w-5 h-5" />
                 </a>
             </div>
@@ -49,11 +49,11 @@
             </div>
             <div class="drawer-side">
                 <label for="mobile-drawer" class="drawer-overlay"></label>
-                <aside class="w-64 min-h-full bg-base-200 border-r border-base-300 dark:border-base-700 p-4">
-                    <label for="mobile-drawer" class="btn btn-square btn-ghost mb-4">
+                <aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 p-4">
+                    <label for="mobile-drawer" class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors mb-4">
                         <x-icon name="heroicon-o-x-mark" class="w-6 h-6" />
                     </label>
-                    <ul class="menu menu-vertical w-full">
+                    <ul class="flex flex-col space-y-1 w-full">
                         <li>
                             <a href="{{ route('dashboard') }}" wire:navigate class="{{ request()->routeIs('dashboard') ? 'active' : '' }}">
                                 <x-icon name="heroicon-o-squares-2x2" class="w-5 h-5" />
@@ -61,8 +61,8 @@
                             </a>
                         </li>
                     </ul>
-                    <div class="divider"></div>
-                    <ul class="menu menu-vertical w-full">
+                    <div class="border-t border-zinc-300 dark:border-zinc-700 my-4"></div>
+                    <ul class="flex flex-col space-y-1 w-full">
                         <li>
                             <a href="https://github.com/BelimbingApp/lara" target="_blank">
                                 <x-icon name="heroicon-o-folder" class="w-5 h-5" />

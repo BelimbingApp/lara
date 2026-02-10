@@ -230,7 +230,7 @@ Belimbing addresses these problems through five immutable core principles:
 ### Architecture Foundations
 
 **Current Implementation (Laravel-Based)**
-- PHP 8.2+ on Laravel 12+ (Livewire Volt + MaryUI)
+- PHP 8.2+ on Laravel 12+ (Livewire Volt + Tailwind CSS + Alpine.js)
 - Deep modular structure under `app/Modules/*/*` (domain modules with models, migrations, seeders)
 - Base framework extensions under `app/Base/*` (e.g., module-aware migrations and seeding)
 
@@ -269,7 +269,7 @@ Belimbing addresses these problems through five immutable core principles:
 ### Platform (Current)
 
 - **Backend:** Laravel 12+ (PHP 8.2+)
-- **UI:** Livewire Volt + MaryUI
+- **UI:** Livewire Volt + Tailwind CSS + Alpine.js
 - **Frontend tooling:** Vite
 - **Module system:** `app/Modules` with module-aware migrations/seed registry
 

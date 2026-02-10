@@ -3,7 +3,7 @@
 ## 1. Project Context
 Belimbing (BLB) is an enterprise-grade **framework** built on Laravel, leveraging the TALL stack evolution:
 - **Framework:** Laravel 12+
-- **Frontend/Logic:** Livewire Volt + MaryUI
+- **Frontend/Logic:** Livewire Volt + Tailwind CSS + Alpine.js
 - **Testing:** Pest PHP
 - **Linting:** Laravel Pint
 - **Dependencies:** Use the latest available versions for all packages and dependencies.

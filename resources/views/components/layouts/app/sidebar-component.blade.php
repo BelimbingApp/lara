@@ -3,9 +3,9 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 ?>
 
-<aside class="w-64 min-h-full bg-base-200 dark:bg-zinc-800 border-r border-base-300 dark:border-base-700 flex flex-col sidebar-container">
+<aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 flex flex-col sidebar-container">
     <!-- Logo/Branding -->
-    <div class="p-4 border-b border-base-300 dark:border-base-700">
+    <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
             <x-app-logo />
         </a>
@@ -14,7 +14,7 @@
     <!-- Navigation -->
     <nav class="flex-1 overflow-y-auto p-4 flex flex-col">
         <!-- Unified Navigation Menu -->
-        <ul class="menu menu-vertical w-full gap-1">
+        <ul class="flex flex-col space-y-1 w-full gap-1">
             <!-- Primary Navigation -->
             <li>
                 <a
@@ -82,7 +82,7 @@
     </nav>
 
     <!-- User Profile Section (Sticky Bottom) -->
-    <div class="p-4 border-t border-base-300 dark:border-base-700 bg-base-200 dark:bg-zinc-800">
+    <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800">
         <div class="flex items-center gap-3">
             <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
                 <span class="text-sm font-semibold text-neutral-800 dark:text-white">
