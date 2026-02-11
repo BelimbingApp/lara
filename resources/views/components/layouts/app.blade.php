@@ -13,160 +13,20 @@
         <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
     @endif
 </head>
-<body class="min-h-screen bg-white dark:bg-zinc-900">
-    <!-- Desktop Layout: Menu Sidebar + Content -->
-    <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
+<body class="h-screen overflow-hidden bg-white dark:bg-zinc-900 flex flex-col">
+    {{-- Top Bar --}}
+    <x-layouts.top-bar />
+
+    {{-- Main Layout: Sidebar + Content --}}
+    <div class="flex flex-1 overflow-hidden">
         <x-menu.sidebar :menuTree="$menuTree" />
-        <main class="flex-1 overflow-y-auto">
+        
+        <main class="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 p-6">
             {{ $slot }}
         </main>
     </div>
 
-    <!-- Mobile Layout - Custom Alpine.js drawer -->
-    <div class="lg:hidden min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
-        <!-- Mobile Header -->
-        <div class="flex items-center bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 px-4 h-16 sticky top-0 z-30">
-            <button
-                type="button"
-                @click="sidebarOpen = true"
-                class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
-                <x-icon name="heroicon-o-bars-3" class="w-6 h-6 hamburger-icon" />
-            </button>
-        </div>
-
-        <!-- Mobile Page Content -->
-        <div class="flex-1 overflow-y-auto bg-white dark:bg-zinc-900 p-6">
-            {{ $slot }}
-        </div>
-
-        <!-- Mobile Sidebar Overlay -->
-        <div
-            x-show="sidebarOpen"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="opacity-0"
-            x-transition:enter-end="opacity-100"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="opacity-100"
-            x-transition:leave-end="opacity-0"
-            @click="sidebarOpen = false"
-            class="fixed inset-0 bg-black/50 z-40"
-            style="display: none;"
-        ></div>
-
-        <!-- Mobile Sidebar -->
-        <aside
-            x-show="sidebarOpen"
-            x-transition:enter="transition ease-out duration-200"
-            x-transition:enter-start="-translate-x-full"
-            x-transition:enter-end="translate-x-0"
-            x-transition:leave="transition ease-in duration-150"
-            x-transition:leave-start="translate-x-0"
-            x-transition:leave-end="-translate-x-full"
-            class="fixed inset-y-0 left-0 w-64 bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-700 flex flex-col z-50 overflow-y-auto"
-            style="display: none;"
-            @click.stop
-        >
-            <!-- Logo -->
-            <div class="p-4 border-b border-zinc-200 dark:border-zinc-700">
-                <button
-                    type="button"
-                    @click="sidebarOpen = false"
-                    class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors mb-4"
-                >
-                    <x-icon name="heroicon-o-x-mark" class="w-6 h-6" />
-                </button>
-                <a
-                    href="{{ route('dashboard') }}"
-                    class="flex items-center gap-3"
-                    @click="sidebarOpen = false"
-                >
-                    <x-app-logo />
-                </a>
-            </div>
-
-            <!-- Navigation -->
-            <nav class="flex-1 overflow-y-auto p-4 space-y-1">
-                <div class="flex flex-col space-y-1">
-                    <a
-                        href="{{ route('dashboard') }}"
-                        @click="sidebarOpen = false"
-                        class="{{ request()->routeIs('dashboard') ? 'active' : '' }} nav-link"
-                    >
-                        <x-icon name="heroicon-o-home" class="w-5 h-5" />
-                        <span>{{ __('Dashboard') }}</span>
-                    </a>
-                    <a
-                        href="{{ route('users.index') }}"
-                        @click="sidebarOpen = false"
-                        class="{{ request()->routeIs('users.*') ? 'active' : '' }} nav-link"
-                    >
-                        <x-icon name="heroicon-o-users" class="w-5 h-5" />
-                        <span>{{ __('User Management') }}</span>
-                    </a>
-                </div>
-
-                <div class="border-t border-zinc-300 dark:border-zinc-700 my-4"></div>
-
-                <div class="flex flex-col space-y-1">
-                    <a
-                        href="https://github.com/BelimbingApp/lara"
-                        target="_blank"
-                        class="nav-link"
-                    >
-                        <x-icon name="heroicon-o-folder" class="w-5 h-5" />
-                        <span>{{ __('Repository') }}</span>
-                    </a>
-                    <a
-                        href="https://laravel.com/docs/starter-kits#livewire"
-                        target="_blank"
-                        class="nav-link"
-                    >
-                        <x-icon name="heroicon-o-book-open" class="w-5 h-5" />
-                        <span>{{ __('Documentation') }}</span>
-                    </a>
-                </div>
-            </nav>
-
-            <!-- User Profile -->
-            <div class="p-4 border-t border-zinc-200 dark:border-zinc-700">
-                <div class="flex items-center gap-3 mb-4">
-                    <div class="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-700 flex items-center justify-center flex-shrink-0">
-                        <span class="text-sm font-semibold text-zinc-800 dark:text-white">
-                            {{ auth()->user()->initials() }}
-                        </span>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-sm font-medium text-zinc-900 dark:text-white truncate">
-                            {{ auth()->user()->name }}
-                        </div>
-                        <div class="text-xs text-zinc-600 dark:text-zinc-400 truncate">
-                            {{ auth()->user()->email }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="border-t border-zinc-300 dark:border-zinc-700 my-4"></div>
-
-                <div class="flex flex-col space-y-1">
-                    <a
-                        href="{{ route('profile.edit') }}"
-                        @click="sidebarOpen = false"
-                        class="nav-link"
-                    >
-                        <x-icon name="heroicon-o-cog-6-tooth" class="w-5 h-5" />
-                        <span>{{ __('Settings') }}</span>
-                    </a>
-                    <form method="POST" action="{{ route('logout') }}">
-                        @csrf
-                        <button type="submit" class="w-full text-left nav-link" data-test="logout-button">
-                            <x-icon name="heroicon-o-arrow-right-on-rectangle" class="w-5 h-5" />
-                            <span>{{ __('Log Out') }}</span>
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </aside>
-    </div>
+    {{-- Status Bar --}}
+    <x-layouts.status-bar />
 </body>
 </html>
