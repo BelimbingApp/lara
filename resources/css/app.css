@@ -8,6 +8,14 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
+    /* Arid Camouflage — light mode palette for extended eye comfort */
+    --color-arid-cream: #dfc39f;
+    --color-arid-surface: #e8ddc8;
+    --color-arid-taupe: #baa582;
+    --color-arid-brown: #9f7851;
+    --color-arid-dark-brown: #7d5a3e;
+    --color-arid-ink: #312f2f;
+
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
     --color-zinc-200: #e5e5e5;
@@ -23,7 +31,7 @@
 
 @layer base {
     * {
-        border-color: rgb(229 231 235);
+        border-color: rgb(186 165 130 / 0.4);
     }
 
     .dark * {

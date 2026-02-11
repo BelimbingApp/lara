@@ -6,14 +6,14 @@
 @props(['title' => null])
 
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
+<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     @include('partials.head')
     @if($title)
         <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
     @endif
 </head>
-<body class="h-screen overflow-hidden bg-white dark:bg-zinc-900 flex flex-col">
+<body class="h-screen overflow-hidden bg-arid-cream dark:bg-zinc-900 flex flex-col">
     {{-- Top Bar --}}
     <x-layouts.top-bar />
 
@@ -21,7 +21,7 @@
     <div class="flex flex-1 overflow-hidden">
         <x-menu.sidebar :menuTree="$menuTree" />
         
-        <main class="flex-1 overflow-y-auto bg-zinc-50 dark:bg-zinc-900 p-6">
+        <main class="flex-1 overflow-y-auto bg-arid-cream dark:bg-zinc-900 p-6">
             {{ $slot }}
         </main>
     </div>
