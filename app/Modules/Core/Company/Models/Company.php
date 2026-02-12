@@ -6,7 +6,7 @@
 namespace App\Modules\Core\Company\Models;
 
 use App\Modules\Core\Address\Models\Address;
-use App\Modules\Core\Company\Factories\CompanyFactory;
+use App\Modules\Core\Company\Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;

@@ -8,7 +8,7 @@ namespace App\Modules\Core\Employee\Models;
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
-use App\Modules\Core\Employee\Factories\EmployeeFactory;
+use App\Modules\Core\Employee\Database\Factories\EmployeeFactory;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;

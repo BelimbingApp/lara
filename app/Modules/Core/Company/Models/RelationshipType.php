@@ -5,7 +5,7 @@
 
 namespace App\Modules\Core\Company\Models;
 
-use App\Modules\Core\Company\Factories\RelationshipTypeFactory;
+use App\Modules\Core\Company\Database\Factories\RelationshipTypeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
