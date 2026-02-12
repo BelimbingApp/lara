@@ -6,7 +6,7 @@ $variantClasses = match($variant) {
     'danger' => 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
     'warning' => 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
     'info' => 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-    default => 'bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200',
+    default => 'bg-surface-subtle text-ink',
 };
 @endphp
 

@@ -1,7 +1,7 @@
-<div class="h-14 bg-arid-surface dark:bg-zinc-900 border-b border-arid-taupe/40 dark:border-zinc-800 flex items-center justify-between px-6 shrink-0 z-10">
+<div class="h-14 bg-surface-bar border-b border-border-default flex items-center justify-between px-6 shrink-0 z-10">
     {{-- Left: App Name --}}
     <div class="flex items-center gap-4">
-        <h1 class="text-lg font-semibold text-arid-ink dark:text-zinc-100">
+        <h1 class="text-lg font-semibold text-ink">
             Belimbing
         </h1>
     </div>
@@ -24,7 +24,7 @@
                 localStorage.setItem('theme', theme);
                 document.documentElement.classList.toggle('dark');
             "
-            class="relative w-9 h-5 rounded-full bg-arid-dark-brown/60 dark:bg-zinc-700 transition-colors hover:bg-arid-dark-brown/80 dark:hover:bg-zinc-600 shadow-inner"
+            class="relative w-9 h-5 rounded-full bg-accent/60 dark:bg-zinc-700 transition-colors hover:bg-accent-hover/80 dark:hover:bg-zinc-600 shadow-inner"
             title="Toggle theme"
             :aria-pressed="theme === 'light'"
         >
@@ -39,7 +39,7 @@
             <input
                 type="search"
                 placeholder="Search..."
-                class="px-3 py-1.5 text-sm border border-arid-taupe/50 dark:border-zinc-700 rounded-lg bg-arid-cream dark:bg-zinc-900 text-arid-ink dark:text-zinc-100 placeholder:text-zinc-600 dark:placeholder:text-zinc-400 focus:outline-none focus:ring-2 focus:ring-arid-dark-brown focus:border-arid-dark-brown dark:focus:ring-zinc-500 dark:focus:border-zinc-500 w-64"
+                class="px-3 py-1.5 text-sm border border-border-input rounded-lg bg-surface-card text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-64"
             />
         </div>
     </div>

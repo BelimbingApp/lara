@@ -13,13 +13,13 @@
         <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
     @endif
 </head>
-<body class="min-h-screen bg-white dark:bg-zinc-900">
+<body class="min-h-screen bg-surface-card">
     <!-- Desktop Layout (lg and up) -->
         <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
         <!-- Desktop Sidebar -->
-            <aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 flex flex-col sidebar-container">
+            <aside class="w-64 min-h-full bg-surface-subtle border-r border-border-default flex flex-col sidebar-container">
                 <!-- Logo/Branding -->
-                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                <div class="p-4 border-b border-border-default">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
                         <x-app-logo />
                     </a>
@@ -80,18 +80,18 @@
                 </nav>
 
                 <!-- User Profile Section (Sticky Bottom) -->
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
+                <div class="p-4 border-t border-border-default bg-surface-subtle">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
-                            <span class="text-sm font-semibold text-neutral-800 dark:text-white">
+                        <div class="w-10 h-10 rounded-full bg-surface-subtle flex items-center justify-center shrink-0">
+                            <span class="text-sm font-semibold text-ink">
                                 {{ auth()->user()->initials() }}
                             </span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                            <div class="text-sm font-medium text-ink truncate">
                                 {{ auth()->user()->name }}
                             </div>
-                            <div class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                            <div class="text-xs text-muted truncate">
                                 {{ auth()->user()->email }}
                             </div>
                         </div>
@@ -129,11 +129,11 @@
     <!-- Mobile Layout (below lg) - Custom Alpine.js drawer -->
     <div class="lg:hidden min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
         <!-- Mobile Header -->
-        <div class="navbar bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-30">
+        <div class="navbar bg-surface-card border-b border-border-default sticky top-0 z-30">
             <button
                 type="button"
                 @click="sidebarOpen = true"
-                class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-surface-subtle transition-colors"
             >
                 <x-icon name="heroicon-o-bars-3" class="w-6 h-6" />
             </button>
@@ -169,16 +169,16 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
-            class="fixed inset-y-0 left-0 w-64 bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-surface-subtle border-r border-border-default flex flex-col z-50"
             style="display: none;"
             @click.stop
         >
                 <!-- Logo -->
-                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800">
+                <div class="p-4 border-b border-border-default">
                 <button
                     type="button"
                     @click="sidebarOpen = false"
-                    class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors mb-4"
+                    class="w-10 h-10 inline-flex items-center justify-center rounded-lg hover:bg-surface-subtle transition-colors mb-4"
                 >
                         <x-icon name="heroicon-o-x-mark" class="w-6 h-6" />
                 </button>
@@ -243,18 +243,18 @@
                 </nav>
 
                 <!-- User Profile -->
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800">
+                <div class="p-4 border-t border-border-default">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
-                            <span class="text-sm font-semibold text-neutral-800 dark:text-white">
+                        <div class="w-10 h-10 rounded-full bg-surface-subtle flex items-center justify-center shrink-0">
+                            <span class="text-sm font-semibold text-ink">
                                 {{ auth()->user()->initials() }}
                             </span>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                            <div class="text-sm font-medium text-ink truncate">
                                 {{ auth()->user()->name }}
                             </div>
-                            <div class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                            <div class="text-xs text-muted truncate">
                                 {{ auth()->user()->email }}
                             </div>
                         </div>

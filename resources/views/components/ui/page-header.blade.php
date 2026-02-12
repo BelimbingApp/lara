@@ -8,9 +8,9 @@
 <div class="mb-6">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ $title }}</h1>
+            <h1 class="text-2xl font-bold text-ink">{{ $title }}</h1>
             @if($subtitle)
-                <p class="mt-1 text-sm text-zinc-900 dark:text-zinc-100/60">{{ $subtitle }}</p>
+                <p class="mt-1 text-sm text-muted">{{ $subtitle }}</p>
             @endif
         </div>
         @if($actions)

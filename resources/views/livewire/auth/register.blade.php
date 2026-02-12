@@ -90,7 +90,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </div>
     </form>
 
-    <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
+    <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-muted">
         <span>{{ __('Already have an account?') }}</span>
         <a href="{{ route('login') }}" wire:navigate class="text-primary hover:underline">{{ __('Log in') }}</a>
     </div>

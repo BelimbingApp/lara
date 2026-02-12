@@ -120,7 +120,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
     </form>
 
     @if (Route::has('register'))
-        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-muted">
             <span>{{ __('Don\'t have an account?') }}</span>
             <a href="{{ route('register') }}" wire:navigate class="text-primary hover:underline">{{ __('Sign up') }}</a>
         </div>

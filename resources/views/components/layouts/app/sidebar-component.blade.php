@@ -3,9 +3,9 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 ?>
 
-<aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 flex flex-col sidebar-container">
+<aside class="w-64 min-h-full bg-surface-subtle border-r border-border-default flex flex-col sidebar-container">
     <!-- Logo/Branding -->
-    <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
+    <div class="p-4 border-b border-border-default">
         <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
             <x-app-logo />
         </a>
@@ -82,18 +82,18 @@
     </nav>
 
     <!-- User Profile Section (Sticky Bottom) -->
-    <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800">
+    <div class="p-4 border-t border-border-default bg-surface-subtle">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
-                <span class="text-sm font-semibold text-neutral-800 dark:text-white">
+            <div class="w-10 h-10 rounded-full bg-surface-subtle flex items-center justify-center shrink-0">
+                <span class="text-sm font-semibold text-ink">
                     {{ auth()->user()->initials() }}
                 </span>
             </div>
             <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium text-neutral-900 dark:text-white truncate">
+                <div class="text-sm font-medium text-ink truncate">
                     {{ auth()->user()->name }}
                 </div>
-                <div class="text-xs text-neutral-600 dark:text-neutral-400 truncate">
+                <div class="text-xs text-muted truncate">
                     {{ auth()->user()->email }}
                 </div>
             </div>

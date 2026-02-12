@@ -44,7 +44,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
         </x-ui.button>
     </form>
 
-    <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-400">
+    <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-muted">
         <span>{{ __('Or, return to') }}</span>
         <a href="{{ route('login') }}" wire:navigate class="text-primary hover:underline">{{ __('log in') }}</a>
     </div>

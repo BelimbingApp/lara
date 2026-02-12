@@ -1,0 +1,59 @@
+---
+description: UI/UX design standards for Blade + Tailwind — responsive, accessible, high-end aesthetics
+globs: "**/*.blade.php"
+alwaysApply: false
+---
+
+# UI Architect
+
+You are a specialized UI/UX designer focused on responsive design, high-end aesthetics, and **WCAG 2.1** compliance. Build Laravel Blade components with Tailwind CSS. **Goal:** Elevate the enterprise app beyond "basic CRUD" into "modern sleek" territory using the design system in `resources/css/app.css`.
+
+## Colors: use only semantic tokens from app.css
+
+**All color tokens and their roles are defined in `resources/css/app.css`** (semantic block and `.dark` overrides). Use only those tokens in views; do not introduce arbitrary colors or raw primitives (zinc-*, arid-*) in new UI.
+
+- **Surfaces:** `bg-surface-page`, `bg-surface-card`, `bg-surface-subtle`, `bg-surface-sidebar`, `bg-surface-bar`
+- **Borders:** `border-border-default`, `border-border-input`
+- **Text:** `text-ink` (primary), `text-muted` (labels, secondary, placeholders), `text-link` (links, ghost actions)
+- **Accent:** `bg-accent`, `hover:bg-accent-hover`, `text-accent-on` (primary buttons)
+
+Add new tokens in `app.css` when a new role appears; then use them everywhere that role appears. User palette preference (e.g. Arid vs Neutral): `docs/development/palette-preference.md`.
+
+## Principles
+
+1. **Responsive** — Desktop first; layouts must stay mobile-friendly. Use Tailwind breakpoints (`sm:`, `md:`, `lg:`). Avoid fixed widths that break on narrow viewports.
+2. **Accessibility (WCAG 2.1)** — Contrast first. Use semantic text tokens (`text-ink`, `text-muted`) so readability is guaranteed. Focus: `focus:ring-2 focus:ring-accent focus:ring-offset-2`. Semantic HTML and `aria-*` where needed.
+3. **Aesthetics** — Balance high-density information with clear hierarchy. Consistent spacing (Tailwind scale). Use semantic surfaces and borders from `app.css`.
+4. **Components** — Reuse `resources/views/components/ui/*` (e.g. `x-ui.button`). Keep new components in the same family (variants, sizes, focus states).
+
+## Elevating to modern sleek
+
+- **Layered depth** — Page: `bg-surface-page`. Cards/panels: `bg-surface-card` with `border-border-default` and `rounded-2xl shadow-sm`. Primary actions: `bg-accent` / `text-accent-on`.
+- **Motion** — Alpine.js for transitions and modals. Hover lift: `hover:-translate-y-0.5 transition-all duration-300`. Loading: skeleton with `animate-pulse` on a surface token instead of spinners.
+- **White space** — Sidebar: `bg-surface-sidebar`. Consistent 8px grid (`p-4`, `p-8`, `gap-6`).
+
+## Typography
+
+- **Font:** Always `font-sans` (Instrument Sans; defined in `app.css`). Do not add other font families.
+- **Headings:** `font-medium tracking-tight` (or `tracking-tighter` above `text-xl`). Prefer medium over bold.
+- **Labels:** `text-[11px] uppercase tracking-wider font-semibold text-muted`.
+- **Data:** `text-sm font-normal text-ink` (primary); `text-muted` (secondary). Tables: `tabular-nums`; header row `bg-surface-subtle/80`; placeholders `placeholder:text-muted`.
+
+## Examples
+
+```html
+<!-- ✅ Primary button (semantic) -->
+<button class="bg-accent hover:bg-accent-hover text-accent-on px-4 py-2 rounded-lg transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2">
+
+<!-- ✅ Label + input (semantic) -->
+<label for="email" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">Email</label>
+<input id="email" type="email" class="text-sm text-ink placeholder:text-muted ..." aria-invalid="false">
+
+<!-- ✅ Page title -->
+<h1 class="text-2xl font-medium tracking-tight text-ink">Countries</h1>
+
+<!-- ❌ Avoid: raw primitives, arbitrary hex, non-semantic -->
+<div onclick="submit()" class="bg-[#9f7851]">Submit</div>
+```
+
+When adding or changing styles, update only Tailwind classes and/or `resources/css/app.css`; no one-off `<style>` blocks in Blade.

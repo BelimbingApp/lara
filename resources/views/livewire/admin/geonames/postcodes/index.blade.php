@@ -49,14 +49,14 @@ new class extends Component
 
     <div class="space-y-6">
         <div class="flex items-center justify-between">
-            <h1 class="text-2xl font-bold text-zinc-900 dark:text-zinc-100">{{ __('Geonames Postcodes') }}</h1>
+            <h1 class="text-2xl font-bold text-ink">{{ __('Geonames Postcodes') }}</h1>
             <div class="flex items-center gap-2">
-                <button wire:click="import" wire:loading.attr="disabled" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                <button wire:click="import" wire:loading.attr="disabled" class="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 rounded-lg font-medium transition-colors disabled:opacity-50">
                     <x-icon name="heroicon-o-arrow-down-tray" class="w-5 h-5" />
                     <span wire:loading.remove wire:target="import">{{ __('Import') }}</span>
                     <span wire:loading wire:target="import">{{ __('Importing...') }}</span>
                 </button>
-                <button wire:click="update" wire:loading.attr="disabled" class="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50">
+                <button wire:click="update" wire:loading.attr="disabled" class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-accent-on rounded-lg font-medium transition-colors disabled:opacity-50">
                     <x-icon name="heroicon-o-arrow-path" class="w-5 h-5" />
                     <span wire:loading.remove wire:target="update">{{ __('Update') }}</span>
                     <span wire:loading wire:target="update">{{ __('Updating...') }}</span>
@@ -85,44 +85,44 @@ new class extends Component
             </div>
         @endif
 
-        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-lg">
+        <div class="bg-surface-card border border-border-default shadow-sm rounded-lg">
             <div class="p-6">
                 <div class="mb-4">
                     <input
                         wire:model.live.debounce.300ms="search"
                         type="text"
                         placeholder="{{ __('Search by postcode, place name, or country...') }}"
-                        class="w-full sm:w-80 px-4 py-2 border border-zinc-300 dark:border-zinc-700 rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 dark:placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        class="w-full sm:w-80 px-4 py-2 border border-border-input rounded-lg bg-surface-card text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
                     />
                 </div>
 
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-zinc-200 dark:divide-zinc-800">
-                        <thead class="bg-zinc-50 dark:bg-zinc-800/50">
+                    <table class="min-w-full divide-y divide-border-default">
+                        <thead class="bg-surface-subtle/80">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Country') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Postcode') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Place Name') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Admin1 Code') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Latitude') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Longitude') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-zinc-500 dark:text-zinc-400 uppercase tracking-wider">{{ __('Updated') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Country') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Postcode') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Place Name') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Admin1 Code') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Latitude') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Longitude') }}</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Updated') }}</th>
                             </tr>
                         </thead>
-                        <tbody class="bg-white dark:bg-zinc-900 divide-y divide-zinc-200 dark:divide-zinc-800">
+                        <tbody class="bg-surface-card divide-y divide-border-default">
                             @forelse($postcodes as $postcode)
-                                <tr class="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ $postcode->country_iso }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->postcode }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->place_name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->admin1_code }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->latitude }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->longitude }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-zinc-600 dark:text-zinc-400">{{ $postcode->updated_at ? $postcode->updated_at->format('Y-m-d') : '-' }}</td>
+                                <tr class="hover:bg-surface-subtle/50 transition-colors">
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-ink">{{ $postcode->country_iso }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->postcode }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->place_name }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->admin1_code }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->latitude }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->longitude }}</td>
+                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $postcode->updated_at ? $postcode->updated_at->format('Y-m-d') : '-' }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-12 text-center text-sm text-zinc-500 dark:text-zinc-400">{{ __('No postcodes found.') }}</td>
+                                    <td colspan="7" class="px-6 py-12 text-center text-sm text-muted">{{ __('No postcodes found.') }}</td>
                                 </tr>
                             @endforelse
                         </tbody>

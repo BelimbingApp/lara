@@ -26,7 +26,7 @@ new class extends Component {
 <section class="mt-10 space-y-6">
     <div class="relative mb-5">
         <h2 class="text-2xl font-semibold">{{ __('Delete account') }}</h2>
-        <p class="text-zinc-600 dark:text-zinc-400">{{ __('Delete your account and all of its resources') }}</p>
+        <p class="text-muted">{{ __('Delete your account and all of its resources') }}</p>
     </div>
 
     <x-ui.button wire:click="$set('showDeleteModal', true)" variant="danger" data-test="delete-user-button">
@@ -38,7 +38,7 @@ new class extends Component {
             <div>
                 <h3 class="text-xl font-semibold">{{ __('Are you sure you want to delete your account?') }}</h3>
 
-                <p class="text-zinc-600 dark:text-zinc-400 mt-2">
+                <p class="text-muted mt-2">
                     {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
                 </p>
             </div>

@@ -34,7 +34,7 @@
             x-transition:leave-start="opacity-100 scale-100"
             x-transition:leave-end="opacity-0 scale-95"
             @click.stop
-            {{ $attributes->merge(['class' => 'relative bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg shadow-xl w-full']) }}
+            {{ $attributes->merge(['class' => 'relative bg-surface-card border border-border-default rounded-lg shadow-xl w-full']) }}
         >
             {{ $slot }}
         </div>

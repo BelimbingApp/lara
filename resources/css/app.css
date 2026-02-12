@@ -9,12 +9,13 @@
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
     /* Arid Camouflage — light mode palette for extended eye comfort */
-    --color-arid-cream: #dfc39f;
-    --color-arid-surface: #e8ddc8;
-    --color-arid-taupe: #baa582;
+    --color-arid-white: #fdfdf7;
+    --color-arid-cream: #F0E2D2;
+    --color-arid-surface: #f8f0e2;
+    --color-arid-taupe: #FAE9CD;
     --color-arid-brown: #9f7851;
-    --color-arid-dark-brown: #7d5a3e;
-    --color-arid-ink: #312f2f;
+    --color-arid-dark-brown: #774020;
+    --color-arid-ink: #796A6A;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -27,6 +28,59 @@
     --color-zinc-800: #262626;
     --color-zinc-900: #171717;
     --color-zinc-950: #0a0a0a;
+
+    /*
+     * Semantic colors (usage-based). Use these in views; primitives above are internal.
+     * Generated classes: bg-surface-page, text-ink, border-border-default, etc.
+     * User palette preference (e.g. Arid vs Neutral): see docs/development/palette-preference.md.
+     *
+     * surface-page   — page/main background (layout body, main content)
+     * surface-card   — cards, modals, inputs, dropdowns, table body
+     * surface-subtle — table header, row hover, nav active, ghost button hover
+     * surface-sidebar— sidebar panel background
+     * surface-bar    — top bar, status bar
+     * border-default — card border, dividers, sidebar border
+     * border-input   — input/checkbox/radio border
+     * ink            — primary text (headings, body, table data)
+     * muted          — labels, secondary text, placeholders, empty state
+     * link           — breadcrumb/link text, ghost button text
+     * accent         — primary button background
+     * accent-hover   — primary button hover
+     * accent-on      — text on primary button (e.g. text-accent-on)
+     */
+    /* Surfaces */
+    --color-surface-page: var(--color-arid-surface);
+    --color-surface-card: var(--color-arid-white);
+    --color-surface-subtle: var(--color-arid-white);
+    --color-surface-sidebar: var(--color-arid-cream);
+    --color-surface-bar: var(--color-arid-taupe);
+    /* Borders */
+    --color-border-default: var(--color-zinc-200);
+    --color-border-input: var(--color-zinc-300);
+    /* Text */
+    --color-ink: var(--color-arid-dark-brown);
+    --color-muted: var(--color-arid-ink);
+    --color-link: var(--color-zinc-700);
+    /* Accent (primary actions, arid) */
+    --color-accent: var(--color-arid-brown);
+    --color-accent-hover: var(--color-arid-dark-brown);
+    --color-accent-on: #ffffff;
+}
+
+.dark {
+    --color-surface-page: var(--color-zinc-950);
+    --color-surface-card: var(--color-zinc-900);
+    --color-surface-subtle: var(--color-zinc-800);
+    --color-surface-sidebar: var(--color-zinc-950);
+    --color-surface-bar: var(--color-zinc-950);
+    --color-border-default: var(--color-zinc-800);
+    --color-border-input: var(--color-zinc-700);
+    --color-ink: var(--color-zinc-100);
+    --color-muted: var(--color-zinc-400);
+    --color-link: var(--color-zinc-300);
+    --color-accent: var(--color-arid-brown);
+    --color-accent-hover: var(--color-arid-dark-brown);
+    --color-accent-on: #ffffff;
 }
 
 @layer base {
