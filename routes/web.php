@@ -23,9 +23,10 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('users/create', 'users.create')->name('users.create');
     Volt::route('users/{user}/edit', 'users.edit')->name('users.edit');
 
-    // Admin: Geonames (placeholder routes for menu testing)
-    Route::get('admin/geonames/countries', fn() => view('placeholder', ['title' => 'Geonames Countries']))->name('admin.geonames.countries.index');
-    Route::get('admin/geonames/postcodes', fn() => view('placeholder', ['title' => 'Geonames Postcodes']))->name('admin.geonames.postcodes.index');
+    // Admin: Geonames
+    Volt::route('admin/geonames/countries', 'admin.geonames.countries.index')->name('admin.geonames.countries.index');
+    Volt::route('admin/geonames/admin1', 'admin.geonames.admin1.index')->name('admin.geonames.admin1.index');
+    Volt::route('admin/geonames/postcodes', 'admin.geonames.postcodes.index')->name('admin.geonames.postcodes.index');
 });
 
 require __DIR__.'/auth.php';

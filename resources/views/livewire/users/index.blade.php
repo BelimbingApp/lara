@@ -41,14 +41,14 @@ new class extends Component {
 
         @if (session('success'))
             <div class="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-800 dark:text-green-200">
-                <x-icon name="heroicon-o-check-circle" class="w-6 h-6 flex-shrink-0" />
+                <x-icon name="heroicon-o-check-circle" class="w-6 h-6 shrink-0" />
                 <span>{{ session('success') }}</span>
             </div>
         @endif
 
         @if (session('error'))
             <div class="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-800 dark:text-red-200">
-                <x-icon name="heroicon-o-exclamation-circle" class="w-6 h-6 flex-shrink-0" />
+                <x-icon name="heroicon-o-exclamation-circle" class="w-6 h-6 shrink-0" />
                 <span>{{ session('error') }}</span>
             </div>
         @endif

@@ -34,7 +34,7 @@ class MenuServiceProvider extends ServiceProvider
      */
     protected function registerViewComposer(): void
     {
-        View::composer('components.layouts.app', function ($view): void {
+        View::composer(['components.layouts.app', 'layouts::app'], function ($view): void {
             // Skip if not authenticated (avoid redirect loop on login pages)
             if (!auth()->check()) {
                 $view->with('menuTree', []);

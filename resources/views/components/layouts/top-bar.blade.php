@@ -1,4 +1,4 @@
-<div class="h-14 bg-arid-surface dark:bg-zinc-900 border-b border-arid-taupe/40 dark:border-zinc-800 flex items-center justify-between px-6 flex-shrink-0 z-10">
+<div class="h-14 bg-arid-surface dark:bg-zinc-900 border-b border-arid-taupe/40 dark:border-zinc-800 flex items-center justify-between px-6 shrink-0 z-10">
     {{-- Left: App Name --}}
     <div class="flex items-center gap-4">
         <h1 class="text-lg font-semibold text-arid-ink dark:text-zinc-100">

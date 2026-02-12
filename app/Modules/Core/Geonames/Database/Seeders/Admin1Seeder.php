@@ -5,7 +5,6 @@
 
 namespace App\Modules\Core\Geonames\Database\Seeders;
 
-use App\Modules\Core\Geonames\Models\Admin1;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
@@ -18,88 +17,112 @@ class Admin1Seeder extends Seeder
      */
     public function run(): void
     {
-        $url = "https://download.geonames.org/export/dump/admin1CodesASCII.txt";
-        $downloadPath = storage_path("download/geonames");
-        $filePath = $downloadPath . "/admin1CodesASCII.txt";
+        $filePath = $this->downloadFile();
 
-        // Create directory if it doesn't exist
-        if (!File::exists($downloadPath)) {
+        if (! $filePath) {
+            return;
+        }
+
+        $records = $this->parseFile($filePath);
+
+        if (empty($records)) {
+            $this->command?->info('No admin1 records to import.');
+
+            return;
+        }
+
+        $this->command?->info('Upserting '.count($records).' admin1 records...');
+
+        $updateColumns = array_values(array_diff(
+            array_keys($records[0]),
+            ['code', 'name', 'created_at'],
+        ));
+
+        foreach (array_chunk($records, 100) as $chunk) {
+            DB::table('geonames_admin1')->upsert(
+                $chunk,
+                ['code'],
+                $updateColumns,
+            );
+        }
+
+        $this->command?->info('Imported '.count($records).' admin1 records.');
+    }
+
+    /**
+     * Download the admin1 codes file from geonames.org.
+     *
+     * Uses a cached copy when available, and re-downloads when the file is missing
+     * or older than 7 days.
+     */
+    protected function downloadFile(): ?string
+    {
+        $url = 'https://download.geonames.org/export/dump/admin1CodesASCII.txt';
+        $downloadPath = storage_path('download/geonames');
+        $filePath = $downloadPath.'/admin1CodesASCII.txt';
+
+        if (! File::exists($downloadPath)) {
             File::makeDirectory($downloadPath, 0755, true);
         }
 
-        // Download file if it doesn't exist or is older than 7 days
         if (
-            !File::exists($filePath) ||
-            File::lastModified($filePath) < now()->subDays(7)->timestamp
+            ! File::exists($filePath)
+            || File::lastModified($filePath) < now()->subDays(7)->timestamp
         ) {
-            $this->command->info("Downloading admin1CodesASCII.txt...");
+            $this->command?->info('Downloading admin1CodesASCII.txt...');
             $response = Http::timeout(300)->get($url);
 
-            if ($response->successful()) {
-                File::put($filePath, $response->body());
-                $this->command->info("Downloaded successfully.");
-            } else {
-                $this->command->error(
-                    "Failed to download file: " . $response->status(),
-                );
-                return;
+            if (! $response->successful()) {
+                $this->command?->error('Failed to download file: '.$response->status());
+
+                return null;
             }
+
+            File::put($filePath, $response->body());
+            $this->command?->info('Downloaded successfully.');
         } else {
-            $this->command->info("Using cached admin1CodesASCII.txt file.");
+            $this->command?->info('Using cached admin1CodesASCII.txt file.');
         }
 
-        // Parse and insert data
-        $this->command->info("Parsing admin1CodesASCII.txt...");
+        return $filePath;
+    }
+
+    /**
+     * Parse the admin1 codes file and return importable records.
+     *
+     * @param  string  $filePath  Path to the admin1CodesASCII.txt file
+     * @return array<int, array<string, mixed>>
+     */
+    protected function parseFile(string $filePath): array
+    {
         $content = File::get($filePath);
         $lines = explode("\n", $content);
-
-        $admin1s = [];
-        $skipped = 0;
+        $records = [];
 
         foreach ($lines as $line) {
             $line = trim($line);
 
-            // Skip empty lines
             if (empty($line)) {
-                $skipped++;
                 continue;
             }
 
-            // Parse tab-separated values
-            // Format: code<TAB>name<TAB>alt_name<TAB>geoname_id
             $parts = explode("\t", $line);
 
             if (count($parts) < 4) {
-                $skipped++;
                 continue;
             }
 
-            $admin1s[] = [
-                "code" => $parts[0] ?? null,
-                "name" => $parts[1] ?? null,
-                "alt_name" => $parts[2] ?? null,
-                "geoname_id" => !empty($parts[3]) ? (int) $parts[3] : null,
-                "created_at" => now(),
-                "updated_at" => now(),
+            $code = $parts[0];
+
+            $records[] = [
+                'code' => $code,
+                'name' => $parts[1] ?? null,
+                'alt_name' => $parts[2] ?? null,
+                'created_at' => now(),
+                'updated_at' => now(),
             ];
         }
 
-        // Bulk insert in chunks
-        $this->command->info(
-            "Inserting " . count($admin1s) . " admin1 records...",
-        );
-        $chunks = array_chunk($admin1s, 100);
-
-        foreach ($chunks as $chunk) {
-            DB::table("geonames_admin1")->insertOrIgnore($chunk);
-        }
-
-        $this->command->info(
-            "Seeded " .
-                count($admin1s) .
-                " admin1 records. Skipped " .
-                $skipped .
-                " lines.",
-        );
+        return $records;
     }
 }

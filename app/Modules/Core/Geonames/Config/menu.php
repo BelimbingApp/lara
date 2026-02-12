@@ -21,6 +21,14 @@ return [
             'position' => 10,
         ],
         [
+            'id' => 'admin.geonames.admin1',
+            'label' => 'Admin1 Divisions',
+            'icon' => 'heroicon-o-map',
+            'route' => 'admin.geonames.admin1.index',
+            'parent' => 'admin.geonames',
+            'position' => 15,
+        ],
+        [
             'id' => 'admin.geonames.postcodes',
             'label' => 'Postcodes',
             'icon' => 'heroicon-o-map-pin',

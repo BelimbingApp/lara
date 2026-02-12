@@ -5,8 +5,8 @@
 
 namespace App\Modules\Core\Geonames\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Admin1 extends Model
 {
@@ -15,14 +15,14 @@ class Admin1 extends Model
      *
      * @var string
      */
-    protected $table = "geonames_admin1";
+    protected $table = 'geonames_admin1';
 
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
-    protected $fillable = ["code", "name", "alt_name", "geoname_id"];
+    protected $fillable = ['code', 'name', 'alt_name'];
 
     /**
      * The attributes that should be cast.
@@ -32,57 +32,40 @@ class Admin1 extends Model
     protected function casts(): array
     {
         return [
-            "geoname_id" => "integer",
-            "created_at" => "datetime",
-            "updated_at" => "datetime",
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
         ];
     }
 
     /**
-     * Extract the country code from the code field.
-     *
-     * @return string|null
+     * Extract the country ISO code from the code field (e.g., 'US.CA' → 'US').
      */
-    public function getCountryCodeAttribute(): ?string
+    public function getCountryIsoAttribute(): ?string
     {
-        if (!$this->code) {
+        if (! $this->code) {
             return null;
         }
 
-        $parts = explode(".", $this->code);
-        return $parts[0] ?? null;
+        return explode('.', $this->code)[0] ?? null;
     }
 
     /**
-     * Get the country that this admin1 division belongs to.
+     * Scope: filter by country ISO code prefix.
      */
-    public function country(): BelongsTo
+    public function scopeForCountry(Builder $query, string $iso): Builder
     {
-        $countryCode = $this->country_code;
-        if (!$countryCode) {
-            // Return a query that will never match if country_code is null
-            return $this->belongsTo(Country::class)->whereRaw("1 = 0");
-        }
-
-        return $this->belongsTo(Country::class, "iso", "iso")->where(
-            "geonames_countries.iso",
-            "=",
-            $countryCode,
-        );
+        return $query->where('code', 'like', $iso.'.%');
     }
 
     /**
-     * Get the country model for this admin1 division.
-     *
-     * @return Country|null
+     * Scope: join geonames_countries to add country_name to the result set.
      */
-    public function getCountry(): ?Country
+    public function scopeWithCountryName(Builder $query): Builder
     {
-        $countryCode = $this->country_code;
-        if (!$countryCode) {
-            return null;
-        }
-
-        return Country::where("iso", $countryCode)->first();
+        return $query
+            ->selectRaw('geonames_admin1.*, geonames_countries.country as country_name, geonames_countries.iso as country_iso')
+            ->leftJoin('geonames_countries', function ($join) {
+                $join->whereRaw("geonames_countries.iso = SPLIT_PART(geonames_admin1.code, '.', 1)");
+            });
     }
 }

@@ -13,13 +13,13 @@
         <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
     @endif
 </head>
-<body class="min-h-screen bg-white dark:bg-zinc-900 dark:bg-zinc-900">
+<body class="min-h-screen bg-white dark:bg-zinc-900">
     <!-- Desktop Layout (lg and up) -->
         <div class="hidden lg:flex lg:h-screen lg:overflow-hidden">
         <!-- Desktop Sidebar -->
-            <aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 flex flex-col sidebar-container">
+            <aside class="w-64 min-h-full bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 flex flex-col sidebar-container">
                 <!-- Logo/Branding -->
-                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
+                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800">
                     <a href="{{ route('dashboard') }}" class="flex items-center gap-3" wire:navigate>
                         <x-app-logo />
                     </a>
@@ -80,9 +80,9 @@
                 </nav>
 
                 <!-- User Profile Section (Sticky Bottom) -->
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800">
+                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-800">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
                             <span class="text-sm font-semibold text-neutral-800 dark:text-white">
                                 {{ auth()->user()->initials() }}
                             </span>
@@ -129,7 +129,7 @@
     <!-- Mobile Layout (below lg) - Custom Alpine.js drawer -->
     <div class="lg:hidden min-h-screen flex flex-col" x-data="{ sidebarOpen: false }">
         <!-- Mobile Header -->
-        <div class="navbar bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 sticky top-0 z-30">
+        <div class="navbar bg-white dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 sticky top-0 z-30">
             <button
                 type="button"
                 @click="sidebarOpen = true"
@@ -169,12 +169,12 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="translate-x-0"
             x-transition:leave-end="-translate-x-full"
-            class="fixed inset-y-0 left-0 w-64 bg-zinc-50 dark:bg-zinc-800 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 dark:border-zinc-700 flex flex-col z-50"
+            class="fixed inset-y-0 left-0 w-64 bg-zinc-50 dark:bg-zinc-800 border-r border-zinc-200 dark:border-zinc-800 flex flex-col z-50"
             style="display: none;"
             @click.stop
         >
                 <!-- Logo -->
-                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
+                <div class="p-4 border-b border-zinc-200 dark:border-zinc-800">
                 <button
                     type="button"
                     @click="sidebarOpen = false"
@@ -243,9 +243,9 @@
                 </nav>
 
                 <!-- User Profile -->
-                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800 dark:border-zinc-700">
+                <div class="p-4 border-t border-zinc-200 dark:border-zinc-800">
                     <div class="flex items-center gap-3 mb-4">
-                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center flex-shrink-0">
+                        <div class="w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-700 flex items-center justify-center shrink-0">
                             <span class="text-sm font-semibold text-neutral-800 dark:text-white">
                                 {{ auth()->user()->initials() }}
                             </span>

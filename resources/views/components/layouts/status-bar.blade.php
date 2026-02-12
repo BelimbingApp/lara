@@ -1,4 +1,4 @@
-<div class="h-6 bg-arid-surface dark:bg-zinc-950 border-t border-arid-taupe/40 dark:border-zinc-800 flex items-center justify-between px-4 text-xs text-zinc-600 dark:text-zinc-400 flex-shrink-0">
+<div class="h-6 bg-arid-surface dark:bg-zinc-950 border-t border-arid-taupe/40 dark:border-zinc-800 flex items-center justify-between px-4 text-xs text-zinc-600 dark:text-zinc-400 shrink-0">
     {{-- Left: Environment Info --}}
     <div class="flex items-center gap-4">
         <span>{{ config('app.env') }}</span>
