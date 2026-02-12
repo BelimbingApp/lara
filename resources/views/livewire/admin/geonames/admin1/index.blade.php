@@ -72,18 +72,6 @@ new class extends Component
 
     public function update(): void
     {
-        $importedIsos = DB::table('geonames_admin1')
-            ->selectRaw("SPLIT_PART(code, '.', 1) as iso")
-            ->distinct()
-            ->pluck('iso')
-            ->all();
-
-        if (empty($importedIsos)) {
-            Session::flash('error', __('No admin1 data to update. Run seeder first.'));
-
-            return;
-        }
-
         app(Admin1Seeder::class)->run();
 
         Session::flash('success', __('Admin1 divisions updated from Geonames.'));
@@ -152,22 +140,22 @@ new class extends Component
                     <table class="min-w-full divide-y divide-border-default">
                         <thead class="bg-surface-subtle/80">
                             <tr>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Country') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Code') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Name') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Alt Name') }}</th>
-                                <th class="px-6 py-3 text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Updated') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Country') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Code') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Name') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Alt Name') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider min-w-[5.5rem]">{{ __('Updated') }}</th>
                             </tr>
                         </thead>
                         <tbody class="bg-surface-card divide-y divide-border-default">
                             @forelse($admin1s as $admin1)
                                 <tr wire:key="admin1-{{ $admin1->id }}" class="hover:bg-surface-subtle/50 transition-colors">
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                         <span class="font-mono text-xs text-muted">{{ $admin1->country_iso }}</span>
                                         <span class="ml-1">{{ $admin1->country_name }}</span>
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm font-mono text-ink">{{ $admin1->code }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-ink"
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-mono text-ink">{{ $admin1->code }}</td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink"
                                         x-data="{ editing: false, name: '{{ addslashes($admin1->name) }}' }"
                                     >
                                         <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
@@ -185,12 +173,12 @@ new class extends Component
                                             class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
                                         />
                                     </td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $admin1->alt_name }}</td>
-                                    <td class="px-6 py-4 whitespace-nowrap text-sm text-muted">{{ $admin1->updated_at?->format('Y-m-d') }}</td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $admin1->alt_name }}</td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums min-w-[5.5rem]">{{ $admin1->updated_at?->format('Y-m-d') }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="px-6 py-12 text-center">
+                                    <td colspan="5" class="px-table-cell-x py-table-cell-y py-12 text-center">
                                         <p class="text-sm text-muted">{{ __('No admin1 divisions found.') }}</p>
                                     </td>
                                 </tr>

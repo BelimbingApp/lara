@@ -28,7 +28,7 @@ class StatusCommand extends IlluminateStatusCommand
     {
         $this->loadAllModuleMigrations();
 
-        return parent::handle();
+        return (int) parent::handle();
     }
 
     /**

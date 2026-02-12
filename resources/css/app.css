@@ -65,6 +65,21 @@
     --color-accent: var(--color-arid-brown);
     --color-accent-hover: var(--color-arid-dark-brown);
     --color-accent-on: #ffffff;
+
+    /*
+     * Spacing (semantic by role). Use in Blade; density is tuned here (or via data-density).
+     * card-inner      — card inner padding (p-card-inner)
+     * table-header-y  — table header vertical padding (py-table-header-y)
+     * table-cell-y    — table cell vertical padding (py-table-cell-y)
+     * table-cell-x    — table cell horizontal padding (px-table-cell-x)
+     * section-gap     — gap between sections / title and content (space-y-section-gap)
+     * To switch to a spacious layout, change these values or add [data-density="spacious"] overrides.
+     */
+    --spacing-card-inner: 0.75rem;
+    --spacing-table-header-y: 0.5rem;
+    --spacing-table-cell-y: 0.05rem;
+    --spacing-table-cell-x: 0.03rem;
+    --spacing-section-gap: 1rem;
 }
 
 .dark {

@@ -19,6 +19,8 @@ You are a specialized UI/UX designer focused on responsive design, high-end aest
 
 Add new tokens in `app.css` when a new role appears; then use them everywhere that role appears. User palette preference (e.g. Arid vs Neutral): `docs/development/palette-preference.md`.
 
+**Spacing:** Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`. Density (compact vs spacious) is controlled by the values in `app.css` or by a future `data-density` override; Blade stays unchanged.
+
 ## Principles
 
 1. **Responsive** — Desktop first; layouts must stay mobile-friendly. Use Tailwind breakpoints (`sm:`, `md:`, `lg:`). Avoid fixed widths that break on narrow viewports.
