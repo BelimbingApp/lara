@@ -40,12 +40,6 @@ return new class extends Migration
                 ->cascadeOnUpdate()
                 ->restrictOnDelete();
 
-            $table
-                ->foreign('admin1_code')
-                ->references('code')
-                ->on('geonames_admin1')
-                ->nullOnDelete();
-
             $table->index(['country_iso', 'postcode']);
             $table->index(['country_iso', 'place_name']);
         });

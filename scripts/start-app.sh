@@ -504,7 +504,7 @@ start_caddy() {
 
 # Start development services
 start_services() {
-    echo -e "${GREEN}Starting Laravel server, Vite, queue worker, and log watcher...${NC}"
+    echo -e "${GREEN}Starting Laravel server, Vite, queue worker, Reverb, and log watcher...${NC}"
 
     # Create a separate log file for dev services output
     local dev_log_file
@@ -589,6 +589,7 @@ main() {
     echo -e "${CYAN}Internal services:${NC}"
     echo -e "  ${BULLET} Laravel: http://127.0.0.1:$APP_PORT"
     echo -e "  ${BULLET} Vite:    http://127.0.0.1:$VITE_PORT"
+    echo -e "  ${BULLET} Reverb:  ws://127.0.0.1:8080"
     echo ""
     echo -e "${CYAN}Starting Caddy reverse proxy...${NC}"
     echo ""
