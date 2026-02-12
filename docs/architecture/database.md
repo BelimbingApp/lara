@@ -178,4 +178,3 @@ app/Modules/Core/Geonames/
 -   `app/Base/Database/AGENTS.md`: Migrate/seeding CLI (e.g. `migrate --seed`, `--module`, `--seeder`).
 -   `docs/architecture/file-structure.md`: Full project directory layout.
 -   `docs/Base/Database/migration-registry.md`: Registry of assigned module IDs (`MM_DD`).
--   `docs/development/database-conventions.md`: Detailed naming conventions (timestamp ranges, table patterns).

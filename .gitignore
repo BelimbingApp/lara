@@ -39,5 +39,5 @@ package-lock.json
 /.caddy
 /certs
 /auth.json
-/docs/development
 /docs/deprecated
+/docs/scratch
