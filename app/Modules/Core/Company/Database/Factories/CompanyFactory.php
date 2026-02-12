@@ -33,7 +33,7 @@ class CompanyFactory extends Factory
             'name' => $companyName,
             'slug' => null, // Will be auto-generated from name
             'status' => 'active',
-            'legal_name' => $companyName . ' ' . fake()->companySuffix(),
+            'legal_name' => $companyName.' '.fake()->companySuffix(),
             'registration_number' => fake()->numerify('##########'),
             'tax_id' => fake()->numerify('##-#######'),
             'legal_entity_type' => fake()->randomElement([
@@ -71,7 +71,7 @@ class CompanyFactory extends Factory
     public function parent(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'parent_id' => null,
             ],
         );
@@ -83,7 +83,7 @@ class CompanyFactory extends Factory
     public function subsidiary(?string $parentId = null): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'parent_id' => $parentId ?? Company::factory()->parent(),
             ],
         );
@@ -95,7 +95,7 @@ class CompanyFactory extends Factory
     public function active(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'status' => 'active',
             ],
         );
@@ -107,7 +107,7 @@ class CompanyFactory extends Factory
     public function suspended(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'status' => 'suspended',
             ],
         );
@@ -119,7 +119,7 @@ class CompanyFactory extends Factory
     public function pending(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'status' => 'pending',
             ],
         );
@@ -131,7 +131,7 @@ class CompanyFactory extends Factory
     public function archived(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'status' => 'archived',
             ],
         );
@@ -143,7 +143,7 @@ class CompanyFactory extends Factory
     public function minimal(): static
     {
         return $this->state(
-            fn(array $attributes) => [
+            fn (array $attributes) => [
                 'legal_name' => null,
                 'registration_number' => null,
                 'tax_id' => null,

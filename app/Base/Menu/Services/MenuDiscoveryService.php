@@ -48,19 +48,21 @@ class MenuDiscoveryService
         try {
             $config = require $path;
 
-            if (!isset($config['items']) || !is_array($config['items'])) {
+            if (! isset($config['items']) || ! is_array($config['items'])) {
                 Log::warning('Menu file missing items array', ['file' => $path]);
+
                 return;
             }
 
             $metadata = $this->extractMetadata($path);
 
             foreach ($config['items'] as $item) {
-                if (!isset($item['id']) || !isset($item['label'])) {
+                if (! isset($item['id']) || ! isset($item['label'])) {
                     Log::warning('Menu item missing id or label', [
                         'file' => $path,
                         'item' => $item,
                     ]);
+
                     continue;
                 }
 
@@ -81,7 +83,7 @@ class MenuDiscoveryService
      */
     protected function extractMetadata(string $path): array
     {
-        $relativePath = str_replace(base_path() . '/', '', $path);
+        $relativePath = str_replace(base_path().'/', '', $path);
 
         return [
             'file' => $relativePath,
@@ -128,6 +130,7 @@ class MenuDiscoveryService
         // app/Modules/Core/Geonames/Config/menu.php -> app/Modules/Core/Geonames
 
         $parts = explode('/Config/menu.php', $relativePath);
+
         return $parts[0] ?? null;
     }
 }

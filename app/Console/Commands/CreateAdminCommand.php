@@ -1,4 +1,5 @@
 <?php
+
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
@@ -40,6 +41,7 @@ class CreateAdminCommand extends Command
             if ($userCount > 0) {
                 $this->info("✓ Admin user already exists ({$userCount} user(s) found).");
                 $this->line('  This command only creates the initial admin during installation.');
+
                 return Command::SUCCESS;
             }
         } catch (\Exception $e) {
@@ -52,9 +54,9 @@ class CreateAdminCommand extends Command
 
         // Get email
         $email = $this->argument('email');
-        if (!$email) {
+        if (! $email) {
             $email = $this->askForEmail();
-            if (!$email) {
+            if (! $email) {
                 return Command::FAILURE;
             }
         }
@@ -65,7 +67,8 @@ class CreateAdminCommand extends Command
         ]);
 
         if ($validator->fails()) {
-            $this->error('Invalid email format: ' . $email);
+            $this->error('Invalid email format: '.$email);
+
             return Command::FAILURE;
         }
 
@@ -75,8 +78,9 @@ class CreateAdminCommand extends Command
         // Option 1: Read from STDIN (most secure for scripting)
         if ($this->option('stdin')) {
             $password = $this->readPasswordFromStdin();
-            if (!$password) {
+            if (! $password) {
                 $this->error('Failed to read password from STDIN.');
+
                 return Command::FAILURE;
             }
         }
@@ -88,7 +92,7 @@ class CreateAdminCommand extends Command
         // Option 3: Interactive prompt (secure)
         else {
             $password = $this->askForPassword();
-            if (!$password) {
+            if (! $password) {
                 return Command::FAILURE;
             }
         }
@@ -96,6 +100,7 @@ class CreateAdminCommand extends Command
         // Validate password
         if (strlen($password) < 8) {
             $this->error('Password must be at least 8 characters long.');
+
             return Command::FAILURE;
         }
 
@@ -116,7 +121,8 @@ class CreateAdminCommand extends Command
 
             return Command::SUCCESS;
         } catch (\Exception $e) {
-            $this->error('Failed to create admin user: ' . $e->getMessage());
+            $this->error('Failed to create admin user: '.$e->getMessage());
+
             return Command::FAILURE;
         }
     }
@@ -127,15 +133,17 @@ class CreateAdminCommand extends Command
     private function askForEmail(): ?string
     {
         // Interactive prompt only (email treated as sensitive to prevent enumeration)
-        if (!$this->input->isInteractive()) {
+        if (! $this->input->isInteractive()) {
             $this->error('Email is required. Provide it as an argument or run interactively.');
             $this->line('  Example: php artisan belimbing:create-admin email@example.com --stdin');
+
             return null;
         }
 
         $email = $this->ask('Enter admin email address');
-        if (!$email) {
+        if (! $email) {
             $this->error('Email is required.');
+
             return null;
         }
 
@@ -151,6 +159,7 @@ class CreateAdminCommand extends Command
         if (empty($password)) {
             return null;
         }
+
         return $password;
     }
 
@@ -160,23 +169,26 @@ class CreateAdminCommand extends Command
     private function askForPassword(): ?string
     {
         // Interactive prompt only
-        if (!$this->input->isInteractive()) {
+        if (! $this->input->isInteractive()) {
             $this->error('Password is required. Provide it as an argument, use --stdin, or run interactively.');
             $this->line('  Examples:');
             $this->line('    php artisan belimbing:create-admin email@example.com "password"');
             $this->line('    echo "password" | php artisan belimbing:create-admin email@example.com --stdin');
+
             return null;
         }
 
         $password = $this->secret('Enter admin password (min 8 characters)');
-        if (!$password) {
+        if (! $password) {
             $this->error('Password is required.');
+
             return null;
         }
 
         $confirmPassword = $this->secret('Confirm password');
         if ($password !== $confirmPassword) {
             $this->error('Passwords do not match.');
+
             return null;
         }
 

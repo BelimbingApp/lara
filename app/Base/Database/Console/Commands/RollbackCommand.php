@@ -36,7 +36,7 @@ class RollbackCommand extends IlluminateRollbackCommand
         // Laravel will rollback the last global batch. That can include migrations
         // outside the module, which then cannot be resolved from module-only paths.
         // We instead target the latest batch that includes migrations from the selected module(s).
-        if (!empty($modules) && ! $this->option('batch') && ! $this->option('step')) {
+        if (! empty($modules) && ! $this->option('batch') && ! $this->option('step')) {
             $targetBatch = null;
 
             $this->migrator->usingConnection($this->option('database'), function () use (&$targetBatch) {

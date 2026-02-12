@@ -25,7 +25,7 @@ class Employee extends Model
      */
     protected static function newFactory(): EmployeeFactory
     {
-        return new EmployeeFactory();
+        return new EmployeeFactory;
     }
 
     /**

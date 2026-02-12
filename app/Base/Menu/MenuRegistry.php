@@ -35,7 +35,7 @@ class MenuRegistry
     {
         foreach ($discoveredItems as $item) {
             $menuItem = MenuItem::fromArray($item);
-            
+
             // Last definition wins (enables extension override)
             if ($this->items->has($menuItem->id)) {
                 Log::info('Menu item overridden', [
@@ -43,7 +43,7 @@ class MenuRegistry
                     'source' => $item['_source']['file'] ?? 'unknown',
                 ]);
             }
-            
+
             $this->items[$menuItem->id] = $menuItem;
         }
     }
@@ -51,7 +51,7 @@ class MenuRegistry
     /**
      * Validate registered items.
      *
-     * @return array  Array of validation error messages
+     * @return array Array of validation error messages
      */
     public function validate(): array
     {
@@ -66,7 +66,7 @@ class MenuRegistry
 
         // Warn about missing parents (but don't error - item becomes root)
         foreach ($this->items as $item) {
-            if ($item->parent && !$this->items->has($item->parent)) {
+            if ($item->parent && ! $this->items->has($item->parent)) {
                 Log::warning('Menu item parent not found', [
                     'item_id' => $item->id,
                     'parent_id' => $item->parent,
@@ -90,11 +90,12 @@ class MenuRegistry
         }
 
         $item = $this->items->get($itemId);
-        if (!$item || !$item->parent) {
+        if (! $item || ! $item->parent) {
             return false;
         }
 
         $visited[] = $itemId;
+
         return $this->hasCircularParent($item->parent, $visited);
     }
 
@@ -109,7 +110,7 @@ class MenuRegistry
     /**
      * Load items from cache.
      *
-     * @return bool  True if loaded from cache, false otherwise
+     * @return bool True if loaded from cache, false otherwise
      */
     public function loadFromCache(): bool
     {
@@ -119,6 +120,7 @@ class MenuRegistry
             $this->items = collect($cached)->mapWithKeys(function ($data, $id) {
                 return [$id => MenuItem::fromArray($data)];
             });
+
             return true;
         }
 

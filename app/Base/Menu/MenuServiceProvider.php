@@ -36,8 +36,9 @@ class MenuServiceProvider extends ServiceProvider
     {
         View::composer(['components.layouts.app', 'layouts::app'], function ($view): void {
             // Skip if not authenticated (avoid redirect loop on login pages)
-            if (!auth()->check()) {
+            if (! auth()->check()) {
                 $view->with('menuTree', []);
+
                 return;
             }
             $registry = $this->app->make(MenuRegistry::class);
@@ -50,17 +51,17 @@ class MenuServiceProvider extends ServiceProvider
                 $registry->registerFromDiscovery($discovery->discover());
                 $errors = $registry->validate();
 
-                if (!empty($errors)) {
+                if (! empty($errors)) {
                     logger()->error('Menu validation errors', ['errors' => $errors]);
                 }
             } else {
                 // Production/Staging: Use cache
-                if (!$registry->loadFromCache()) {
+                if (! $registry->loadFromCache()) {
                     // Cache miss: discover and persist
                     $registry->registerFromDiscovery($discovery->discover());
                     $errors = $registry->validate();
 
-                    if (!empty($errors)) {
+                    if (! empty($errors)) {
                         logger()->error('Menu validation errors', ['errors' => $errors]);
                     }
 

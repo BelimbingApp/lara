@@ -71,6 +71,7 @@ class DepartmentType extends Model
     public function activate(): bool
     {
         $this->is_active = true;
+
         return $this->save();
     }
 
@@ -80,6 +81,7 @@ class DepartmentType extends Model
     public function deactivate(): bool
     {
         $this->is_active = false;
+
         return $this->save();
     }
 

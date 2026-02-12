@@ -69,7 +69,7 @@ class Company extends Model
      */
     protected static function newFactory(): CompanyFactory
     {
-        return new CompanyFactory();
+        return new CompanyFactory;
     }
 
     /**
@@ -282,6 +282,7 @@ class Company extends Model
     public function activate(): bool
     {
         $this->status = 'active';
+
         return $this->save();
     }
 
@@ -291,6 +292,7 @@ class Company extends Model
     public function suspend(): bool
     {
         $this->status = 'suspended';
+
         return $this->save();
     }
 
@@ -300,6 +302,7 @@ class Company extends Model
     public function archive(): bool
     {
         $this->status = 'archived';
+
         return $this->save();
     }
 

@@ -117,7 +117,7 @@ class CompanyRelationship extends Model
      */
     public function hasEnded(): bool
     {
-        return !is_null($this->effective_to) && $this->effective_to->lt(now());
+        return ! is_null($this->effective_to) && $this->effective_to->lt(now());
     }
 
     /**
@@ -125,7 +125,7 @@ class CompanyRelationship extends Model
      */
     public function isPending(): bool
     {
-        return !is_null($this->effective_from) &&
+        return ! is_null($this->effective_from) &&
             $this->effective_from->gt(now());
     }
 
@@ -135,6 +135,7 @@ class CompanyRelationship extends Model
     public function end(): bool
     {
         $this->effective_to = now()->toDateString();
+
         return $this->save();
     }
 
@@ -144,6 +145,7 @@ class CompanyRelationship extends Model
     public function extendTo(string $date): bool
     {
         $this->effective_to = $date;
+
         return $this->save();
     }
 
@@ -153,6 +155,7 @@ class CompanyRelationship extends Model
     public function makeIndefinite(): bool
     {
         $this->effective_to = null;
+
         return $this->save();
     }
 

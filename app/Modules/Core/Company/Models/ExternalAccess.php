@@ -86,7 +86,7 @@ class ExternalAccess extends Model
      */
     public function isValid(): bool
     {
-        if (!$this->is_active) {
+        if (! $this->is_active) {
             return false;
         }
 
@@ -94,7 +94,7 @@ class ExternalAccess extends Model
 
         // Check if access has been granted
         if (
-            !is_null($this->access_granted_at) &&
+            ! is_null($this->access_granted_at) &&
             $this->access_granted_at->gt($now)
         ) {
             return false;
@@ -102,7 +102,7 @@ class ExternalAccess extends Model
 
         // Check if access has expired
         if (
-            !is_null($this->access_expires_at) &&
+            ! is_null($this->access_expires_at) &&
             $this->access_expires_at->lt($now)
         ) {
             return false;
@@ -116,7 +116,7 @@ class ExternalAccess extends Model
      */
     public function hasExpired(): bool
     {
-        return !is_null($this->access_expires_at) &&
+        return ! is_null($this->access_expires_at) &&
             $this->access_expires_at->lt(now());
     }
 
@@ -125,7 +125,7 @@ class ExternalAccess extends Model
      */
     public function isPending(): bool
     {
-        return !is_null($this->access_granted_at) &&
+        return ! is_null($this->access_granted_at) &&
             $this->access_granted_at->gt(now());
     }
 
@@ -136,6 +136,7 @@ class ExternalAccess extends Model
     {
         $this->access_granted_at = now();
         $this->is_active = true;
+
         return $this->save();
     }
 
@@ -145,6 +146,7 @@ class ExternalAccess extends Model
     public function revoke(): bool
     {
         $this->is_active = false;
+
         return $this->save();
     }
 
@@ -154,6 +156,7 @@ class ExternalAccess extends Model
     public function extendTo(string $date): bool
     {
         $this->access_expires_at = $date;
+
         return $this->save();
     }
 
@@ -163,6 +166,7 @@ class ExternalAccess extends Model
     public function makeIndefinite(): bool
     {
         $this->access_expires_at = null;
+
         return $this->save();
     }
 
@@ -185,9 +189,10 @@ class ExternalAccess extends Model
     {
         $permissions = $this->permissions ?? [];
 
-        if (!in_array($permission, $permissions)) {
+        if (! in_array($permission, $permissions)) {
             $permissions[] = $permission;
             $this->permissions = $permissions;
+
             return $this->save();
         }
 
@@ -205,9 +210,10 @@ class ExternalAccess extends Model
 
         $permissions = array_filter(
             $this->permissions,
-            fn($p) => $p !== $permission,
+            fn ($p) => $p !== $permission,
         );
         $this->permissions = array_values($permissions);
+
         return $this->save();
     }
 

@@ -99,7 +99,7 @@ test('company full address formats correctly', function (): void {
     ]);
 
     $fullAddress = $company->fresh()->fullAddress();
-    
+
     expect($fullAddress)
         ->toContain('123 Main St')
         ->toContain('Suite 100')

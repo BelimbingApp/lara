@@ -9,6 +9,7 @@ use Illuminate\Database\Seeder;
  * This file is required for `php artisan db:seed`.
  *
  * For Belimbing seeding (registry, app-level, ad-hoc).
+ *
  * @see app/Base/Database/AGENTS.md
  */
 class DatabaseSeeder extends Seeder

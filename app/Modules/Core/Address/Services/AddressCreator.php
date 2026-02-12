@@ -16,10 +16,10 @@ class AddressCreator
      * This is intentionally minimal for v1: callers can pass parsed components
      * and any AI metadata; we persist provenance and timestamps consistently.
      *
-     * @param string      $rawInput Free-form address block (scan/paste/import)
-     * @param array       $attributes Parsed components like line1/locality/postcode/country_iso/admin1_code
-     * @param string|null $source Source of the input (manual, scan, paste, import_api)
-     * @param float|null  $confidence Parser confidence (0..1)
+     * @param  string  $rawInput  Free-form address block (scan/paste/import)
+     * @param  array  $attributes  Parsed components like line1/locality/postcode/country_iso/admin1_code
+     * @param  string|null  $source  Source of the input (manual, scan, paste, import_api)
+     * @param  float|null  $confidence  Parser confidence (0..1)
      */
     public function fromRawInput(
         string $rawInput,
@@ -38,7 +38,7 @@ class AddressCreator
         ]);
 
         foreach ($attributes as $key => $value) {
-            if (!in_array($key, $address->getFillable(), true)) {
+            if (! in_array($key, $address->getFillable(), true)) {
                 continue;
             }
 
@@ -46,8 +46,8 @@ class AddressCreator
         }
 
         // Best-effort default mapping when caller provides only raw input.
-        if (!$address->line1) {
-            $lines = preg_split("/\\r\\n|\\r|\\n/", trim($rawInput)) ?: [];
+        if (! $address->line1) {
+            $lines = preg_split('/\\r\\n|\\r|\\n/', trim($rawInput)) ?: [];
             $address->line1 = $lines[0] ?? null;
             $address->line2 = $lines[1] ?? null;
             $address->line3 = $lines[2] ?? null;

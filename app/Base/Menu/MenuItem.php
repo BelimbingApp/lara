@@ -42,7 +42,7 @@ readonly class MenuItem
      */
     public function hasRoute(): bool
     {
-        return !is_null($this->route) || !is_null($this->url);
+        return ! is_null($this->route) || ! is_null($this->url);
     }
 
     /**
@@ -50,6 +50,6 @@ readonly class MenuItem
      */
     public function isContainer(): bool
     {
-        return !$this->hasRoute();
+        return ! $this->hasRoute();
     }
 }

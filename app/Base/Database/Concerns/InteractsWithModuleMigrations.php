@@ -70,7 +70,7 @@ trait InteractsWithModuleMigrations
 
         // Always include database/migrations for Laravel core tables (cache, jobs, sessions)
         $corePath = $this->laravel->databasePath('migrations');
-        if (!in_array($corePath, $paths)) {
+        if (! in_array($corePath, $paths)) {
             $paths[] = $corePath;
         }
 

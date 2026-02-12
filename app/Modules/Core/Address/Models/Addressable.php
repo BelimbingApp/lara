@@ -58,4 +58,3 @@ class Addressable extends MorphPivot
         return $this->morphTo();
     }
 }
-

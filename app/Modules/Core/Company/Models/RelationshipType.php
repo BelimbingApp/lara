@@ -40,7 +40,7 @@ class RelationshipType extends Model
      */
     protected static function newFactory(): RelationshipTypeFactory
     {
-        return new RelationshipTypeFactory();
+        return new RelationshipTypeFactory;
     }
 
     /**
@@ -92,6 +92,7 @@ class RelationshipType extends Model
     public function activate(): bool
     {
         $this->is_active = true;
+
         return $this->save();
     }
 
@@ -101,6 +102,7 @@ class RelationshipType extends Model
     public function deactivate(): bool
     {
         $this->is_active = false;
+
         return $this->save();
     }
 

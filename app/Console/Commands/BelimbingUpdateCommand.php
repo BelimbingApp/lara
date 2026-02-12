@@ -1,4 +1,5 @@
 <?php
+
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
@@ -39,7 +40,7 @@ class BelimbingUpdateCommand extends Command
 
         $dryRun = $this->option('dry-run');
         $force = $this->option('force');
-        $backup = !$this->option('no-backup') && ($this->option('backup') || !$this->option('no-backup'));
+        $backup = ! $this->option('no-backup') && ($this->option('backup') || ! $this->option('no-backup'));
 
         if ($dryRun) {
             $this->warn('DRY RUN MODE: No changes will be applied');
@@ -56,21 +57,23 @@ class BelimbingUpdateCommand extends Command
 
         if ($currentVersion === $latestVersion) {
             $this->info('✓ Already up to date!');
+
             return Command::SUCCESS;
         }
 
         $this->newLine();
         $this->info("Update available: {$currentVersion} → {$latestVersion}");
 
-        if (!$force && !$dryRun) {
-            if (!$this->confirm('Do you want to proceed with the update?', true)) {
+        if (! $force && ! $dryRun) {
+            if (! $this->confirm('Do you want to proceed with the update?', true)) {
                 $this->info('Update cancelled.');
+
                 return Command::SUCCESS;
             }
         }
 
         // Create backup
-        if ($backup && !$dryRun) {
+        if ($backup && ! $dryRun) {
             $this->newLine();
             $this->info('Creating backup...');
             $backupPath = $this->createBackup();
@@ -78,7 +81,7 @@ class BelimbingUpdateCommand extends Command
                 $this->info("✓ Backup created: {$backupPath}");
             } else {
                 $this->error('✗ Backup failed');
-                if (!$this->confirm('Continue without backup?', false)) {
+                if (! $this->confirm('Continue without backup?', false)) {
                     return Command::FAILURE;
                 }
             }
@@ -89,7 +92,7 @@ class BelimbingUpdateCommand extends Command
         $this->info('Updating application...');
 
         try {
-            if (!$dryRun) {
+            if (! $dryRun) {
                 $this->performUpdate();
             } else {
                 $this->line('Would execute: git pull origin main');
@@ -104,7 +107,7 @@ class BelimbingUpdateCommand extends Command
             $this->newLine();
             $this->info('✓ Update completed successfully!');
 
-            if ($backup && !$dryRun && isset($backupPath)) {
+            if ($backup && ! $dryRun && isset($backupPath)) {
                 $this->line("Backup location: {$backupPath}");
                 $this->line('To rollback, restore from the backup directory.');
             }
@@ -112,12 +115,12 @@ class BelimbingUpdateCommand extends Command
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $this->newLine();
-            $this->error('✗ Update failed: ' . $e->getMessage());
-            $this->error('Stack trace: ' . $e->getTraceAsString());
+            $this->error('✗ Update failed: '.$e->getMessage());
+            $this->error('Stack trace: '.$e->getTraceAsString());
 
-            if ($backup && !$dryRun && isset($backupPath)) {
+            if ($backup && ! $dryRun && isset($backupPath)) {
                 $this->newLine();
-                $this->warn('Rollback available from backup: ' . $backupPath);
+                $this->warn('Rollback available from backup: '.$backupPath);
                 if ($this->confirm('Would you like to rollback?', false)) {
                     $this->rollback($backupPath);
                 }
@@ -151,6 +154,7 @@ class BelimbingUpdateCommand extends Command
         // Fallback to composer.json version
         if (File::exists(base_path('composer.json'))) {
             $composer = json_decode(File::get(base_path('composer.json')), true);
+
             return $composer['version'] ?? 'unknown';
         }
 
@@ -177,6 +181,7 @@ class BelimbingUpdateCommand extends Command
                 $response = file_get_contents("https://api.github.com/repos/{$repo}/releases/latest");
                 if ($response) {
                     $data = json_decode($response, true);
+
                     return $data['tag_name'] ?? 'unknown';
                 }
             }
@@ -217,10 +222,10 @@ class BelimbingUpdateCommand extends Command
 
         // Backup database
         try {
-            $dbName = config('database.connections.' . config('database.default') . '.database');
-            $dbUser = config('database.connections.' . config('database.default') . '.username');
-            $dbHost = config('database.connections.' . config('database.default') . '.host');
-            $dbPort = config('database.connections.' . config('database.default') . '.port');
+            $dbName = config('database.connections.'.config('database.default').'.database');
+            $dbUser = config('database.connections.'.config('database.default').'.username');
+            $dbHost = config('database.connections.'.config('database.default').'.host');
+            $dbPort = config('database.connections.'.config('database.default').'.port');
 
             $dumpFile = "{$backupPath}/database.sql";
 
@@ -239,21 +244,21 @@ class BelimbingUpdateCommand extends Command
                 Process::run($command);
             }
 
-            $this->line("  ✓ Database backup created");
+            $this->line('  ✓ Database backup created');
         } catch (\Exception $e) {
-            $this->warn("  ⚠ Database backup failed: " . $e->getMessage());
+            $this->warn('  ⚠ Database backup failed: '.$e->getMessage());
         }
 
         // Backup .env file
         if (File::exists(base_path('.env'))) {
             File::copy(base_path('.env'), "{$backupPath}/.env");
-            $this->line("  ✓ .env file backed up");
+            $this->line('  ✓ .env file backed up');
         }
 
         // Backup storage/app (user uploads, etc.)
         if (File::exists(storage_path('app'))) {
             File::copyDirectory(storage_path('app'), "{$backupPath}/storage-app");
-            $this->line("  ✓ Storage directory backed up");
+            $this->line('  ✓ Storage directory backed up');
         }
 
         return $backupPath;
@@ -267,16 +272,16 @@ class BelimbingUpdateCommand extends Command
         // Pull latest changes
         $this->line('  Pulling latest changes...');
         $result = Process::run('git pull origin main');
-        if (!$result->successful()) {
-            throw new \RuntimeException('Git pull failed: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new \RuntimeException('Git pull failed: '.$result->errorOutput());
         }
         $this->line('  ✓ Code updated');
 
         // Update Composer dependencies
         $this->line('  Updating Composer dependencies...');
         $result = Process::run('composer install --no-dev --optimize-autoloader');
-        if (!$result->successful()) {
-            throw new \RuntimeException('Composer update failed: ' . $result->errorOutput());
+        if (! $result->successful()) {
+            throw new \RuntimeException('Composer update failed: '.$result->errorOutput());
         }
         $this->line('  ✓ Composer dependencies updated');
 
@@ -284,8 +289,8 @@ class BelimbingUpdateCommand extends Command
         if (File::exists(base_path('package.json'))) {
             $this->line('  Updating bun dependencies...');
             $result = Process::run('bun install --production');
-            if (!$result->successful()) {
-                throw new \RuntimeException('Bun install failed: ' . $result->errorOutput());
+            if (! $result->successful()) {
+                throw new \RuntimeException('Bun install failed: '.$result->errorOutput());
             }
             $this->line('  ✓ bun dependencies updated');
         }
@@ -313,10 +318,10 @@ class BelimbingUpdateCommand extends Command
         // Restore database
         if (File::exists("{$backupPath}/database.sql")) {
             try {
-                $dbName = config('database.connections.' . config('database.default') . '.database');
-                $dbUser = config('database.connections.' . config('database.default') . '.username');
-                $dbHost = config('database.connections.' . config('database.default') . '.host');
-                $dbPort = config('database.connections.' . config('database.default') . '.port');
+                $dbName = config('database.connections.'.config('database.default').'.database');
+                $dbUser = config('database.connections.'.config('database.default').'.username');
+                $dbHost = config('database.connections.'.config('database.default').'.host');
+                $dbPort = config('database.connections.'.config('database.default').'.port');
 
                 if (config('database.default') === 'pgsql') {
                     $command = sprintf(
@@ -333,7 +338,7 @@ class BelimbingUpdateCommand extends Command
                     $this->line('  ✓ Database restored');
                 }
             } catch (\Exception $e) {
-                $this->error('  ✗ Database restore failed: ' . $e->getMessage());
+                $this->error('  ✗ Database restore failed: '.$e->getMessage());
             }
         }
 

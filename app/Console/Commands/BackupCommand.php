@@ -1,4 +1,5 @@
 <?php
+
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
@@ -85,12 +86,14 @@ class BackupCommand extends Command
 
         if ($success) {
             $this->newLine();
-            $this->info("✓ Backup completed successfully!");
+            $this->info('✓ Backup completed successfully!');
             $this->line("Location: {$backupPath}");
+
             return Command::SUCCESS;
         } else {
             $this->newLine();
             $this->error('✗ Backup completed with errors');
+
             return Command::FAILURE;
         }
     }
@@ -106,10 +109,10 @@ class BackupCommand extends Command
         $this->info('Backing up database...');
 
         try {
-            $dbName = config('database.connections.' . config('database.default') . '.database');
-            $dbUser = config('database.connections.' . config('database.default') . '.username');
-            $dbHost = config('database.connections.' . config('database.default') . '.host');
-            $dbPort = config('database.connections.' . config('database.default') . '.port');
+            $dbName = config('database.connections.'.config('database.default').'.database');
+            $dbUser = config('database.connections.'.config('database.default').'.username');
+            $dbHost = config('database.connections.'.config('database.default').'.host');
+            $dbPort = config('database.connections.'.config('database.default').'.port');
 
             $dumpFile = "{$backupPath}/database.sql";
 
@@ -126,18 +129,22 @@ class BackupCommand extends Command
 
                 $result = Process::run($command);
                 if ($result->successful()) {
-                    $this->line("  ✓ Database backup created: " . File::size($dumpFile) . " bytes");
+                    $this->line('  ✓ Database backup created: '.File::size($dumpFile).' bytes');
+
                     return true;
                 } else {
-                    $this->error("  ✗ Database backup failed: " . $result->errorOutput());
+                    $this->error('  ✗ Database backup failed: '.$result->errorOutput());
+
                     return false;
                 }
             } else {
-                $this->warn("  ⚠ Database type not supported for backup");
+                $this->warn('  ⚠ Database type not supported for backup');
+
                 return false;
             }
         } catch (\Exception $e) {
-            $this->error("  ✗ Database backup failed: " . $e->getMessage());
+            $this->error('  ✗ Database backup failed: '.$e->getMessage());
+
             return false;
         }
     }
@@ -175,7 +182,7 @@ class BackupCommand extends Command
                     // First backup or no previous backup - do full copy (excluding backups dir)
                     $this->copyDirectoryExcluding(storage_path('app'), $targetPath, ['backups']);
                 }
-                $this->line("  ✓ Storage directory backed up");
+                $this->line('  ✓ Storage directory backed up');
             }
 
             // Backup public storage if it exists
@@ -191,12 +198,13 @@ class BackupCommand extends Command
                     // First backup or no previous backup - do full copy
                     File::copyDirectory(public_path('storage'), $targetPath);
                 }
-                $this->line("  ✓ Public storage backed up");
+                $this->line('  ✓ Public storage backed up');
             }
 
             return true;
         } catch (\Exception $e) {
-            $this->error("  ✗ Files backup failed: " . $e->getMessage());
+            $this->error('  ✗ Files backup failed: '.$e->getMessage());
+
             return false;
         }
     }
@@ -206,7 +214,7 @@ class BackupCommand extends Command
      */
     private function findPreviousBackup(string $backupDir): ?string
     {
-        if (!File::exists($backupDir)) {
+        if (! File::exists($backupDir)) {
             return null;
         }
 
@@ -237,7 +245,7 @@ class BackupCommand extends Command
             'rsync -a %s --link-dest=%s %s %s 2>&1',
             $excludeBackups,
             escapeshellarg($previousBackup),
-            escapeshellarg(rtrim($source, '/') . '/'),
+            escapeshellarg(rtrim($source, '/').'/'),
             escapeshellarg($target)
         ));
 
@@ -267,19 +275,20 @@ class BackupCommand extends Command
 
         foreach ($iterator as $item) {
             $sourcePath = $item->getPathname();
-            $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $sourcePath);
+            $relativePath = str_replace($source.DIRECTORY_SEPARATOR, '', $sourcePath);
 
             // Skip backups directory to prevent recursion
-            if (strpos($relativePath, $backupsDirName . DIRECTORY_SEPARATOR) === 0 ||
+            if (strpos($relativePath, $backupsDirName.DIRECTORY_SEPARATOR) === 0 ||
                 $relativePath === $backupsDirName) {
                 continue;
             }
 
-            $targetPath = $target . DIRECTORY_SEPARATOR . $relativePath;
-            $previousPath = $previousBackup . DIRECTORY_SEPARATOR . $relativePath;
+            $targetPath = $target.DIRECTORY_SEPARATOR.$relativePath;
+            $previousPath = $previousBackup.DIRECTORY_SEPARATOR.$relativePath;
 
             if ($item->isDir()) {
                 File::ensureDirectoryExists($targetPath);
+
                 continue;
             }
 
@@ -310,7 +319,7 @@ class BackupCommand extends Command
         }
 
         if ($copiedCount > 0 || $skippedCount > 0) {
-            $this->line(sprintf("    Copied: %d files, Linked: %d files (unchanged)", $copiedCount, $skippedCount));
+            $this->line(sprintf('    Copied: %d files, Linked: %d files (unchanged)', $copiedCount, $skippedCount));
         }
     }
 
@@ -328,12 +337,12 @@ class BackupCommand extends Command
 
         foreach ($iterator as $item) {
             $sourcePath = $item->getPathname();
-            $relativePath = str_replace($source . DIRECTORY_SEPARATOR, '', $sourcePath);
+            $relativePath = str_replace($source.DIRECTORY_SEPARATOR, '', $sourcePath);
 
             // Skip excluded directories
             $shouldExclude = false;
             foreach ($excludeDirs as $excludeDir) {
-                if (strpos($relativePath, $excludeDir . DIRECTORY_SEPARATOR) === 0 ||
+                if (strpos($relativePath, $excludeDir.DIRECTORY_SEPARATOR) === 0 ||
                     $relativePath === $excludeDir) {
                     $shouldExclude = true;
                     break;
@@ -344,7 +353,7 @@ class BackupCommand extends Command
                 continue;
             }
 
-            $targetPath = $target . DIRECTORY_SEPARATOR . $relativePath;
+            $targetPath = $target.DIRECTORY_SEPARATOR.$relativePath;
 
             if ($item->isDir()) {
                 File::ensureDirectoryExists($targetPath);
@@ -370,18 +379,19 @@ class BackupCommand extends Command
             // Backup .env file
             if (File::exists(base_path('.env'))) {
                 File::copy(base_path('.env'), "{$backupPath}/.env");
-                $this->line("  ✓ .env file backed up");
+                $this->line('  ✓ .env file backed up');
             }
 
             // Backup config directory (if custom configs exist)
             if (File::exists(config_path())) {
                 File::copyDirectory(config_path(), "{$backupPath}/config");
-                $this->line("  ✓ Config directory backed up");
+                $this->line('  ✓ Config directory backed up');
             }
 
             return true;
         } catch (\Exception $e) {
-            $this->error("  ✗ Configuration backup failed: " . $e->getMessage());
+            $this->error('  ✗ Configuration backup failed: '.$e->getMessage());
+
             return false;
         }
     }
@@ -395,19 +405,19 @@ class BackupCommand extends Command
         $backupName = basename($backupPath);
         $archivePath = "{$parentDir}/{$backupName}.tar.gz";
 
-        $result = Process::run("tar -czf " . escapeshellarg($archivePath) . " -C " . escapeshellarg($parentDir) . " " . escapeshellarg($backupName));
+        $result = Process::run('tar -czf '.escapeshellarg($archivePath).' -C '.escapeshellarg($parentDir).' '.escapeshellarg($backupName));
 
         if ($result->successful()) {
             $this->line("  ✓ Backup compressed: {$archivePath}");
-            $this->line("  Size: " . File::size($archivePath) . " bytes");
+            $this->line('  Size: '.File::size($archivePath).' bytes');
 
             // Optionally remove uncompressed directory
             if ($this->confirm('Remove uncompressed backup directory?', false)) {
                 File::deleteDirectory($backupPath);
-                $this->line("  ✓ Uncompressed directory removed");
+                $this->line('  ✓ Uncompressed directory removed');
             }
         } else {
-            $this->warn("  ⚠ Compression failed: " . $result->errorOutput());
+            $this->warn('  ⚠ Compression failed: '.$result->errorOutput());
         }
     }
 }

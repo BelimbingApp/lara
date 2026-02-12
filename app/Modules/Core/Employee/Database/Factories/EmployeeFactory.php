@@ -48,7 +48,7 @@ class EmployeeFactory extends Factory
      */
     public function active(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'active',
             'employment_end' => null,
         ]);
@@ -59,7 +59,7 @@ class EmployeeFactory extends Factory
      */
     public function terminated(): static
     {
-        return $this->state(fn(array $attributes) => [
+        return $this->state(fn (array $attributes) => [
             'status' => 'terminated',
             'employment_end' => fake()->dateTimeBetween('-1 year', 'now')->format('Y-m-d'),
         ]);
