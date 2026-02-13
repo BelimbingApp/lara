@@ -24,7 +24,7 @@
                 localStorage.setItem('theme', theme);
                 document.documentElement.classList.toggle('dark');
             "
-            class="relative w-9 h-5 rounded-full bg-accent/60 dark:bg-zinc-700 transition-colors hover:bg-accent-hover/80 dark:hover:bg-zinc-600 shadow-inner"
+            class="relative w-9 h-5 rounded-full bg-border-input dark:bg-zinc-700 transition-colors hover:bg-muted/50 dark:hover:bg-zinc-600 shadow-inner"
             title="Toggle theme"
             :aria-pressed="theme === 'light'"
         >

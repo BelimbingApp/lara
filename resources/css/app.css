@@ -8,14 +8,34 @@
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
-    /* Arid Camouflage — light mode palette for extended eye comfort */
-    --color-arid-white: #fdfdf7;
-    --color-arid-cream: #F0E2D2;
-    --color-arid-surface: #f8f0e2;
-    --color-arid-taupe: #FAE9CD;
-    --color-arid-brown: #9f7851;
-    --color-arid-dark-brown: #774020;
-    --color-arid-ink: #796A6A;
+    /*
+     * Arid Camouflage — warm palette tuned for extended eye comfort.
+     *
+     * Design rationale
+     * ────────────────
+     * Surfaces are desaturated warm off-whites so data is easy to read;
+     * warmth lives in the undertone, not the saturation.  Clear 3-5 %
+     * luminance steps between layers (card > page > subtle > sidebar)
+     * give each surface a distinct identity without loudness.
+     *
+     * Accent is terracotta — warm-family but contrasts in hue against
+     * the neutral-warm surfaces so primary actions command attention.
+     *
+     * Text: ink is near-black warm for strong readability; muted is
+     * warm mid-gray darkened to clear WCAG AA on every surface.
+     *
+     * Borders are warm-tinted (not cool zinc) so they disappear into
+     * the palette rather than creating cold seams.
+     */
+    --color-arid-white: #faf9f5;
+    --color-arid-cream: #e6e1d8;
+    --color-arid-surface: #f1ede5;
+    --color-arid-taupe: #f5f2ec;
+    --color-arid-brown: #b5622f;
+    --color-arid-dark-brown: #9a5226;
+    --color-arid-ink: #6b6057;
+    --color-arid-border: #ddd8cf;
+    --color-arid-border-input: #cbc5bb;
 
     --color-zinc-50: #fafafa;
     --color-zinc-100: #f5f5f5;
@@ -51,16 +71,16 @@
     /* Surfaces */
     --color-surface-page: var(--color-arid-surface);
     --color-surface-card: var(--color-arid-white);
-    --color-surface-subtle: var(--color-arid-white);
+    --color-surface-subtle: #ece8e0;
     --color-surface-sidebar: var(--color-arid-cream);
     --color-surface-bar: var(--color-arid-taupe);
-    /* Borders */
-    --color-border-default: var(--color-zinc-200);
-    --color-border-input: var(--color-zinc-300);
+    /* Borders (warm-tinted to match the palette) */
+    --color-border-default: var(--color-arid-border);
+    --color-border-input: var(--color-arid-border-input);
     /* Text */
-    --color-ink: var(--color-arid-dark-brown);
+    --color-ink: #2c2418;
     --color-muted: var(--color-arid-ink);
-    --color-link: var(--color-zinc-700);
+    --color-link: #544c43;
     /* Accent (primary actions, arid) */
     --color-accent: var(--color-arid-brown);
     --color-accent-hover: var(--color-arid-dark-brown);
@@ -110,8 +130,8 @@
     --color-ink: var(--color-zinc-100);
     --color-muted: var(--color-zinc-400);
     --color-link: var(--color-zinc-300);
-    --color-accent: var(--color-arid-brown);
-    --color-accent-hover: var(--color-arid-dark-brown);
+    --color-accent: #c97a55;
+    --color-accent-hover: var(--color-arid-brown);
     --color-accent-on: #ffffff;
     --color-status-success: #86efac;
     --color-status-success-subtle: rgba(22, 101, 52, 0.2);
@@ -131,7 +151,7 @@
 
 @layer base {
     * {
-        border-color: rgb(186 165 130 / 0.4);
+        border-color: rgb(203 197 187 / 0.5);
     }
 
     .dark * {

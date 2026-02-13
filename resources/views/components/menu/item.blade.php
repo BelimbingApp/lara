@@ -8,7 +8,7 @@
         {{-- Link item: full-width line, subtle active highlight (VS Code style) --}}
         <a
             href="{{ $item->route ? route($item->route) : $item->url }}"
-            class="flex items-center gap-2 w-full px-2 py-px text-sm rounded-none transition text-link {{ $isActive ? 'bg-surface-subtle text-ink font-medium' : 'hover:bg-surface-subtle font-normal' }}"
+            class="flex items-center gap-2 w-full px-2 py-px text-sm rounded-none transition text-link {{ $isActive ? 'bg-surface-card text-ink font-medium' : 'hover:bg-surface-subtle font-normal' }}"
         >
             @if(count($children) > 0)
                 <span class="text-[12px] shrink-0 text-accent w-3.5 text-center" aria-hidden="true">
