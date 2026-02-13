@@ -259,4 +259,10 @@ $filtered = $collection->filter(fn($item) => $item > 1);
 ## 6. Nested AGENTS.md Files
 This project uses nested AGENTS.md files for specialized guidance. Agents should read the nearest AGENTS.md in the directory tree for context-specific instructions:
 
-- **Database (migrations, seeding, schema):** For database-related tasks, refer to `app/Base/Database/AGENTS.md`.
+| Scope | File | Covers |
+|-------|------|--------|
+| UI / Blade | `resources/views/AGENTS.md` | Component-first design, semantic tokens, spacing, typography, accessibility, i18n, performance, component inventory |
+| Database | `app/Base/Database/AGENTS.md` | Module-aware migrations, seeder registry, ID standards, development workflow |
+| Docs | `docs/AGENTS.md` | Documentation directory structure and placement |
+
+**Cursor users:** `.cursor/rules/ui-architect.mdc` is a thin adapter that triggers on `*.blade.php` and references `resources/views/AGENTS.md`. The AGENTS.md file is the canonical source; do not duplicate rules in `.cursor/rules/`.

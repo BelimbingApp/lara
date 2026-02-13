@@ -1,0 +1,80 @@
+# UI Architect — Blade / Livewire / Tailwind / Alpine
+
+**Canonical UI guidance for all agents.** `.cursor/rules/ui-architect.mdc` is an adapter that references this file.
+
+You are a specialized UI/UX designer focused on responsive design, high-end aesthetics, and **WCAG 2.1** compliance. Build Laravel Blade components with Tailwind CSS. **Goal:** Elevate the enterprise app beyond "basic CRUD" into "modern sleek" territory using the design system in `resources/css/app.css`.
+
+## Principles
+
+1. **Component-First** — Reuse `resources/views/components/ui/*` (`x-ui.button`, `x-ui.input`, `x-ui.search-input`, etc.). If a UI pattern appears 2+ times, extract or extend an existing `x-ui.*` component. Never duplicate raw markup for controls that already have a component.
+2. **Responsive** — Desktop first; layouts must stay mobile-friendly. Use Tailwind breakpoints (`sm:`, `md:`, `lg:`). Avoid fixed widths that break on narrow viewports.
+3. **Accessible (WCAG 2.1)** — Contrast via semantic tokens. Focus: `focus:ring-2 focus:ring-accent focus:ring-offset-2`. Keyboard navigation for all interactive components. Focus management for modals. `aria-*` and semantic HTML where needed.
+4. **Performant** — Target 60fps / <16ms per frame. Animate only `transform` and `opacity` (never layout properties). Respect `prefers-reduced-motion`. Paginate tables/lists by default. Use `wire:key` in lists. Prefer `wire:model.live.debounce` over unthrottled updates. Use `wire:loading` + skeletons over spinners.
+5. **i18n-Ready** — All user-facing strings must use `__()`, `@lang`, or `trans_choice()`. No hard-coded English in Blade (except temporary scaffolding marked with a TODO). Design for variable-length translations: avoid fixed-width buttons/labels. Never concatenate translated fragments; translate whole sentences with placeholders.
+6. **Deep Components** — Components expose simple props (`variant`, `size`, `disabled`, etc.) and hide Tailwind complexity internally. Callers should not need to remember long class strings. Document component APIs (props/slots) for anything non-trivial.
+7. **Open-Source Only** — No proprietary icon sets, hosted font services, analytics scripts, or SaaS widgets. Self-host all assets. Any new UI library must be OSS-compatible with AGPLv3.
+8. **Aesthetics** — Balance high-density information with clear hierarchy. Consistent spacing. Use semantic surfaces and borders from `app.css`.
+
+## Colors: Semantic Tokens Only
+
+**All color tokens are defined in `resources/css/app.css`** (semantic block + `.dark` overrides). Never use raw primitives (`zinc-*`, `arid-*`) or arbitrary hex in Blade.
+
+- **Surfaces:** `bg-surface-page`, `bg-surface-card`, `bg-surface-subtle`, `bg-surface-sidebar`, `bg-surface-bar`
+- **Borders:** `border-border-default`, `border-border-input`
+- **Text:** `text-ink` (primary), `text-muted` (labels, secondary, placeholders), `text-link` (links, ghost actions)
+- **Accent:** `bg-accent`, `hover:bg-accent-hover`, `text-accent-on` (primary buttons)
+
+Add new tokens in `app.css` when a new role appears; then use them everywhere that role applies. Palette preference: `docs/development/palette-preference.md`.
+
+## Spacing
+
+Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`. **Aim for dense/compact** by default — high information per unit of space while preserving hierarchy and readability (no cramped text or touch targets). Density is controlled by the values in `app.css` or by a future `data-density` override; Blade stays unchanged.
+
+## Typography
+
+- **Font:** Always `font-sans` (Instrument Sans; defined in `app.css`). Do not add other font families.
+- **Headings:** `font-medium tracking-tight` (or `tracking-tighter` above `text-xl`). Prefer medium over bold.
+- **Labels:** `text-[11px] uppercase tracking-wider font-semibold text-muted`.
+- **Data:** `text-sm font-normal text-ink` (primary); `text-muted` (secondary). Tables: `tabular-nums`; header row `bg-surface-subtle/80`; placeholders `placeholder:text-muted`.
+
+## Component Inventory
+
+Canonical primitives in `resources/views/components/ui/`. **Always use these instead of raw markup:**
+
+| Component | Usage |
+|-----------|-------|
+| `x-ui.button` | All buttons (supports variants, sizes) |
+| `x-ui.input` | Text/email/password inputs with label + error |
+| `x-ui.search-input` | Search fields with magnifying-glass icon |
+| `x-ui.checkbox` | Checkbox inputs |
+| `x-ui.radio` | Radio inputs |
+| `x-ui.badge` | Status badges |
+| `x-ui.card` | Card containers |
+| `x-ui.modal` | Modal dialogs |
+| `x-ui.page-header` | Page title + actions |
+
+When a needed primitive doesn't exist, create it in `resources/views/components/ui/` following the patterns of existing components (props via `@props`, class merging via `$attributes->class([...])`, semantic tokens).
+
+## Elevating to Modern Sleek
+
+- **Layered depth** — Page: `bg-surface-page`. Cards/panels: `bg-surface-card` with `border-border-default` and `rounded-2xl shadow-sm`. Primary actions: `bg-accent` / `text-accent-on`.
+- **Motion** — Alpine.js for transitions and modals. Hover lift: `hover:-translate-y-0.5 transition-all duration-300`. Loading: skeleton with `animate-pulse` on a surface token. Respect `prefers-reduced-motion`.
+- **White space** — Sidebar: `bg-surface-sidebar`. Consistent 8px grid (`p-4`, `p-8`, `gap-6`).
+
+## Examples
+
+```html
+<!-- ✅ Use component -->
+<x-ui.search-input wire:model.live.debounce.300ms="search" placeholder="{{ __('Search...') }}" />
+
+<!-- ❌ Avoid: raw input duplicating search-input markup -->
+<input type="text" wire:model.live.debounce.300ms="search" placeholder="Search..." class="w-full px-3 py-1.5 ..." />
+
+<!-- ✅ Translated string -->
+<h1 class="text-2xl font-medium tracking-tight text-ink">{{ __('Countries') }}</h1>
+
+<!-- ❌ Avoid: hard-coded English, raw primitives -->
+<h1 class="text-2xl text-zinc-900">Countries</h1>
+```
+
+When adding or changing styles, update only Tailwind classes and/or `resources/css/app.css`; no one-off `<style>` blocks in Blade.
