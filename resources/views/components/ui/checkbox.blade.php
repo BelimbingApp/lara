@@ -12,7 +12,7 @@
             'bg-surface-card',
             'text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2',
             'disabled:opacity-50 disabled:cursor-not-allowed',
-            'border-red-500' => $error,
+            'border-status-danger' => $error,
         ]) }}
     >
     
@@ -23,6 +23,6 @@
     @endif
     
     @if($error)
-        <p class="text-sm text-red-600">{{ $error }}</p>
+        <p class="text-sm text-status-danger">{{ $error }}</p>
     @endif
 </div>

@@ -65,9 +65,26 @@
     --color-accent: var(--color-arid-brown);
     --color-accent-hover: var(--color-arid-dark-brown);
     --color-accent-on: #ffffff;
+    /* Status (feedback — alerts, badges, validation errors, progress) */
+    --color-status-success: #166534;
+    --color-status-success-subtle: #f0fdf4;
+    --color-status-success-border: #bbf7d0;
+    --color-status-danger: #991b1b;
+    --color-status-danger-subtle: #fef2f2;
+    --color-status-danger-border: #fecaca;
+    --color-status-warning: #854d0e;
+    --color-status-warning-subtle: #fefce8;
+    --color-status-warning-border: #fef08a;
+    --color-status-info: #1e40af;
+    --color-status-info-subtle: #eff6ff;
+    --color-status-info-border: #bfdbfe;
+    /* Secondary button */
+    --color-surface-secondary: #525252;
+    --color-surface-secondary-hover: #404040;
 
     /*
      * Spacing (semantic by role). Use in Blade; density is tuned here (or via data-density).
+     * Default: compact/dense for high information per unit of space; keep hierarchy and readability.
      * card-inner      — card inner padding (p-card-inner)
      * table-header-y  — table header vertical padding (py-table-header-y)
      * table-cell-y    — table cell vertical padding (py-table-cell-y)
@@ -75,11 +92,11 @@
      * section-gap     — gap between sections / title and content (space-y-section-gap)
      * To switch to a spacious layout, change these values or add [data-density="spacious"] overrides.
      */
-    --spacing-card-inner: 0.75rem;
-    --spacing-table-header-y: 0.5rem;
-    --spacing-table-cell-y: 0.05rem;
-    --spacing-table-cell-x: 0.03rem;
-    --spacing-section-gap: 1rem;
+    --spacing-card-inner: 0.5rem;
+    --spacing-table-header-y: 0.375rem;
+    --spacing-table-cell-y: 0.25rem;
+    --spacing-table-cell-x: 0.5rem;
+    --spacing-section-gap: 0.75rem;
 }
 
 .dark {
@@ -96,6 +113,20 @@
     --color-accent: var(--color-arid-brown);
     --color-accent-hover: var(--color-arid-dark-brown);
     --color-accent-on: #ffffff;
+    --color-status-success: #86efac;
+    --color-status-success-subtle: rgba(22, 101, 52, 0.2);
+    --color-status-success-border: #166534;
+    --color-status-danger: #fca5a5;
+    --color-status-danger-subtle: rgba(153, 27, 27, 0.2);
+    --color-status-danger-border: #991b1b;
+    --color-status-warning: #fde047;
+    --color-status-warning-subtle: rgba(133, 77, 14, 0.2);
+    --color-status-warning-border: #854d0e;
+    --color-status-info: #93c5fd;
+    --color-status-info-subtle: rgba(30, 64, 175, 0.2);
+    --color-status-info-border: #1e40af;
+    --color-surface-secondary: var(--color-zinc-600);
+    --color-surface-secondary-hover: var(--color-zinc-500);
 }
 
 @layer base {

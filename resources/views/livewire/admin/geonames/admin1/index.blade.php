@@ -81,116 +81,97 @@ new class extends Component
 <div>
     <x-slot name="title">{{ __('Admin1 Divisions') }}</x-slot>
 
-    <div class="space-y-6">
-        {{-- Header --}}
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-ink">{{ __('Admin1 Divisions') }}</h1>
-                <p class="text-sm text-muted mt-1">{{ __('States, provinces, and top-level administrative divisions') }}</p>
-            </div>
-            <button wire:click="update" wire:loading.attr="disabled" wire:target="update" class="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent-hover text-accent-on rounded-lg font-medium transition-colors disabled:opacity-50">
-                <x-icon name="heroicon-o-arrow-path" class="w-5 h-5" wire:loading.class="animate-spin" wire:target="update" />
-                <span wire:loading.remove wire:target="update">{{ __('Update') }}</span>
-                <span wire:loading wire:target="update">{{ __('Updating...') }}</span>
-            </button>
-        </div>
+    <div class="space-y-section-gap">
+        <x-ui.page-header :title="__('Admin1 Divisions')" :subtitle="__('States, provinces, and top-level administrative divisions')">
+            <x-slot name="actions">
+                <x-ui.button wire:click="update" wire:loading.attr="disabled" wire:target="update">
+                    <x-icon name="heroicon-o-arrow-path" class="w-5 h-5" wire:loading.class="animate-spin" wire:target="update" />
+                    <span wire:loading.remove wire:target="update">{{ __('Update') }}</span>
+                    <span wire:loading wire:target="update">{{ __('Updating...') }}</span>
+                </x-ui.button>
+            </x-slot>
+        </x-ui.page-header>
 
-        {{-- Flash Messages --}}
         @if (session('success'))
-            <div class="flex items-center gap-3 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-green-800 dark:text-green-200">
-                <x-icon name="heroicon-o-check-circle" class="w-6 h-6 shrink-0" />
-                <span>{{ session('success') }}</span>
-            </div>
+            <x-ui.alert variant="success">{{ session('success') }}</x-ui.alert>
         @endif
 
         @if (session('error'))
-            <div class="flex items-center gap-3 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-red-800 dark:text-red-200">
-                <x-icon name="heroicon-o-exclamation-circle" class="w-6 h-6 shrink-0" />
-                <span>{{ session('error') }}</span>
-            </div>
+            <x-ui.alert variant="error">{{ session('error') }}</x-ui.alert>
         @endif
 
-        {{-- Filters --}}
-        <div class="bg-surface-card border border-border-default shadow-sm rounded-lg">
-            <div class="p-6">
-                <div class="flex flex-col sm:flex-row gap-3">
-                    <div class="flex-1">
-                        <input
-                            type="text"
-                            wire:model.live.debounce.300ms="search"
-                            placeholder="{{ __('Search by name, code, or country...') }}"
-                            class="w-full px-4 py-2 border border-border-input rounded-lg bg-surface-card text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                        />
-                    </div>
-                    <div class="sm:w-64">
-                        <select
-                            wire:model.live="filterCountryIso"
-                            class="w-full px-4 py-2 border border-border-input rounded-lg bg-surface-card text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
-                        >
-                            <option value="">{{ __('All Countries') }}</option>
-                            @foreach($importedCountries as $iso => $name)
-                                <option value="{{ $iso }}">{{ $name }} ({{ $iso }})</option>
-                            @endforeach
-                        </select>
-                    </div>
+        <x-ui.card>
+            <div class="flex flex-col sm:flex-row gap-3 mb-3">
+                <div class="flex-1">
+                    <x-ui.search-input
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('Search by name, code, or country...') }}"
+                    />
                 </div>
-
-                {{-- Table --}}
-                <div class="overflow-x-auto mt-4">
-                    <table class="min-w-full divide-y divide-border-default">
-                        <thead class="bg-surface-subtle/80">
-                            <tr>
-                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Country') }}</th>
-                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Code') }}</th>
-                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Name') }}</th>
-                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider">{{ __('Alt Name') }}</th>
-                                <th class="px-table-cell-x py-table-header-y text-left text-xs font-medium text-muted uppercase tracking-wider min-w-[5.5rem]">{{ __('Updated') }}</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-surface-card divide-y divide-border-default">
-                            @forelse($admin1s as $admin1)
-                                <tr wire:key="admin1-{{ $admin1->id }}" class="hover:bg-surface-subtle/50 transition-colors">
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
-                                        <span class="font-mono text-xs text-muted">{{ $admin1->country_iso }}</span>
-                                        <span class="ml-1">{{ $admin1->country_name }}</span>
-                                    </td>
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-mono text-ink">{{ $admin1->code }}</td>
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink"
-                                        x-data="{ editing: false, name: '{{ addslashes($admin1->name) }}' }"
-                                    >
-                                        <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                                            <span x-text="name"></span>
-                                            <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                                        </div>
-                                        <input
-                                            x-show="editing"
-                                            x-ref="input"
-                                            x-model="name"
-                                            @keydown.enter="editing = false; $wire.saveName({{ $admin1->id }}, name)"
-                                            @keydown.escape="editing = false; name = '{{ addslashes($admin1->name) }}'"
-                                            @blur="editing = false; $wire.saveName({{ $admin1->id }}, name)"
-                                            type="text"
-                                            class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                                        />
-                                    </td>
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $admin1->alt_name }}</td>
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums min-w-[5.5rem]">{{ $admin1->updated_at?->format('Y-m-d') }}</td>
-                                </tr>
-                            @empty
-                                <tr>
-                                    <td colspan="5" class="px-table-cell-x py-table-cell-y py-12 text-center">
-                                        <p class="text-sm text-muted">{{ __('No admin1 divisions found.') }}</p>
-                                    </td>
-                                </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="mt-4">
-                    {{ $admin1s->links() }}
+                <div class="sm:w-64">
+                    <x-ui.select wire:model.live="filterCountryIso">
+                        <option value="">{{ __('All Countries') }}</option>
+                        @foreach($importedCountries as $iso => $name)
+                            <option value="{{ $iso }}">{{ $name }} ({{ $iso }})</option>
+                        @endforeach
+                    </x-ui.select>
                 </div>
             </div>
-        </div>
+
+            <div class="overflow-x-auto -mx-card-inner px-card-inner">
+                <table class="min-w-full divide-y divide-border-default text-sm">
+                    <thead class="bg-surface-subtle/80">
+                        <tr>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Country') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Code') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Name') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Alt Name') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider min-w-22">{{ __('Updated') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-surface-card divide-y divide-border-default">
+                        @forelse($admin1s as $admin1)
+                            <tr wire:key="admin1-{{ $admin1->id }}" class="hover:bg-surface-subtle/50 transition-colors">
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
+                                    <span class="font-mono text-xs text-muted">{{ $admin1->country_iso }}</span>
+                                    <span class="ml-1">{{ $admin1->country_name }}</span>
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-mono text-ink">{{ $admin1->code }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink"
+                                    x-data="{ editing: false, name: '{{ addslashes($admin1->name) }}' }"
+                                >
+                                    <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                                        <span x-text="name"></span>
+                                        <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </div>
+                                    <input
+                                        x-show="editing"
+                                        x-ref="input"
+                                        x-model="name"
+                                        @keydown.enter="editing = false; $wire.saveName({{ $admin1->id }}, name)"
+                                        @keydown.escape="editing = false; name = '{{ addslashes($admin1->name) }}'"
+                                        @blur="editing = false; $wire.saveName({{ $admin1->id }}, name)"
+                                        type="text"
+                                        class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                                    />
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $admin1->alt_name }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums min-w-22">{{ $admin1->updated_at?->format('Y-m-d') }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-table-cell-x py-12 text-center">
+                                    <p class="text-sm text-muted">{{ __('No admin1 divisions found.') }}</p>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-2">
+                {{ $admin1s->links() }}
+            </div>
+        </x-ui.card>
     </div>
 </div>

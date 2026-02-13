@@ -1,7 +1,7 @@
-<div class="h-14 bg-surface-bar border-b border-border-default flex items-center justify-between px-6 shrink-0 z-10">
+<div class="h-11 bg-surface-bar border-b border-border-default flex items-center justify-between px-4 shrink-0 z-10">
     {{-- Left: App Name --}}
     <div class="flex items-center gap-4">
-        <h1 class="text-lg font-semibold text-ink">
+        <h1 class="text-base font-semibold text-ink">
             Belimbing
         </h1>
     </div>
@@ -35,12 +35,8 @@
         </button>
 
         {{-- Search (placeholder) --}}
-        <div class="hidden md:block">
-            <input
-                type="search"
-                placeholder="Search..."
-                class="px-3 py-1.5 text-sm border border-border-input rounded-lg bg-surface-card text-ink placeholder:text-muted focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent w-64"
-            />
+        <div class="hidden md:block w-64">
+            <x-ui.search-input />
         </div>
     </div>
 </div>

@@ -21,7 +21,7 @@
     <div class="flex flex-1 overflow-hidden">
         <x-menu.sidebar :menuTree="$menuTree" />
         
-        <main class="flex-1 overflow-y-auto bg-surface-page p-6">
+        <main class="flex-1 overflow-y-auto bg-surface-page p-4">
             {{ $slot }}
         </main>
     </div>
