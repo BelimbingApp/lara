@@ -26,13 +26,17 @@ new class extends Component
 
     public function with(): array
     {
-        $query = Postcode::query()->orderBy('country_iso')->orderBy('postcode');
+        $query = Postcode::query()
+            ->withCountryName()
+            ->orderBy('country_name')
+            ->orderBy('postcode');
 
         if ($this->search) {
             $query->where(function ($q) {
-                $q->where('postcode', 'like', '%'.$this->search.'%')
-                    ->orWhere('place_name', 'like', '%'.$this->search.'%')
-                    ->orWhere('country_iso', 'like', '%'.$this->search.'%');
+                $q->where('geonames_postcodes.postcode', 'like', '%'.$this->search.'%')
+                    ->orWhere('geonames_postcodes.place_name', 'like', '%'.$this->search.'%')
+                    ->orWhere('geonames_postcodes.country_iso', 'like', '%'.$this->search.'%')
+                    ->orWhere('geonames_countries.country', 'like', '%'.$this->search.'%');
             });
         }
 
@@ -233,25 +237,24 @@ new class extends Component
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Postcode') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Place Name') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Admin1 Code') }}</th>
-                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Latitude') }}</th>
-                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Longitude') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Updated') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-surface-card divide-y divide-border-default">
                         @forelse($postcodes as $postcode)
                             <tr class="hover:bg-surface-subtle/50 transition-colors">
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap font-medium text-ink tabular-nums">{{ $postcode->country_iso }}</td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted tabular-nums">{{ $postcode->postcode }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
+                                    <span class="font-mono text-xs text-muted">{{ $postcode->country_iso }}</span>
+                                    <span class="ml-1">{{ $postcode->country_name ?? '' }}</span>
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap font-medium text-ink tabular-nums">{{ $postcode->postcode }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted">{{ $postcode->place_name }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted tabular-nums">{{ $postcode->admin1_code }}</td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted tabular-nums">{{ $postcode->latitude }}</td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted tabular-nums">{{ $postcode->longitude }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-muted tabular-nums">{{ $postcode->updated_at?->format('Y-m-d') }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="px-table-cell-x py-8 text-center text-muted">{{ __('No postcodes found.') }}</td>
+                                <td colspan="5" class="px-table-cell-x py-8 text-center text-muted">{{ __('No postcodes found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

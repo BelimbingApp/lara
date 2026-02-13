@@ -21,12 +21,12 @@ Users can choose the **main palette** (e.g. Arid Camouflage vs Neutral) as a per
 - **Other palettes** — For each additional palette, add a block that redefines **only** the palette-dependent tokens:
 
 ```css
-/* Default: Arid Camouflage (in @theme / :root) */
---color-surface-page: var(--color-arid-cream);
---color-surface-sidebar: var(--color-arid-surface);
---color-surface-bar: var(--color-arid-surface);
---color-accent: var(--color-arid-brown);
---color-accent-hover: var(--color-arid-dark-brown);
+/* Default: Arid Camouflage (in @theme / :root) — values from theme primitives */
+--color-surface-page: …;
+--color-surface-sidebar: …;
+--color-surface-bar: …;
+--color-accent: …;
+--color-accent-hover: …;
 /* ... */
 
 /* User preference: Neutral */

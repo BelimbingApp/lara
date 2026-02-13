@@ -5,6 +5,7 @@
 
 namespace App\Modules\Core\Geonames\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -52,6 +53,16 @@ class Postcode extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Scope: join geonames_countries to add country_name to the result set.
+     */
+    public function scopeWithCountryName(Builder $query): Builder
+    {
+        return $query
+            ->selectRaw('geonames_postcodes.*, geonames_countries.country as country_name')
+            ->leftJoin('geonames_countries', 'geonames_postcodes.country_iso', '=', 'geonames_countries.iso');
     }
 
     /**
