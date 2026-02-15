@@ -110,6 +110,8 @@
      * table-cell-y    — table cell vertical padding (py-table-cell-y)
      * table-cell-x    — table cell horizontal padding (px-table-cell-x)
      * section-gap     — gap between sections / title and content (space-y-section-gap)
+     * input-x         — form control horizontal padding (px-input-x): input, select, textarea, search
+     * input-y         — form control vertical padding (py-input-y): input, select, textarea, search
      * To switch to a spacious layout, change these values or add [data-density="spacious"] overrides.
      */
     --spacing-card-inner: 0.5rem;
@@ -117,6 +119,8 @@
     --spacing-table-cell-y: 0.25rem;
     --spacing-table-cell-x: 0.5rem;
     --spacing-section-gap: 0.75rem;
+    --spacing-input-x: 0.75rem;
+    --spacing-input-y: 0.375rem;
 }
 
 .dark {

@@ -277,7 +277,8 @@ All subdirectories within a module are **module internals** — they are not ass
 app/Modules/{Layer1}/{Module}/
 ├── Database/                 # Module internals: database layer
 │   ├── Migrations/           # Module migrations (auto-discovered)
-│   ├── Seeders/              # Module seeders
+│   ├── Seeders/              # Production seeders (reference/config data)
+│   │   └── Dev/              # Development seeders (Dev* prefix, fake test data)
 │   └── Factories/            # Module factories
 ├── Models/                   # Module internals: Eloquent models
 ├── Services/                 # Module internals: business logic

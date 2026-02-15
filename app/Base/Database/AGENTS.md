@@ -94,10 +94,25 @@ php artisan migrate --seed
 # Seed only one module (case-sensitive)
 php artisan migrate --seed --module=Company
 
-# Run a single seeder (short form: ModuleName/SeederClass)
+# Run a single seeder (short form: Module/SeederClass or Module/Sub/SeederClass)
 php artisan migrate --seed --seeder=Company/RelationshipTypeSeeder
 # Or FQCN with single quotes so backslashes are preserved
 php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\RelationshipTypeSeeder'
+```
+
+### Development vs. Production Seeders
+
+| Category | Location | Naming | Registered in migration? |
+|----------|----------|--------|--------------------------|
+| **Production** | `Database/Seeders/` | `{Entity}Seeder` | Yes (`registerSeeder()`) |
+| **Development** | `Database/Seeders/Dev/` | `Dev{Description}Seeder` | No (run explicitly) |
+
+- **Production seeders** populate reference/config data needed in all environments.
+- **Development seeders** create fake data for UI work and manual testing. They live in `Dev/` subdirectory with a `Dev` class prefix.
+
+```bash
+# Run a dev seeder explicitly (note the Dev/ subdirectory in the path)
+php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 ```
 
 ## Database ID Standards

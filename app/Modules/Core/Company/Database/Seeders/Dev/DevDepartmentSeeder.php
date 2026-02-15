@@ -3,21 +3,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-namespace App\Modules\Core\Company\Database\Seeders;
+namespace App\Modules\Core\Company\Database\Seeders\Dev;
 
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Company\Models\DepartmentType;
 use Illuminate\Database\Seeder;
 
-class DepartmentSeeder extends Seeder
+class DevDepartmentSeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Seeds standard departments for all existing companies.
      */
     public function run(): void
     {
-        // For development: Seed departments for all existing companies
         Company::query()->chunk(100, function ($companies): void {
             foreach ($companies as $company) {
                 $this->seedDepartmentsForCompany($company);
@@ -32,7 +33,6 @@ class DepartmentSeeder extends Seeder
      */
     protected function seedDepartmentsForCompany(Company $company): void
     {
-        // Get all active department types
         $departmentTypes = DepartmentType::query()->active()->get();
 
         foreach ($departmentTypes as $type) {

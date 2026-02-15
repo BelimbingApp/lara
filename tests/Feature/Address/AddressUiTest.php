@@ -1,0 +1,50 @@
+<?php
+
+use App\Modules\Core\Address\Models\Address;
+use App\Modules\Core\User\Models\User;
+use Livewire\Livewire;
+
+test('guests are redirected to login from addresses pages', function (): void {
+    $this->get(route('admin.addresses.index'))->assertRedirect(route('login'));
+    $this->get(route('admin.addresses.create'))->assertRedirect(route('login'));
+});
+
+test('authenticated users can view address pages', function (): void {
+    $user = User::factory()->create();
+    $address = Address::query()->create([
+        'label' => 'HQ',
+        'line1' => '123 Main Street',
+        'locality' => 'Springfield',
+        'verification_status' => 'unverified',
+    ]);
+
+    $this->actingAs($user);
+
+    $this->get(route('admin.addresses.index'))->assertOk();
+    $this->get(route('admin.addresses.create'))->assertOk();
+    $this->get(route('admin.addresses.show', $address))->assertOk();
+});
+
+test('address can be created from create page component', function (): void {
+    $user = User::factory()->create();
+    $this->actingAs($user);
+
+    Livewire::test('addresses.create')
+        ->set('label', 'Warehouse')
+        ->set('line1', '88 River Road')
+        ->set('locality', 'Boston')
+        ->set('postcode', '02110')
+        ->set('country_iso', 'us')
+        ->set('verification_status', 'verified')
+        ->call('store')
+        ->assertRedirect(route('admin.addresses.index'));
+
+    $address = Address::query()->where('label', 'Warehouse')->first();
+
+    expect($address)
+        ->not()->toBeNull()
+        ->and($address->country_iso)
+        ->toBe('US')
+        ->and($address->verification_status)
+        ->toBe('verified');
+});

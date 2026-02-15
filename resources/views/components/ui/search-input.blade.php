@@ -11,7 +11,7 @@
         type="search"
         placeholder="{{ $placeholder }}"
         {{ $attributes->class([
-            'w-full pl-8 pr-3 py-1.5 text-sm',
+            'w-full pl-8 pr-input-x py-input-y text-sm',
             'border border-border-input rounded-2xl',
             'bg-surface-card text-ink placeholder:text-muted',
             'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',

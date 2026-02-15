@@ -60,24 +60,24 @@ class MenuBuilder
     /**
      * Mark active item and parent chain.
      *
+     * Uses prefix matching so that child routes (e.g. admin.companies.show,
+     * admin.companies.edit) highlight the parent menu item (admin.companies.index).
+     *
      * @param  array  $tree  Menu tree
      * @param  string  $currentRoute  Current route name
      */
     protected function markActive(array $tree, string $currentRoute): array
     {
         foreach ($tree as &$node) {
-            // Check if this item is active
-            if ($node['item']->route === $currentRoute) {
+            if ($this->routeMatches($node['item']->route, $currentRoute)) {
                 $node['is_active'] = true;
 
-                return $tree;  // Found active, parent chain will be marked by caller
+                return $tree;
             }
 
-            // Check children recursively
             if (! empty($node['children'])) {
                 $node['children'] = $this->markActive($node['children'], $currentRoute);
 
-                // If any child is active or has active child, mark this node
                 foreach ($node['children'] as $child) {
                     if ($child['is_active'] || $child['has_active_child']) {
                         $node['has_active_child'] = true;
@@ -88,6 +88,35 @@ class MenuBuilder
         }
 
         return $tree;
+    }
+
+    /**
+     * Check if the current route matches a menu item's route.
+     *
+     * Strips the trailing ".index" from the menu route to form a prefix,
+     * then checks if the current route starts with that prefix.
+     * Falls back to exact match for non-index routes.
+     *
+     * @param  string|null  $menuRoute  The menu item's route name
+     * @param  string  $currentRoute  The current request route name
+     */
+    protected function routeMatches(?string $menuRoute, string $currentRoute): bool
+    {
+        if ($menuRoute === null) {
+            return false;
+        }
+
+        if ($menuRoute === $currentRoute) {
+            return true;
+        }
+
+        if (str_ends_with($menuRoute, '.index')) {
+            $prefix = substr($menuRoute, 0, -6);
+
+            return str_starts_with($currentRoute, $prefix);
+        }
+
+        return false;
     }
 
     /**

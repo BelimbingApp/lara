@@ -2,7 +2,7 @@
     'label' => null,
     'error' => null,
     'required' => false,
-    'type' => 'text',
+    'rows' => 4,
 ])
 
 <div class="space-y-1">
@@ -15,9 +15,9 @@
         </label>
     @endif
 
-    <input
-        type="{{ $type }}"
-        {{ $attributes->except(['label', 'error', 'required'])->class([
+    <textarea
+        rows="{{ $rows }}"
+        {{ $attributes->except(['label', 'error', 'required', 'rows'])->class([
             'w-full px-input-x py-input-y text-sm border rounded-2xl transition-colors',
             'border-border-input',
             'bg-surface-card',
@@ -27,7 +27,7 @@
             'disabled:opacity-50 disabled:cursor-not-allowed',
             'border-status-danger focus:ring-status-danger' => $error,
         ]) }}
-    >
+    >{{ $slot }}</textarea>
 
     @if($error)
         <p class="text-sm text-status-danger">{{ $error }}</p>

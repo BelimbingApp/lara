@@ -5,15 +5,17 @@
 
 namespace App\Modules\Core\Address\Models;
 
+use App\Modules\Core\Address\Database\Factories\AddressFactory;
 use App\Modules\Core\Geonames\Models\Admin1;
 use App\Modules\Core\Geonames\Models\Country;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Address extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     /**
      * The table associated with the model.
@@ -48,6 +50,14 @@ class Address extends Model
         'verification_status',
         'metadata',
     ];
+
+    /**
+     * Create a new factory instance for the model.
+     */
+    protected static function newFactory(): AddressFactory
+    {
+        return new AddressFactory;
+    }
 
     /**
      * The attributes that should be cast.

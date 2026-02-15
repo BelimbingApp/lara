@@ -153,6 +153,34 @@ php artisan migrate --module=Geonames --seed
 
 ---
 
+### Development vs. Production Seeders
+
+Seeders fall into two categories with distinct naming and placement conventions:
+
+| Category | Purpose | Location | Naming |
+| :--- | :--- | :--- | :--- |
+| **Production** | Reference/config data needed in all environments | `Database/Seeders/` | `{Entity}Seeder` |
+| **Development** | Fake/test data for local development only | `Database/Seeders/Dev/` | `Dev{Description}Seeder` |
+
+**Production seeders** populate structural data derived from config (e.g., `DepartmentTypeSeeder`, `RelationshipTypeSeeder`). They are registered via `RegistersSeeders` in migrations and run automatically on `migrate --seed` in all environments.
+
+**Development seeders** create realistic fake data for UI development and manual testing. They live in a `Dev/` subdirectory and use a `Dev` class name prefix so they are immediately recognizable in CLI output, logs, and seeder registry. They should **never** be registered via `RegistersSeeders` in migrations — run them explicitly:
+
+```bash
+# Run a specific dev seeder (note the Dev/ subdirectory in the path)
+php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
+
+# All dev seeders in a module are discovered with --seed if pending
+php artisan migrate --seed --module=Company
+```
+
+**Conventions:**
+-   Dev seeders use `firstOrCreate` patterns for idempotency.
+-   Dev seeders may depend on production seeders having run first (e.g., dev data references `RelationshipType` records).
+-   Never add dev seeders to production deployment scripts.
+
+---
+
 ## 4. Directory Structure
 
 All database assets live within their module to support portability.
@@ -164,7 +192,9 @@ app/Modules/Core/Geonames/
 │   │   ├── 0200_01_03_000000_create_countries.php
 │   │   └── 0200_01_03_000001_create_cities.php
 │   ├── Seeders/
-│   │   └── CountrySeeder.php
+│   │   ├── CountrySeeder.php          # Production: reference data
+│   │   └── Dev/
+│   │       └── DevCitySeeder.php      # Development: fake test data
 │   └── Factories/
 │       └── CityFactory.php
 └── Models/

@@ -28,7 +28,9 @@ Add new tokens in `app.css` when a new role appears; then use them everywhere th
 
 ## Spacing
 
-Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`. **Aim for dense/compact** by default — high information per unit of space while preserving hierarchy and readability (no cramped text or touch targets). Density is controlled by the values in `app.css` or by a future `data-density` override; Blade stays unchanged.
+Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`, `px-input-x`, `py-input-y`. **Aim for dense/compact** by default — high information per unit of space while preserving hierarchy and readability (no cramped text or touch targets). Density is controlled by the values in `app.css` or by a future `data-density` override; Blade stays unchanged.
+
+**Form controls** (`x-ui.input`, `x-ui.select`, `x-ui.textarea`, `x-ui.search-input`) use `px-input-x` and `py-input-y` for padding. **Never hardcode** `px-3`, `py-1.5`, `py-2`, or any raw spacing on form controls — always use the semantic tokens so density can be changed in one place.
 
 ## Typography
 

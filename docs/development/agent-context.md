@@ -83,7 +83,8 @@ php artisan migrate --module=Company --seed
 app/Modules/{Layer1}/{Module}/
 ├── Database/
 │   ├── Migrations/     # Auto-discovered by BLB
-│   ├── Seeders/        # Auto-discovered with --seed
+│   ├── Seeders/        # Production seeders; auto-discovered with --seed
+│   │   └── Dev/        # Dev seeders (Dev* prefix, fake test data only)
 │   └── Factories/
 ├── Models/
 ├── Services/

@@ -11,20 +11,12 @@ This application is built on the **TALL Stack** (TailwindCSS, Alpine.js, Laravel
 - **Alpine.js** - Lightweight JavaScript framework (included via Livewire)
 - **Laravel 12** - Latest PHP framework with modern features
 - **Livewire Volt** - Reactive components with minimal boilerplate (single-file components)
-- **MaryUI** - Open-source UI component library built on DaisyUI for Livewire
 
 ### Additional Technologies
 - **PHP 8.2+** - Modern PHP with enhanced performance
 - **PostgreSQL** - Robust relational database
 - **Vite** - Fast build tool and development server
-- **Responsive Design** - Mobile-first approach with dark/light mode
-
-### Development Tools
-- **Bun** - Fast JavaScript runtime and package manager (preferred over Node.js/npm)
-- **Pest** - Modern PHP testing framework
-- **Laravel Pail** - Real-time log monitoring
-- **Laravel Pint** - Code style fixer
-- **Laravel Sail** - Docker development environment
+- **Responsive Design** - Mobile-compatible approach with dark/light mode
 
 ## 📋 Prerequisites
 
@@ -62,7 +54,6 @@ Installation is fully automated via setup scripts. See the **[Quick Start Guide]
 
 ### Technical Features
 - Full-stack reactive components with Livewire Volt
-- Modern UI with MaryUI components (built on DaisyUI)
 - Responsive design
 - Database sessions and queues
 - Real-time logging
@@ -73,7 +64,6 @@ Installation is fully automated via setup scripts. See the **[Quick Start Guide]
 For detailed information about our architectural decisions, see:
 
 - **[Livewire Volt Architecture](./docs/architecture/livewire-volt.md)** - Why we use Livewire Volt and comparison with HTMX
-- **[MaryUI Component Library](./docs/architecture/ui-libraries-comparison.md)** - Analysis of TALL Stack UI libraries, MaryUI selected
 - **[Caddy Development Setup](./docs/architecture/caddy-development-setup.md)** - Simplified development environment with custom domains
 - **[File Structure](./docs/architecture/file-structure.md)** - Project organization and structure
 
@@ -236,7 +226,6 @@ If you include third-party code, preserve original notices and add a reference i
 
 - **Documentation**: [Laravel Documentation](https://laravel.com/docs)
 - **Livewire**: [Livewire Documentation](https://livewire.laravel.com)
-- **MaryUI**: [MaryUI Documentation](https://mary-ui.com)
 
 ---
 
