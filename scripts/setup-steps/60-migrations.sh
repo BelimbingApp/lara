@@ -52,6 +52,34 @@ run_migrations() {
     fi
 }
 
+# Create licensee company (id=1) via artisan tinker
+create_licensee_company() {
+    echo -e "${CYAN}Creating licensee company...${NC}"
+
+    # Check if company id=1 already exists
+    local exists
+    exists=$(php artisan tinker --execute="echo App\Modules\Core\Company\Models\Company::find(1) ? 'true' : 'false';" 2>/dev/null | tail -1)
+
+    if [ "$exists" = "true" ]; then
+        echo -e "${GREEN}✓${NC} Licensee company already exists (id=1)"
+        return 0
+    fi
+
+    local company_name
+    if [ -t 0 ]; then
+        company_name=$(ask_input "Licensee company name" "My Company")
+    else
+        company_name="${LICENSEE_COMPANY_NAME:-My Company}"
+    fi
+
+    if php artisan tinker --execute="App\Modules\Core\Company\Models\Company::create(['name' => '$company_name', 'status' => 'active']);" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} Licensee company created: ${CYAN}$company_name${NC} (id=1)"
+    else
+        echo -e "${RED}✗${NC} Failed to create licensee company" >&2
+        return 1
+    fi
+}
+
 # Create admin user via artisan command
 create_admin_user() {
     echo -e "${CYAN}Creating admin user...${NC}"
@@ -178,6 +206,11 @@ main() {
     if ! run_migrations; then
         exit 1
     fi
+    echo ""
+
+    # Create licensee company
+    print_subsection_header "Licensee Company"
+    create_licensee_company
     echo ""
 
     # Create admin user

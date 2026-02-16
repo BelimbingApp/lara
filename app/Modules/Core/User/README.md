@@ -25,7 +25,7 @@ The main user model representing system authentication accounts.
 - Password hashing
 - Remember token support
 - Email verification tracking
-- Soft deletes (inherits from Laravel's base traits)
+- Notification support (via Notifiable trait)
 
 **Example:**
 

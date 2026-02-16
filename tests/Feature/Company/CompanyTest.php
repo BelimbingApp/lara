@@ -108,23 +108,27 @@ test('company full address formats correctly', function (): void {
 });
 
 test('active scope filters active companies', function (): void {
+    $before = Company::query()->active()->count();
+
     Company::factory()->active()->count(3)->create();
     Company::factory()->suspended()->count(2)->create();
     Company::factory()->archived()->count(1)->create();
 
     $activeCompanies = Company::query()->active()->get();
 
-    expect($activeCompanies)->toHaveCount(3);
+    expect($activeCompanies)->toHaveCount($before + 3);
 });
 
 test('root scope filters companies without parent', function (): void {
+    $before = Company::query()->root()->count();
+
     Company::factory()->count(3)->create(['parent_id' => null]);
     $parent = Company::factory()->create();
     Company::factory()->count(2)->create(['parent_id' => $parent->id]);
 
     $rootCompanies = Company::query()->root()->get();
 
-    expect($rootCompanies)->toHaveCount(4);
+    expect($rootCompanies)->toHaveCount($before + 4);
 });
 
 test('company can have relationships with other companies', function (): void {

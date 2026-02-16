@@ -28,9 +28,9 @@
             </li>
             <li>
                 <a
-                    href="{{ route('users.index') }}"
+                    href="{{ route('admin.users.index') }}"
                     wire:navigate
-                    class="{{ request()->routeIs('users.*') ? 'active' : '' }} nav-link"
+                    class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }} nav-link"
                 >
                     <x-icon name="heroicon-o-users" class="w-4 h-4 shrink-0" />
                     <span class="text-xs whitespace-nowrap">{{ __('User Management') }}</span>

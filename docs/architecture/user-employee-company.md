@@ -292,6 +292,25 @@ Employee.user_id → User.id (nullOnDelete)
 - Two entities to manage for employees with system access
 - Potential for data inconsistency if not carefully managed
 
+### Licensee Company (id=1)
+
+**Purpose:** Identify the company that is the licensee operating this Belimbing instance.
+
+**Convention:** The licensee company is always `id=1`, created during installation via `scripts/setup-steps/60-migrations.sh`.
+
+**Key Points:**
+- Created before the initial admin user during setup
+- Admin user is automatically assigned `company_id=1`
+- Cannot be deleted (enforced at both model and UI level)
+- `Company::LICENSEE_ID` constant and `$company->isLicensee()` method provide programmatic access
+- All other companies (customers, suppliers, partners) exist in relation to the licensee
+
+**Why id=1 Convention:**
+- Simple and deterministic — no config files or flags needed
+- Always available after installation — no risk of misconfiguration
+- No database migration needed — works with existing schema
+- Clear and obvious — first company created is the operator
+
 ---
 
 ## Future Enhancements

@@ -8,6 +8,7 @@ namespace App\Modules\Core\User\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\ExternalAccess;
+use App\Modules\Core\Employee\Models\Employee;
 use App\Modules\Core\User\Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -90,5 +91,13 @@ class User extends Authenticatable
     public function validExternalAccesses(): HasMany
     {
         return $this->externalAccesses()->valid();
+    }
+
+    /**
+     * Get employee records linked to this user.
+     */
+    public function employees(): HasMany
+    {
+        return $this->hasMany(Employee::class, 'user_id');
     }
 }

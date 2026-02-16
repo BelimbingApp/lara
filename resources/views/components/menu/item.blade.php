@@ -17,7 +17,7 @@
                 </span>
             @endif
 
-            <span class="truncate">{{ $item->label }}</span>
+            <span class="truncate">{{ __($item->label) }}</span>
         </a>
     @else
         {{-- Container item (no route) --}}
@@ -30,7 +30,7 @@
                 <span x-show="expanded">⮟</span>
             </span>
 
-            <span class="truncate">{{ $item->label }}</span>
+            <span class="truncate">{{ __($item->label) }}</span>
         </div>
     @endif
 

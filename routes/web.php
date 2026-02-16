@@ -19,9 +19,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
 
     // User Management
-    Volt::route('users', 'users.index')->name('users.index');
-    Volt::route('users/create', 'users.create')->name('users.create');
-    Volt::route('users/{user}/edit', 'users.edit')->name('users.edit');
+    Volt::route('admin/users', 'users.index')->name('admin.users.index');
+    Volt::route('admin/users/create', 'users.create')->name('admin.users.create');
+    Volt::route('admin/users/{user}', 'users.show')->name('admin.users.show');
 
     // Company Management
     Volt::route('admin/companies', 'companies.index')->name('admin.companies.index');
@@ -29,6 +29,9 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('admin/companies/{company}', 'companies.show')->name('admin.companies.show');
     Volt::route('admin/companies/{company}/relationships', 'companies.relationships')->name('admin.companies.relationships');
     Volt::route('admin/companies/{company}/departments', 'companies.departments')->name('admin.companies.departments');
+
+    // Setup
+    Volt::route('admin/setup/licensee', 'admin.setup.licensee')->name('admin.setup.licensee');
 
     // Address Management
     Volt::route('admin/addresses', 'addresses.index')->name('admin.addresses.index');

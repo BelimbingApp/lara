@@ -41,9 +41,9 @@
                         </li>
                     <li>
                         <a
-                            href="{{ route('users.index') }}"
+                            href="{{ route('admin.users.index') }}"
                             wire:navigate
-                            class="{{ request()->routeIs('users.*') ? 'active' : '' }} nav-link"
+                            class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }} nav-link"
                         >
                             <x-icon name="heroicon-o-users" class="w-5 h-5" />
                             <span>{{ __('User Management') }}</span>
@@ -206,9 +206,9 @@
                         </li>
                     <li>
                         <a
-                            href="{{ route('users.index') }}"
+                            href="{{ route('admin.users.index') }}"
                             @click="sidebarOpen = false"
-                            class="{{ request()->routeIs('users.*') ? 'active' : '' }} nav-link"
+                            class="{{ request()->routeIs('admin.users.*') ? 'active' : '' }} nav-link"
                         >
                             <x-icon name="heroicon-o-users" class="w-5 h-5" />
                             <span>{{ __('User Management') }}</span>

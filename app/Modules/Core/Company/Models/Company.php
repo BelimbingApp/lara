@@ -18,6 +18,11 @@ use Illuminate\Support\Str;
 
 class Company extends Model
 {
+    /**
+     * The licensee company is always id=1, created during installation.
+     */
+    public const LICENSEE_ID = 1;
+
     use HasFactory, SoftDeletes;
 
     /**
@@ -82,6 +87,12 @@ class Company extends Model
         static::creating(function ($company): void {
             if (empty($company->slug)) {
                 $company->slug = Str::slug($company->name);
+            }
+        });
+
+        static::deleting(function ($company): void {
+            if ($company->id === self::LICENSEE_ID) {
+                throw new \LogicException('The licensee company (id=1) cannot be deleted.');
             }
         });
     }
@@ -274,6 +285,14 @@ class Company extends Model
     public function isArchived(): bool
     {
         return $this->status === 'archived';
+    }
+
+    /**
+     * Check if this is the licensee company (the company operating this Belimbing instance).
+     */
+    public function isLicensee(): bool
+    {
+        return $this->id === self::LICENSEE_ID;
     }
 
     /**

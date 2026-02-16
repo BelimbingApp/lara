@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
@@ -7,21 +8,34 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules;
 use Livewire\Volt\Component;
 
-new class extends Component {
+new class extends Component
+{
     public User $user;
+
+    /** @var int|string|null */
+    public $company_id = null;
+
     public string $name = '';
+
     public string $email = '';
+
     public string $password = '';
+
     public string $password_confirmation = '';
 
-    /**
-     * Mount the component.
-     */
     public function mount(User $user): void
     {
         $this->user = $user;
+        $this->company_id = $user->company_id;
         $this->name = $user->name;
         $this->email = $user->email;
+    }
+
+    public function with(): array
+    {
+        return [
+            'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
+        ];
     }
 
     /**
@@ -29,7 +43,12 @@ new class extends Component {
      */
     public function update(): void
     {
+        if ($this->company_id === '') {
+            $this->company_id = null;
+        }
+
         $rules = [
+            'company_id' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -37,25 +56,24 @@ new class extends Component {
                 'lowercase',
                 'email',
                 'max:255',
-                Rule::unique(User::class)->ignore($this->user->id)
+                Rule::unique(User::class)->ignore($this->user->id),
             ],
         ];
 
-        // Only validate password if it's provided
-        if (!empty($this->password)) {
+        if (! empty($this->password)) {
             $rules['password'] = ['required', 'string', 'confirmed', Rules\Password::defaults()];
         }
 
         $validated = $this->validate($rules);
 
+        $this->user->company_id = ($validated['company_id'] ?? null) ? (int) $validated['company_id'] : null;
         $this->user->name = $validated['name'];
         $this->user->email = $validated['email'];
 
-        if (!empty($this->password)) {
+        if (! empty($this->password)) {
             $this->user->password = Hash::make($validated['password']);
         }
 
-        // Reset email verification if email changed
         if ($this->user->isDirty('email')) {
             $this->user->email_verified_at = null;
         }
@@ -64,7 +82,7 @@ new class extends Component {
 
         Session::flash('success', __('User updated successfully.'));
 
-        $this->redirect(route('users.index'), navigate: true);
+        $this->redirect(route('admin.users.index'), navigate: true);
     }
 }; ?>
 
@@ -74,15 +92,26 @@ new class extends Component {
     <div class="space-y-section-gap">
         <x-ui.page-header :title="__('Edit User')" :subtitle="__('Update user information')">
             <x-slot name="actions">
-                <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                <x-ui.button variant="ghost" as="a" href="{{ route('admin.users.index') }}" wire:navigate>
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                     {{ __('Back') }}
-                </a>
+                </x-ui.button>
             </x-slot>
         </x-ui.page-header>
 
         <x-ui.card>
             <form wire:submit="update" class="space-y-6">
+                <x-ui.select
+                    wire:model="company_id"
+                    label="{{ __('Company') }}"
+                    :error="$errors->first('company_id')"
+                >
+                    <option value="">{{ __('No company') }}</option>
+                    @foreach ($companies as $company)
+                        <option value="{{ $company->id }}">{{ $company->name }}</option>
+                    @endforeach
+                </x-ui.select>
+
                 <x-ui.input
                     wire:model="name"
                     label="{{ __('Name') }}"
@@ -130,9 +159,9 @@ new class extends Component {
                     <x-ui.button type="submit" variant="primary">
                         {{ __('Update User') }}
                     </x-ui.button>
-                    <a href="{{ route('users.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                    <x-ui.button variant="ghost" as="a" href="{{ route('admin.users.index') }}" wire:navigate>
                         {{ __('Cancel') }}
-                    </a>
+                    </x-ui.button>
                 </div>
             </form>
         </x-ui.card>

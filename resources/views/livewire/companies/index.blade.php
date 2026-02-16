@@ -48,6 +48,12 @@ new class extends Component
     {
         $company = Company::query()->withCount('children')->findOrFail($companyId);
 
+        if ($company->id === Company::LICENSEE_ID) {
+            Session::flash('error', __('The licensee company cannot be deleted.'));
+
+            return;
+        }
+
         if ($company->children_count > 0) {
             Session::flash('error', __('Cannot delete a company that has subsidiaries.'));
 
@@ -123,14 +129,18 @@ new class extends Component
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
-                                            wire:click="delete({{ $company->id }})"
-                                            wire:confirm="{{ __('Are you sure you want to delete this company?') }}"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
-                                        >
-                                            <x-icon name="heroicon-o-trash" class="w-4 h-4" />
-                                            {{ __('Delete') }}
-                                        </button>
+                                        @if ($company->isLicensee())
+                                            <x-ui.badge variant="default">{{ __('Licensee') }}</x-ui.badge>
+                                        @else
+                                            <button
+                                                wire:click="delete({{ $company->id }})"
+                                                wire:confirm="{{ __('Are you sure you want to delete this company?') }}"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
+                                            >
+                                                <x-icon name="heroicon-o-trash" class="w-4 h-4" />
+                                                {{ __('Delete') }}
+                                            </button>
+                                        @endif
                                     </div>
                                 </td>
                             </tr>

@@ -5,6 +5,7 @@
 
 namespace App\Console\Commands;
 
+use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Validator;
@@ -110,6 +111,7 @@ class CreateAdminCommand extends Command
         // Create admin user
         try {
             User::create([
+                'company_id' => Company::LICENSEE_ID,
                 'name' => $name,
                 'email' => $email,
                 'password' => $password, // Will be hashed by cast
