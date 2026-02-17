@@ -32,6 +32,11 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('admin/companies/{company}/relationships', 'companies.relationships')->name('admin.companies.relationships');
     Volt::route('admin/companies/{company}/departments', 'companies.departments')->name('admin.companies.departments');
 
+    // Employee Management
+    Volt::route('admin/employees', 'employees.index')->name('admin.employees.index');
+    Volt::route('admin/employees/create', 'employees.create')->name('admin.employees.create');
+    Volt::route('admin/employees/{employee}', 'employees.show')->name('admin.employees.show');
+
     // Setup
     Volt::route('admin/setup/licensee', 'admin.setup.licensee')->name('admin.setup.licensee');
 
