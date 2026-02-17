@@ -115,6 +115,25 @@ php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\R
 php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 ```
 
+## Database Portability
+
+**All database operations must be DB-agnostic.** Never use raw SQL that targets a specific database engine (MySQL, PostgreSQL, SQLite). Use Laravel's Schema Builder and Query Builder abstractions instead.
+
+| Instead of | Use |
+|------------|-----|
+| `DB::statement('SET FOREIGN_KEY_CHECKS=0')` | `Schema::disableForeignKeyConstraints()` |
+| `DB::statement('SET FOREIGN_KEY_CHECKS=1')` | `Schema::enableForeignKeyConstraints()` |
+| `DB::statement("SET session_replication_role = 'replica'")` | `Schema::disableForeignKeyConstraints()` |
+| `DB::statement('DROP TABLE ...')` | `Schema::dropIfExists('table')` |
+| `DB::statement('ALTER TABLE ...')` | `Schema::table('table', fn ($t) => ...)` |
+| `DB::statement('CREATE INDEX ...')` | Use `$table->index()` in migrations |
+
+If a raw statement is truly unavoidable, document why and guard it with a driver check:
+
+```php
+$driver = DB::connection()->getDriverName(); // 'pgsql', 'mysql', 'sqlite'
+```
+
 ## Database ID Standards
 
 - **Primary Keys**: Use `id()` (UNSIGNED BIGINT auto-increment)

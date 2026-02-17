@@ -40,12 +40,12 @@ class Company extends Model
     protected $fillable = [
         'parent_id',
         'name',
-        'slug',
+        'code',
         'status',
         'legal_name',
         'registration_number',
         'tax_id',
-        'legal_entity_type',
+        'legal_entity_type_id',
         'jurisdiction',
         'email',
         'website',
@@ -85,8 +85,8 @@ class Company extends Model
         parent::boot();
 
         static::creating(function ($company): void {
-            if (empty($company->slug)) {
-                $company->slug = Str::slug($company->name);
+            if (empty($company->code)) {
+                $company->code = Str::upper(Str::slug($company->name, '_'));
             }
         });
 
@@ -103,6 +103,14 @@ class Company extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Company::class, 'parent_id');
+    }
+
+    /**
+     * Get the legal entity type.
+     */
+    public function legalEntityType(): BelongsTo
+    {
+        return $this->belongsTo(LegalEntityType::class);
     }
 
     /**

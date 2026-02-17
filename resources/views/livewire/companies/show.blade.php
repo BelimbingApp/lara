@@ -2,6 +2,8 @@
 
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Company\Models\LegalEntityType;
+use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
 
@@ -23,8 +25,9 @@ new class extends Component
     {
         $this->company = $company->load([
             'parent',
+            'legalEntityType',
             'addresses',
-            'children',
+            'children.legalEntityType',
             'departments.type',
             'relationships.type',
             'relationships.relatedCompany',
@@ -37,13 +40,14 @@ new class extends Component
     {
         $rules = [
             'name' => ['required', 'string', 'max:255'],
+            'code' => ['nullable', 'string', 'max:255'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'registration_number' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:255'],
-            'legal_entity_type' => ['nullable', 'string', 'max:255'],
-            'jurisdiction' => ['nullable', 'string', 'max:255'],
+            'legal_entity_type_id' => ['nullable', 'integer', 'exists:company_legal_entity_types,id'],
+            'jurisdiction' => ['nullable', 'string', 'max:2', 'exists:geonames_countries,iso'],
         ];
 
         if (! isset($rules[$field])) {
@@ -171,6 +175,8 @@ new class extends Component
                 ->where('id', '!=', $this->company->id)
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'legalEntityTypes' => LegalEntityType::query()->active()->orderBy('name')->get(['id', 'code', 'name']),
+            'countries' => Country::query()->orderBy('country')->get(['iso', 'country']),
         ];
     }
 }; ?>
@@ -216,6 +222,25 @@ new class extends Component
                                 @blur="editing = false; $wire.saveField('name', val)"
                                 type="text"
                                 class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                            />
+                        </dd>
+                    </div>
+                    <div x-data="{ editing: false, val: '{{ addslashes($company->code ?? '') }}' }">
+                        <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Code') }}</dt>
+                        <dd class="text-sm text-ink">
+                            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                                <span class="font-mono" x-text="val || '-'"></span>
+                                <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <input
+                                x-show="editing"
+                                x-ref="input"
+                                x-model="val"
+                                @keydown.enter="editing = false; $wire.saveField('code', val)"
+                                @keydown.escape="editing = false; val = '{{ addslashes($company->code ?? '') }}'"
+                                @blur="editing = false; $wire.saveField('code', val)"
+                                type="text"
+                                class="w-full px-1 -mx-1 py-0.5 text-sm font-mono border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
                             />
                         </dd>
                     </div>
@@ -265,23 +290,26 @@ new class extends Component
                             </select>
                         </dd>
                     </div>
-                    <div x-data="{ editing: false, val: '{{ addslashes($company->legal_entity_type ?? '') }}' }">
+                    <div x-data="{ editing: false, val: '{{ $company->legal_entity_type_id ?? '' }}' }">
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Legal Entity Type') }}</dt>
-                        <dd class="text-sm text-ink">
-                            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                                <span x-text="val || '-'"></span>
+                        <dd class="mt-0.5">
+                            <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                                <span class="text-sm text-ink">{{ $company->legalEntityType?->name ?? '-' }}</span>
                                 <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                            <input
+                            <select
                                 x-show="editing"
-                                x-ref="input"
                                 x-model="val"
-                                @keydown.enter="editing = false; $wire.saveField('legal_entity_type', val)"
-                                @keydown.escape="editing = false; val = '{{ addslashes($company->legal_entity_type ?? '') }}'"
-                                @blur="editing = false; $wire.saveField('legal_entity_type', val)"
-                                type="text"
-                                class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                            />
+                                @change="editing = false; $wire.saveField('legal_entity_type_id', val || null)"
+                                @keydown.escape="editing = false; val = '{{ $company->legal_entity_type_id ?? '' }}'"
+                                @blur="editing = false"
+                                class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                            >
+                                <option value="">{{ __('None') }}</option>
+                                @foreach($legalEntityTypes as $type)
+                                    <option value="{{ $type->id }}">{{ $type->name }}</option>
+                                @endforeach
+                            </select>
                         </dd>
                     </div>
                     <div x-data="{ editing: false, val: '{{ addslashes($company->registration_number ?? '') }}' }">
@@ -322,23 +350,33 @@ new class extends Component
                             />
                         </dd>
                     </div>
-                    <div x-data="{ editing: false, val: '{{ addslashes($company->jurisdiction ?? '') }}' }">
+                    <div x-data="{ editing: false, val: '{{ $company->jurisdiction ?? '' }}' }">
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Jurisdiction') }}</dt>
-                        <dd class="text-sm text-ink">
-                            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                                <span x-text="val || '-'"></span>
+                        <dd class="mt-0.5">
+                            <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                                <span class="text-sm text-ink">
+                                    @if($company->jurisdiction)
+                                        {{ $countries->firstWhere('iso', $company->jurisdiction)?->country ?? $company->jurisdiction }}
+                                        <span class="text-muted">({{ $company->jurisdiction }})</span>
+                                    @else
+                                        -
+                                    @endif
+                                </span>
                                 <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
-                            <input
+                            <select
                                 x-show="editing"
-                                x-ref="input"
                                 x-model="val"
-                                @keydown.enter="editing = false; $wire.saveField('jurisdiction', val)"
-                                @keydown.escape="editing = false; val = '{{ addslashes($company->jurisdiction ?? '') }}'"
-                                @blur="editing = false; $wire.saveField('jurisdiction', val)"
-                                type="text"
-                                class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                            />
+                                @change="editing = false; $wire.saveField('jurisdiction', val || null)"
+                                @keydown.escape="editing = false; val = '{{ $company->jurisdiction ?? '' }}'"
+                                @blur="editing = false"
+                                class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                            >
+                                <option value="">{{ __('None') }}</option>
+                                @foreach($countries as $country)
+                                    <option value="{{ $country->iso }}">{{ $country->country }} ({{ $country->iso }})</option>
+                                @endforeach
+                            </select>
                         </dd>
                     </div>
                     <div x-data="{ editing: false, val: '{{ addslashes($company->email ?? '') }}' }">
@@ -667,7 +705,7 @@ new class extends Component
                                             default => 'default',
                                         }">{{ ucfirst($child->status) }}</x-ui.badge>
                                     </td>
-                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $child->legal_entity_type ?? '-' }}</td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $child->legalEntityType?->name ?? '-' }}</td>
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $child->jurisdiction ?? '-' }}</td>
                                 </tr>
                             @endforeach

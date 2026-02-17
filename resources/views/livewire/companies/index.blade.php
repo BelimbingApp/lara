@@ -25,7 +25,7 @@ new class extends Component
                     $query
                         ->where('name', 'like', '%'.$search.'%')
                         ->orWhere('legal_name', 'like', '%'.$search.'%')
-                        ->orWhere('slug', 'like', '%'.$search.'%')
+                        ->orWhere('code', 'like', '%'.$search.'%')
                         ->orWhere('email', 'like', '%'.$search.'%')
                         ->orWhere('jurisdiction', 'like', '%'.$search.'%');
                 })
@@ -96,7 +96,7 @@ new class extends Component
             <div class="mb-2">
                 <x-ui.search-input
                     wire:model.live.debounce.300ms="search"
-                    placeholder="{{ __('Search by company name, slug, legal name, email, or jurisdiction...') }}"
+                    placeholder="{{ __('Search by company name, code, legal name, email, or jurisdiction...') }}"
                 />
             </div>
 
@@ -116,10 +116,10 @@ new class extends Component
                             <tr wire:key="company-{{ $company->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
                                     <a href="{{ route('admin.companies.show', $company) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $company->name }}</a>
-                                    <div class="text-xs text-muted tabular-nums">{{ $company->slug }}</div>
+                                    <div class="text-xs text-muted tabular-nums">{{ $company->code }}</div>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
-                                    {{ $company->parent?->name ?? __('Root') }}
+                                    {{ $company->parent?->name ?? __('None') }}
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
                                     <x-ui.badge :variant="$this->statusVariant($company->status)">{{ ucfirst($company->status) }}</x-ui.badge>

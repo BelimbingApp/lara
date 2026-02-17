@@ -41,6 +41,104 @@ return [
     |
     */
 
+    /*
+    |--------------------------------------------------------------------------
+    | Legal Entity Types
+    |--------------------------------------------------------------------------
+    |
+    | Define the default legal entity types for companies.
+    | These are jurisdiction-agnostic categories; jurisdiction-specific names
+    | (e.g., Sdn Bhd, Pte Ltd) can be stored in metadata.
+    |
+    | Structure:
+    | - code: Unique identifier (lowercase, no spaces)
+    | - name: Display name
+    | - description: Human-readable description
+    | - is_active: Whether this type is active by default
+    | - metadata: Additional configuration
+    |
+    */
+
+    'legal_entity_types' => [
+        [
+            'code' => 'sole_proprietorship',
+            'name' => 'Sole Proprietorship',
+            'description' => 'Business owned and operated by a single individual',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'partnership',
+            'name' => 'Partnership',
+            'description' => 'Business owned by two or more partners sharing profits and liabilities',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'llp',
+            'name' => 'Limited Liability Partnership',
+            'description' => 'Partnership where partners have limited personal liability',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'private_limited',
+            'name' => 'Private Limited Company',
+            'description' => 'Privately held company with limited liability; shares not publicly traded',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'public_listed',
+            'name' => 'Public Listed Company',
+            'description' => 'Company whose shares are traded on a public stock exchange',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'public_unlisted',
+            'name' => 'Public Unlisted Company',
+            'description' => 'Public company whose shares are not listed on a stock exchange',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'corporation',
+            'name' => 'Corporation',
+            'description' => 'Incorporated entity with separate legal personality from its owners',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'cooperative',
+            'name' => 'Cooperative',
+            'description' => 'Member-owned organisation operated for mutual benefit',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'non_profit',
+            'name' => 'Non-Profit Organisation',
+            'description' => 'Organisation operated for social, charitable, or educational purposes',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'government',
+            'name' => 'Government Entity',
+            'description' => 'Government body or state-owned enterprise',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+        [
+            'code' => 'branch',
+            'name' => 'Branch Office',
+            'description' => 'Local office of a foreign-registered company',
+            'is_active' => true,
+            'metadata' => [],
+        ],
+    ],
+
     'department_types' => [
         [
             'code' => 'exec',

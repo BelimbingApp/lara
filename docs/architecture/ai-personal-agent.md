@@ -1,4 +1,4 @@
-# AI Personal Agent (PA) Architecture — Personal Agents for Business
+# AI Personal Agent (PA) Architecture
 
 **Document Type:** Architecture Reference & Vision (Future Implementation)
 **Status:** Research / Planning
@@ -27,7 +27,7 @@
 
 **Primary intent:** The PA system exists to **help employees achieve the goals set by the company**. Everything the PA does—daily planning, task execution, workflows, and coordination—serves that end: aligning individual effort with company objectives and removing friction so people can focus on outcomes, not process.
 
-**What:** BLB's AI-native architecture includes **Personal Agents (PAs)** for every user in an organization. Users interact with their PA through familiar messaging channels (WhatsApp, Telegram, Slack, etc.) instead of traditional web forms.
+**What:** BLB's AI-native architecture includes **Personal Agents (PAs)** for every user in an organization. Alternatively, users can interact with their PA through familiar messaging channels (WhatsApp, Telegram, Slack, etc.) instead of traditional web forms.
 
 **Why:** To better help employees achieve the set goals of the company. PAs reduce form fatigue, streamline business processes, enable natural language interaction, and provide 24/7 support so that users can focus on goals rather than learning complex UIs.
 
@@ -79,7 +79,7 @@ PA → Employee:
   Type: Annual leave
   Balance after: 12 days remaining
   Status: Pending approval from Sarah Chen
-  
+
 Should I notify Sarah?"
 
 Employee: "Yes"
@@ -382,7 +382,7 @@ User:
   - id
   - company_id
   - name, email
-  
+
 // New: PA configuration per user
 PersonalAgent:
   - id
@@ -466,9 +466,9 @@ use App\Modules\Core\Employee\Models\Employee;
 class LeaveApplicationTool extends BaseTool
 {
     public string $name = 'blb_leave_apply';
-    
+
     public string $description = 'Submit a leave application for the current user';
-    
+
     public function schema(): array
     {
         return [
@@ -497,25 +497,25 @@ class LeaveApplicationTool extends BaseTool
             'required' => ['start_date', 'end_date', 'leave_type'],
         ];
     }
-    
+
     public function execute(string $userId, array $params): array
     {
         // Get employee record
         $employee = Employee::query()
             ->where('user_id', $userId)
             ->firstOrFail();
-        
+
         // Validate leave balance
         $leaveDays = $this->calculateLeaveDays($params['start_date'], $params['end_date']);
         $balance = $employee->getLeaveBalance($params['leave_type']);
-        
+
         if ($leaveDays > $balance && $params['leave_type'] !== 'unpaid') {
             return [
                 'success' => false,
                 'error' => "Insufficient leave balance. Requested: {$leaveDays} days, Available: {$balance} days",
             ];
         }
-        
+
         // Create leave request
         $leaveRequest = LeaveRequest::create([
             'employee_id' => $employee->id,
@@ -527,15 +527,15 @@ class LeaveApplicationTool extends BaseTool
             'status' => 'pending',
             'submitted_at' => now(),
         ]);
-        
+
         // Notify supervisor's PA (PA-to-PA communication)
         if ($employee->supervisor_id) {
             $this->notifySupervisorPA($employee->supervisor, $leaveRequest);
         }
-        
+
         // Log for audit
         $this->logToolExecution('leave_apply', $userId, $params, $leaveRequest->id);
-        
+
         return [
             'success' => true,
             'leave_request_id' => $leaveRequest->id,
@@ -585,7 +585,7 @@ Help users apply for leave through natural conversation.
 2. **Calculate days:**
    - Count only working days (exclude weekends, public holidays)
    - Half-day leave = 0.5 days
-   
+
 3. **Get approval:**
    - Immediate supervisor for ≤ 3 days
    - Department head for 4-7 days
@@ -651,7 +651,7 @@ PA: Uses `blb_leave_balance` tool, shows remaining days + expiry
 User: "Claim taxi fare $45.50"
 PA: "Receipt? [Upload photo]"
 User: [Uploads receipt photo]
-PA: 
+PA:
   - OCR extracts amount, date, vendor
   - Validates against policy (max $50 per trip)
   - Creates expense claim
@@ -706,7 +706,7 @@ PA → Procurement Manager (Slack):
   Reorder point: 50 units
   Suggested order: 200 units
   Preferred supplier: ABC Corp
-  
+
 Create PO? [Yes] [Snooze] [Adjust]"
 ```
 
@@ -719,7 +719,7 @@ Manager's PA → Manager (Telegram):
   1. Leave: John Doe, Feb 15-17 (Team capacity: OK)
   2. Expense: Alice Wang, $850 training course (Within budget)
   3. Purchase: New laptop $2,400 (Pending IT approval)
-  
+
 [Approve All] [Review Individually] [Defer]"
 
 Manager: "Approve 1 and 2"
@@ -747,18 +747,18 @@ PA → CEO:
   Actual: $1.2M (60% of target)
   Target: $2M
   Projection: $1.8M (90% of target) ⚠️
-  
+
   Top performers:
   - Alice (120% of quota)
   - Bob (115% of quota)
-  
+
   At risk:
   - Charlie (45% of quota)
-  
+
   Suggested actions:
   1. Sales coaching for Charlie
   2. Increase marketing in Region B
-  
+
 [View Details] [Schedule Review]"
 ```
 
@@ -772,7 +772,7 @@ Sales Rep's PA → Logistics PA:
   Delivery: By Feb 12 (3 days)
   Items: 500 units Widget A
   Shipping: Express to Singapore
-  
+
 Can fulfill?"
 
 Logistics PA → Warehouse Manager:
@@ -819,10 +819,10 @@ PA → Employee:
   - 4-5 days/week requires manager approval
   - Must attend Tuesday team meetings in-office
   - Equipment: Company laptop provided
-  
+
 Your current WFH: 2 days this week
 Can still WFH: Thu or Fri without approval
-  
+
 Need to request WFH? [Yes] [Just Checking]"
 ```
 
@@ -844,7 +844,7 @@ PA:
 PA → Employee (WhatsApp):
 "⏰ Reminder: Monthly report due tomorrow
   Last month: Submitted 2 days late
-  
+
 Would you like me to:
   1. Generate draft report from data?
   2. Remind me again at 4pm?
@@ -858,11 +858,11 @@ PA → Accounting Manager (Slack):
   Vendor: XYZ Supplies
   Normal monthly: ~$5,000
   This month: $15,000 (3x average)
-  
+
   Invoices:
   - INV-001: $8,000 (approved by John)
   - INV-002: $7,000 (approved by Alice)
-  
+
   Review? [Details] [Flag for Audit] [Mark as Expected]"
 ```
 
@@ -872,12 +872,12 @@ PA notices user submitting same type of request weekly
   ↓
 PA → User:
 "I notice you order office supplies every Monday.
-  
+
 Should I:
   1. Auto-create weekly order (you approve)?
   2. Set up recurring order?
   3. Just remind you Mondays?
-  
+
 This could save ~10 minutes/week"
 ```
 
@@ -1059,7 +1059,7 @@ PA: "Invoice INV-456 ready for approval
      Amount: $12,450
      Vendor: ABC Corp
      Due: Feb 20
-     
+
      [Approve] [Reject] [View Details]"
 ```
 
@@ -1067,14 +1067,14 @@ PA: "Invoice INV-456 ready for approval
 ```
 User: [Uploads CSV file]
      "Import these customers"
-     
+
 PA: "Found 150 rows, 3 columns
      Looks like: name, email, phone
-     
+
      Preview:
      1. John Doe, john@example.com, +1234567890
      2. Jane Smith, jane@example.com, +0987654321
-     
+
      Import all 150? [Yes] [Preview More] [Cancel]"
 ```
 
@@ -1090,14 +1090,14 @@ PA: [Transcribes, processes]
 ```
 User: [Photo of receipt]
      "Claim this expense"
-     
+
 PA: [OCR extracts]
      "Receipt detected:
       Vendor: Restaurant XYZ
       Amount: $68.50
       Date: Feb 8, 2026
       Category: Client Entertainment?
-      
+
      [Confirm] [Edit] [Cancel]"
 ```
 
@@ -1296,7 +1296,7 @@ PASession:
   - channel_identifier (phone number, chat_id, etc.)
   - context (JSON - current conversation state)
   - created_at, updated_at, last_activity_at
-  
+
 // pa_messages table (JSONL equivalent)
 PAMessage:
   - id
@@ -1315,14 +1315,14 @@ PAMessage:
 
 class SkillRegistry {
     protected array $skills = [];
-    
+
     public function discover(): void {
         // Scan storage/app/ai-personal-agent/company_{id}/skills/
         // Parse SKILL.md files
         // Validate requirements
         // Cache skill content
     }
-    
+
     public function getSkillsForPA(PersonalAssistant $pa): array {
         // Filter by:
         // - Company-specific skills
@@ -1340,11 +1340,11 @@ class SkillRegistry {
 
 class ToolRegistry {
     protected array $tools = [];
-    
+
     public function register(string $name, Tool $tool): void {
         $this->tools[$name] = $tool;
     }
-    
+
     public function getToolsForPA(PersonalAssistant $pa): array {
         // Filter by:
         // - User permissions
@@ -1389,7 +1389,7 @@ PA: "3 customers within 5km:
      1. ABC Corp (2.3km) - Last visit: 3 weeks ago
      2. XYZ Ltd (4.1km) - High priority (overdue follow-up)
      3. DEF Inc (4.8km) - New lead
-     
+
      Suggested route: XYZ → ABC → DEF
      [Navigate] [Call XYZ] [Skip]"
 ```
@@ -1410,7 +1410,7 @@ PA: Remembers this means:
   2. Reconcile accounts
   3. Email to CFO
   4. Archive documents
-  
+
 Next month: "Do the monthly close" → executes all steps
 ```
 
@@ -1434,7 +1434,7 @@ Procurement PA (autonomous):
   - Predicts stockouts (ML)
   - Auto-creates POs with preferred suppliers
   - Only escalates for exceptions
-  
+
 CFO just reviews summary:
 "This month: 23 POs auto-created, $45K total
  All within policy, 0 exceptions"
@@ -1677,9 +1677,9 @@ Who should we contact in an emergency?"
 
 John: "My wife, Jane Doe, +65 9123 4567"
 
-PA: 
+PA:
 "✓ Added Jane Doe as emergency contact
-  
+
 Form 2/5: Tax Declaration
 What's your tax file number?"
 
@@ -1698,11 +1698,11 @@ Daily briefing:
 📊 Department metrics:
    - Sales: 105% of weekly target ✓
    - Inventory: 2 items low stock ⚠️
-   
+
 🔔 Urgent items:
    - Client A invoice overdue 3 days
    - Project X milestone due today
-   
+
 [Approve Leave Requests] [View Low Stock] [All Clear]"
 
 Sarah: "Approve leave requests"
@@ -1713,7 +1713,7 @@ PA:
   Dates: Feb 15-17 (3 days, Annual)
   Team capacity: OK (2 backups available)
   Previous leave: Last taken 2 months ago
-  
+
 [Approve] [Reject] [Defer]"
 
 Sarah: "Approve"
@@ -1725,18 +1725,18 @@ Leave Request 2/2:
   Employee: Alice Wang
   Dates: Feb 20-21 (2 days, Sick)
   Medical cert: Required (will submit today)
-  
+
 [Approve] [Reject] [Defer]"
 
 Sarah: "Approve"
 
 PA:
 "✓ All leave requests processed.
-  
+
 Low stock alert:
   1. Widget A (45/50 units) - Auto PO suggested
   2. Part B (12/20 units) - Order in transit (arrives Feb 11)
-  
+
 [Auto-Order Widget A] [Monitor] [Dismiss]"
 ```
 
@@ -1747,13 +1747,13 @@ Month-End Close (Multi-PA Orchestration):
 
 Finance PA (Autonomous):
   Day 28: Start pre-close checklist
-  
+
 Finance PA → Department PAs:
 "Month-end approaching. Please ensure:
   - All invoices entered by Day 30
   - Expense claims submitted
   - Revenue recognized
-  
+
 [Acknowledge] [Issues]"
 
 Department PAs → Finance PA:
@@ -1765,7 +1765,7 @@ Finance PA → Finance Manager:
 "Pre-close status:
   ✓ 2/3 departments ready
   ⚠️ Operations: 3 invoices pending
-  
+
   Action needed?
   [Contact Operations] [Extend Deadline] [Proceed]"
 
@@ -1774,9 +1774,9 @@ Manager: "Contact operations"
 Finance PA → Operations Manager's PA:
 "Finance close in 2 days. Still need:
   - Invoice from Supplier X ($5,000)
-  - Invoice from Supplier Y ($3,200)  
+  - Invoice from Supplier Y ($3,200)
   - Invoice from Supplier Z ($1,800)
-  
+
 Can these be entered today?"
 
 [Cross-PA coordination resolves blockers]
@@ -1787,18 +1787,18 @@ Finance PA:
   - Runs validation checks
   - Identifies discrepancies
   - Notifies relevant PAs to fix
-  
+
 Finance PA → CFO:
 "Month-end close complete:
   Revenue: $1.2M (vs $1.1M budget) ✓
   Expenses: $850K (vs $900K budget) ✓
   Variance: 2 items (details attached)
-  
+
   Reports ready:
   - P&L Statement
-  - Balance Sheet  
+  - Balance Sheet
   - Cash Flow
-  
+
 [Download] [Review Variances] [Approve]"
 ```
 
@@ -1813,7 +1813,7 @@ Customer Service PA:
   - Auto-retrieves order data
   - Checks shipment tracking
   - Identifies issue (carrier delay)
-  
+
 CS PA → Logistics PA:
 "Order ORD-456 delayed. Customer contacted. Status?"
 
@@ -1864,12 +1864,12 @@ Proposed policy change:
     • Employee has balance
     • Not during blackout dates
   - Manager just gets FYI notification
-  
+
 Estimated impact:
   - 60% of requests auto-approved
   - Manager time saved: ~2 hours/month
   - Employee approval wait: 1 hour → instant
-  
+
 [Pilot Test] [Review Data] [Dismiss]"
 
 HR Director: "Pilot test"
@@ -1899,7 +1899,7 @@ PA System:
 - "Works on your phone, anywhere"
 - "I know company policies, you don't have to"
 
-**Result:** 
+**Result:**
 - **10x faster** task completion for common operations
 - **90% reduction** in user training time
 - **100% mobile-capable** (no VPN, no desktop required)

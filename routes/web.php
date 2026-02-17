@@ -26,6 +26,7 @@ Route::middleware(['auth'])->group(function () {
     // Company Management
     Volt::route('admin/companies', 'companies.index')->name('admin.companies.index');
     Volt::route('admin/companies/create', 'companies.create')->name('admin.companies.create');
+    Volt::route('admin/companies/legal-entity-types', 'companies.legal-entity-types')->name('admin.companies.legal-entity-types');
     Volt::route('admin/companies/{company}', 'companies.show')->name('admin.companies.show');
     Volt::route('admin/companies/{company}/relationships', 'companies.relationships')->name('admin.companies.relationships');
     Volt::route('admin/companies/{company}/departments', 'companies.departments')->name('admin.companies.departments');

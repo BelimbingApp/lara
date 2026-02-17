@@ -77,8 +77,8 @@ test('company can be created from create page component', function (): void {
 
     expect($company)
         ->not()->toBeNull()
-        ->and($company->slug)
-        ->toBe('northwind-holdings')
+        ->and($company->code)
+        ->toBe('NORTHWIND_HOLDINGS')
         ->and($company->scope_activities['industry'])
         ->toBe('Logistics');
 });

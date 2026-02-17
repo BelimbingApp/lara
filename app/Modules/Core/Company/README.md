@@ -200,7 +200,7 @@ $access->makeIndefinite();
 | id | integer | Primary key (auto-increment) |
 | parent_id | unsignedBigInteger | Parent company (nullable) |
 | name | string | Company name |
-| slug | string | URL-friendly identifier |
+| code | string | Short unique company code |
 | status | string | active, suspended, pending, archived |
 | legal_name | string | Full legal name |
 | registration_number | string | Business registration number |

@@ -18,14 +18,14 @@ return new class extends Migration
             $table->id();
             $table->foreignId('parent_id')->nullable()->index();
             $table->string('name');
-            $table->string('slug')->unique();
+            $table->string('code')->unique();
             $table->string('status')->default('active')->index(); // active, suspended, pending, archived
 
             // Registration details
             $table->string('legal_name')->nullable();
             $table->string('registration_number')->nullable();
             $table->string('tax_id')->nullable();
-            $table->string('legal_entity_type')->nullable();
+            $table->foreignId('legal_entity_type_id')->nullable()->index();
             $table->string('jurisdiction')->nullable();
 
             // Contact information (phone is on Address; use primary address for phone)

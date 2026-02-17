@@ -13,5 +13,13 @@ return [
             'parent' => 'admin',
             'position' => 220,
         ],
+        [
+            'id' => 'admin.companies.legal-entity-types',
+            'label' => 'Legal Entity Types',
+            'icon' => 'heroicon-o-scale',
+            'route' => 'admin.companies.legal-entity-types',
+            'parent' => 'admin.companies',
+            'position' => 10,
+        ],
     ],
 ];

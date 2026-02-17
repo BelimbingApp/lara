@@ -6,19 +6,23 @@
 >
     @if($item->hasRoute())
         {{-- Link item: full-width line, subtle active highlight (VS Code style) --}}
-        <a
-            href="{{ $item->route ? route($item->route) : $item->url }}"
-            class="flex items-center gap-2 w-full px-2 py-px text-sm rounded-none transition text-link {{ $isActive ? 'bg-surface-card text-ink font-medium' : 'hover:bg-surface-subtle font-normal' }}"
-        >
+        <div class="flex items-center w-full px-2 py-px text-sm rounded-none transition text-link {{ $isActive ? 'bg-surface-card text-ink font-medium' : 'hover:bg-surface-subtle font-normal' }}">
             @if(count($children) > 0)
-                <span class="text-[12px] shrink-0 text-accent w-3.5 text-center" aria-hidden="true">
+                <span
+                    @click.prevent="expanded = !expanded"
+                    class="text-[12px] shrink-0 text-accent w-3.5 text-center cursor-pointer mr-2"
+                    aria-hidden="true"
+                >
                     <span x-show="!expanded">⮞</span>
                     <span x-show="expanded">⮟</span>
                 </span>
             @endif
 
-            <span class="truncate">{{ __($item->label) }}</span>
-        </a>
+            <a
+                href="{{ $item->route ? route($item->route) : $item->url }}"
+                class="truncate flex-1"
+            >{{ __($item->label) }}</a>
+        </div>
     @else
         {{-- Container item (no route) --}}
         <div

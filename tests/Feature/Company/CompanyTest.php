@@ -7,12 +7,12 @@ use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\CompanyRelationship;
 use App\Modules\Core\Company\Models\RelationshipType;
 
-test('company slug is auto-generated from name', function (): void {
+test('company code is auto-generated from name', function (): void {
     $company = Company::factory()->create([
         'name' => 'My Great Company',
     ]);
 
-    expect($company->slug)->toBe('my-great-company');
+    expect($company->code)->toBe('MY_GREAT_COMPANY');
 });
 
 test('company can have parent company', function (): void {

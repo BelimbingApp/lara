@@ -6,6 +6,7 @@
 namespace App\Modules\Core\Company\Database\Factories;
 
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Company\Models\LegalEntityType;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -31,18 +32,12 @@ class CompanyFactory extends Factory
 
         return [
             'name' => $companyName,
-            'slug' => null, // Will be auto-generated from name
+            'code' => null, // Will be auto-generated from name
             'status' => 'active',
             'legal_name' => $companyName.' '.fake()->companySuffix(),
             'registration_number' => fake()->numerify('##########'),
             'tax_id' => fake()->numerify('##-#######'),
-            'legal_entity_type' => fake()->randomElement([
-                'LLC',
-                'Corporation',
-                'Partnership',
-                'Sole Proprietorship',
-                'Private Limited',
-            ]),
+            'legal_entity_type_id' => LegalEntityType::query()->inRandomOrder()->value('id'),
             'jurisdiction' => fake()->country(),
             'email' => fake()->companyEmail(),
             'website' => fake()->domainName(),
@@ -148,7 +143,7 @@ class CompanyFactory extends Factory
                 'legal_name' => null,
                 'registration_number' => null,
                 'tax_id' => null,
-                'legal_entity_type' => null,
+                'legal_entity_type_id' => null,
                 'jurisdiction' => null,
                 'email' => null,
                 'website' => null,

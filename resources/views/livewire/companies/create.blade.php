@@ -1,6 +1,8 @@
 <?php
 
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Company\Models\LegalEntityType;
+use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
@@ -11,7 +13,7 @@ new class extends Component
 
     public string $name = '';
 
-    public ?string $slug = null;
+    public ?string $code = null;
 
     public string $status = 'active';
 
@@ -21,7 +23,7 @@ new class extends Component
 
     public ?string $tax_id = null;
 
-    public ?string $legal_entity_type = null;
+    public ?int $legal_entity_type_id = null;
 
     public ?string $jurisdiction = null;
 
@@ -39,6 +41,11 @@ new class extends Component
             'parentCompanies' => Company::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'legalEntityTypes' => LegalEntityType::query()
+                ->active()
+                ->orderBy('name')
+                ->get(['id', 'code', 'name']),
+            'countries' => Country::query()->orderBy('country')->get(['iso', 'country']),
         ];
     }
 
@@ -63,13 +70,13 @@ new class extends Component
         return [
             'parent_id' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', Rule::unique(Company::class, 'slug')],
+            'code' => ['nullable', 'string', 'max:255', Rule::unique(Company::class, 'code')],
             'status' => ['required', 'in:active,suspended,pending,archived'],
             'legal_name' => ['nullable', 'string', 'max:255'],
             'registration_number' => ['nullable', 'string', 'max:255'],
             'tax_id' => ['nullable', 'string', 'max:255'],
-            'legal_entity_type' => ['nullable', 'string', 'max:255'],
-            'jurisdiction' => ['nullable', 'string', 'max:255'],
+            'legal_entity_type_id' => ['nullable', 'integer', 'exists:company_legal_entity_types,id'],
+            'jurisdiction' => ['nullable', 'string', 'max:2', 'exists:geonames_countries,iso'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
             'scope_activities_json' => ['nullable', 'json'],
@@ -106,7 +113,7 @@ new class extends Component
             <form wire:submit="store" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.select wire:model="parent_id" label="{{ __('Parent Company') }}" :error="$errors->first('parent_id')">
-                        <option value="">{{ __('None (Root Company)') }}</option>
+                        <option value="">{{ __('None') }}</option>
                         @foreach($parentCompanies as $parentCompany)
                             <option value="{{ $parentCompany->id }}">{{ $parentCompany->name }}</option>
                         @endforeach
@@ -131,6 +138,14 @@ new class extends Component
                     />
 
                     <x-ui.input
+                        wire:model="code"
+                        label="{{ __('Code') }}"
+                        type="text"
+                        placeholder="{{ __('Auto-generated if blank') }}"
+                        :error="$errors->first('code')"
+                    />
+
+                    <x-ui.input
                         wire:model="legal_name"
                         label="{{ __('Legal Name') }}"
                         type="text"
@@ -138,13 +153,12 @@ new class extends Component
                         :error="$errors->first('legal_name')"
                     />
 
-                    <x-ui.input
-                        wire:model="legal_entity_type"
-                        label="{{ __('Legal Entity Type') }}"
-                        type="text"
-                        placeholder="{{ __('LLC, Corporation, Partnership, etc.') }}"
-                        :error="$errors->first('legal_entity_type')"
-                    />
+                    <x-ui.select wire:model="legal_entity_type_id" label="{{ __('Legal Entity Type') }}" :error="$errors->first('legal_entity_type_id')">
+                        <option value="">{{ __('Select type...') }}</option>
+                        @foreach($legalEntityTypes as $type)
+                            <option value="{{ $type->id }}">{{ $type->name }}</option>
+                        @endforeach
+                    </x-ui.select>
 
                     <x-ui.input
                         wire:model="registration_number"
@@ -164,13 +178,12 @@ new class extends Component
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <x-ui.input
-                        wire:model="jurisdiction"
-                        label="{{ __('Jurisdiction') }}"
-                        type="text"
-                        placeholder="{{ __('Country/state of registration') }}"
-                        :error="$errors->first('jurisdiction')"
-                    />
+                    <x-ui.select wire:model="jurisdiction" label="{{ __('Jurisdiction') }}" :error="$errors->first('jurisdiction')">
+                        <option value="">{{ __('Select country...') }}</option>
+                        @foreach($countries as $country)
+                            <option value="{{ $country->iso }}">{{ $country->country }} ({{ $country->iso }})</option>
+                        @endforeach
+                    </x-ui.select>
 
                     <x-ui.input
                         wire:model="email"

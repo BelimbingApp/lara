@@ -2,6 +2,7 @@
 
 use App\Modules\Core\Company\Models\Company;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
 
@@ -51,39 +52,37 @@ new class extends Component
         $oldId = $company->id;
 
         DB::transaction(function () use ($oldId): void {
-            DB::statement('SET FOREIGN_KEY_CHECKS=0');
+            $row = (array) DB::table('companies')->where('id', $oldId)->first();
+            unset($row['id']);
 
-            DB::table('companies')->where('id', $oldId)->update(['id' => Company::LICENSEE_ID]);
+            DB::table('companies')->where('id', $oldId)->update(['slug' => $row['slug'].'-reassigning']);
+            DB::table('companies')->insert(array_merge($row, ['id' => Company::LICENSEE_ID]));
 
-            DB::table('companies')->where('parent_id', $oldId)->update(['parent_id' => Company::LICENSEE_ID]);
-            DB::table('users')->where('company_id', $oldId)->update(['company_id' => Company::LICENSEE_ID]);
-
-            $optionalTables = [
+            $fkTables = [
+                ['companies', 'parent_id'],
+                ['users', 'company_id'],
                 ['employees', 'company_id'],
                 ['departments', 'company_id'],
+                ['company_departments', 'company_id'],
                 ['company_relationships', 'company_id'],
                 ['company_relationships', 'related_company_id'],
                 ['external_accesses', 'company_id'],
             ];
 
-            foreach ($optionalTables as [$table, $column]) {
-                try {
+            foreach ($fkTables as [$table, $column]) {
+                if (Schema::hasTable($table)) {
                     DB::table($table)->where($column, $oldId)->update([$column => Company::LICENSEE_ID]);
-                } catch (\Exception $e) {
-                    // Table may not exist yet
                 }
             }
 
-            try {
+            if (Schema::hasTable('addressables')) {
                 DB::table('addressables')
                     ->where('addressable_id', $oldId)
                     ->where('addressable_type', Company::class)
                     ->update(['addressable_id' => Company::LICENSEE_ID]);
-            } catch (\Exception $e) {
-                // Table may not exist yet
             }
 
-            DB::statement('SET FOREIGN_KEY_CHECKS=1');
+            DB::table('companies')->where('id', $oldId)->delete();
         });
 
         Session::flash('success', __('Licensee set successfully.'));
@@ -106,8 +105,6 @@ new class extends Component
             'website' => ['nullable', 'string', 'max:255'],
         ]);
 
-        DB::statement('SET FOREIGN_KEY_CHECKS=0');
-
         DB::table('companies')->insert(array_merge($validated, [
             'id' => Company::LICENSEE_ID,
             'slug' => \Illuminate\Support\Str::slug($validated['name']),
@@ -115,8 +112,6 @@ new class extends Component
             'created_at' => now(),
             'updated_at' => now(),
         ]));
-
-        DB::statement('SET FOREIGN_KEY_CHECKS=1');
 
         Session::flash('success', __('Licensee company created successfully.'));
         $this->redirect(route('admin.companies.show', Company::LICENSEE_ID), navigate: true);

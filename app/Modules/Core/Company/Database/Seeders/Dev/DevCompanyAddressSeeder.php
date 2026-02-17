@@ -8,6 +8,7 @@ namespace App\Modules\Core\Company\Database\Seeders\Dev;
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\CompanyRelationship;
+use App\Modules\Core\Company\Models\LegalEntityType;
 use App\Modules\Core\Company\Models\RelationshipType;
 use Illuminate\Database\Seeder;
 
@@ -42,7 +43,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Stellar Industries Sdn. Bhd.',
                 'registration_number' => '201901012345',
                 'tax_id' => 'C2584-3109876',
-                'legal_entity_type' => 'sdn_bhd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'MY',
                 'email' => 'admin@stellarindustries.com.my',
                 'website' => 'https://stellarindustries.com.my',
@@ -54,7 +55,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Nusantara Trading Co. Pte. Ltd.',
                 'registration_number' => '202200056789',
                 'tax_id' => 'T2200056789F',
-                'legal_entity_type' => 'pte_ltd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'SG',
                 'email' => 'info@nusantaratrading.sg',
                 'website' => 'https://nusantaratrading.sg',
@@ -66,7 +67,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Borneo Logistics Sdn. Bhd.',
                 'registration_number' => '201801098765',
                 'tax_id' => 'C2584-9876543',
-                'legal_entity_type' => 'sdn_bhd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'MY',
                 'email' => 'ops@borneologistics.my',
                 'status' => 'active',
@@ -77,7 +78,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Pinnacle Holdings Bhd.',
                 'registration_number' => '200501034567',
                 'tax_id' => 'C2584-3456789',
-                'legal_entity_type' => 'bhd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('public_listed')?->id,
                 'jurisdiction' => 'MY',
                 'email' => 'corporate@pinnacleholdings.com.my',
                 'website' => 'https://pinnacleholdings.com.my',
@@ -112,7 +113,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Stellar Packaging Sdn. Bhd.',
                 'registration_number' => '202101078901',
                 'tax_id' => 'C2584-7890123',
-                'legal_entity_type' => 'sdn_bhd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'MY',
                 'email' => 'packaging@stellarindustries.com.my',
                 'status' => 'active',
@@ -124,7 +125,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'Stellar Digital Solutions Sdn. Bhd.',
                 'registration_number' => '202201045678',
                 'tax_id' => 'C2584-4567890',
-                'legal_entity_type' => 'sdn_bhd',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'MY',
                 'email' => 'digital@stellarindustries.com.my',
                 'website' => 'https://stellardigital.com.my',
@@ -137,7 +138,7 @@ class DevCompanyAddressSeeder extends Seeder
                 'legal_name' => 'PT Stellar Ventures Indonesia',
                 'registration_number' => 'AHU-0012345.AH.01.01',
                 'tax_id' => '01.234.567.8-012.000',
-                'legal_entity_type' => 'pt',
+                'legal_entity_type_id' => LegalEntityType::findByCode('private_limited')?->id,
                 'jurisdiction' => 'ID',
                 'email' => 'jakarta@stellarventures.co.id',
                 'status' => 'pending',
