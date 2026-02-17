@@ -21,5 +21,13 @@ return [
             'parent' => 'admin.companies',
             'position' => 10,
         ],
+        [
+            'id' => 'admin.companies.department-types',
+            'label' => 'Department Types',
+            'icon' => 'heroicon-o-rectangle-group',
+            'route' => 'admin.companies.department-types',
+            'parent' => 'admin.companies',
+            'position' => 20,
+        ],
     ],
 ];

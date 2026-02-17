@@ -86,7 +86,7 @@ class Company extends Model
 
         static::creating(function ($company): void {
             if (empty($company->code)) {
-                $company->code = Str::upper(Str::slug($company->name, '_'));
+                $company->code = Str::lower(Str::slug($company->name, '_'));
             }
         });
 
