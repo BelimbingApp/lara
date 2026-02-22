@@ -69,12 +69,8 @@ class MenuBuilder
     protected function markActive(array $tree, string $currentRoute): array
     {
         foreach ($tree as &$node) {
-            if ($this->routeMatches($node['item']->route, $currentRoute)) {
-                $node['is_active'] = true;
-
-                return $tree;
-            }
-
+            // Check children first so deeper (more specific) matches take priority
+            // over prefix matches on parent items.
             if (! empty($node['children'])) {
                 $node['children'] = $this->markActive($node['children'], $currentRoute);
 
@@ -84,6 +80,11 @@ class MenuBuilder
                         break;
                     }
                 }
+            }
+
+            // Only mark this node active if no child already matched
+            if (! $node['has_active_child'] && $this->routeMatches($node['item']->route, $currentRoute)) {
+                $node['is_active'] = true;
             }
         }
 
