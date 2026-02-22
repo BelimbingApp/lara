@@ -23,6 +23,11 @@ Route::middleware('guest')->group(function () {
         ->name('password.reset');
 });
 
+// Dashboard
+Route::view('dashboard', 'dashboard')
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
 // Auth routes (authenticated)
 Route::middleware('auth')->group(function () {
     Volt::route('verify-email', 'auth.verify-email')

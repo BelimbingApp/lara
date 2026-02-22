@@ -1,6 +1,6 @@
 # Architecture Migration Plan
 
-**Status:** Structure Complete — Focus shifts to module depth
+**Status:** Complete
 **Priority:** Strategic Investment
 **Principles:** Ousterhout's "A Philosophy of Software Design"
 
@@ -14,7 +14,7 @@ app/
 └── Providers/   # Laravel bootstrap (AppServiceProvider, VoltServiceProvider)
 ```
 
-All legacy Laravel scaffold directories (`Http/`, `Models/`, `Console/`, `Livewire/`) have been eliminated. All domain routes live in their modules; `routes/web.php` contains only framework-shell routes (`/`, `dashboard`).
+All legacy Laravel scaffold directories (`Http/`, `Models/`, `Console/`, `Livewire/`) have been eliminated. All domain routes live in their modules; `routes/web.php` contains only the welcome page.
 
 ## Completed
 
@@ -31,7 +31,8 @@ All legacy Laravel scaffold directories (`Http/`, `Models/`, `Console/`, `Livewi
 - [x] `routes/auth.php` → `Modules/Core/User/Routes/web.php`
 - [x] Settings routes (`settings/*`) → `Modules/Core/User/Routes/web.php`
 - [x] Licensee setup route → `Modules/Core/Company/Routes/web.php`
-- [x] `routes/web.php` reduced to framework shell (`/`, `dashboard`)
+- [x] Dashboard route → `Modules/Core/User/Routes/web.php`
+- [x] `routes/web.php` reduced to welcome page only (`/`)
 - [x] Fixed stale `App.Models.User` channel → `App.Modules.Core.User.Models.User`
 - [x] Removed dead `belimbing:backup` schedule from `routes/console.php`
 
@@ -39,6 +40,13 @@ All legacy Laravel scaffold directories (`Http/`, `Models/`, `Console/`, `Livewi
 - [x] Removed `--kill-others` from `concurrently` (Reverb/queue crashes no longer kill web server)
 - [x] Added Reverb config to `.env.example` and `.env` (missing `REVERB_APP_ID`/key/secret caused crashes)
 - [x] Set `BROADCAST_CONNECTION=reverb` (was `log` while running Reverb)
+- [x] Fixed Reverb DB connection (cache driver mismatch)
+
+### Test Fixes ✅
+- [x] Fixed 11 pre-existing Company test failures (79/79 passing)
+- [x] Code casing: tests expected uppercase, model generates lowercase
+- [x] Seeded data collisions: tests assumed empty DB under `DatabaseTransactions`
+- [x] Hardcoded factory codes: `customer()`/`supplier()` collided with seeder data
 
 ## Deferred (YAGNI)
 
@@ -54,7 +62,7 @@ Introduce only when a concrete consumer appears:
 The structural migration is complete. Focus shifts to **deepening existing modules**:
 
 1. **Module depth** — Richer domain logic, better encapsulation, clearer public APIs between modules. Existing modules (Company, User, Employee, Geonames, Address, Workflow) have routes, models, and views but thin domain logic.
-2. **Test coverage** — 11 pre-existing test failures (Company code casing) need fixing. Expand test coverage as modules deepen.
+2. **Test coverage** — Expand test coverage as modules deepen.
 3. **New Base modules as needed** — When cross-cutting concerns emerge organically (events, configuration, security), extract them into `Base/` modules with real consumers driving the interface design.
 
 ---
