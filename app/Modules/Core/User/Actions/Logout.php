@@ -1,6 +1,9 @@
 <?php
 
-namespace App\Livewire\Actions;
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Modules\Core\User\Actions;
 
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
