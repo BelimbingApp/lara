@@ -4,7 +4,7 @@
     "scripts": {
         "build": "vite build",
         "dev": "vite",
-        "dev:all": "concurrently -c \"#93c5fd,#c4b5fd,#86efac,#fdba74\" \"php artisan serve --port=${APP_PORT:-8000}\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start\" \"bun run dev\" --names=server,queue,reverb,vite --kill-others"
+        "dev:all": "concurrently -c \"#93c5fd,#c4b5fd,#86efac,#fdba74\" \"php artisan serve --port=${APP_PORT:-8000}\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start\" \"bun run dev\" --names=server,queue,reverb,vite"
     },
     "dependencies": {
         "@tailwindcss/vite": "^4.1.18",

@@ -1,61 +1,58 @@
 # Architecture Migration Plan
 
-**Status:** Draft
+**Status:** Phase 3 Complete
 **Priority:** Strategic Investment
 **Principles:** Ousterhout's "A Philosophy of Software Design"
 
 ## Context
-The project is in the **Initialization Phase**. The current codebase uses a standard Laravel structure (`app/Http`, `app/Models`, etc.) with a nascent `app/Modules` directory. The goal is to migrate to the `app/Base`, `app/Extensions` architecture defined in `docs/architecture/file-structure.md`.
+BLB uses a modular architecture defined in `docs/architecture/file-structure.md`. The `app/` directory now contains only three top-level directories:
 
-## Principles Alignment
+```
+app/
+├── Base/        # Framework infrastructure (Database, Menu, Routing)
+├── Modules/     # Business process modules (Core/*)
+└── Providers/   # Laravel bootstrap (AppServiceProvider, VoltServiceProvider)
+```
 
-### 1. Strategic Programming
-**Directives:** "Invest in design quality to lower future development costs."
-**Application:**
-- We will not just "move files"; we will define the **interfaces** for the new layers (`Base`, `Support`) first.
-- We accept that this migration slows down feature development temporarily to create a scalable foundation.
-- **Trade-off:** We are paying an upfront cost now (velocity dip) to avoid the "Standard Laravel Monolith" trap where everything is coupled.
+All legacy Laravel scaffold directories (`Http/`, `Models/`, `Console/`, `Livewire/`) have been eliminated.
 
-### 2. Deep Modules
-**Directives:** "Modules should provide powerful functionality through simple interfaces."
-**Application:**
-- **Bad:** Creating `app/Base/Service.php` that just wraps `app/Http/Controllers`.
-- **Good:** Creating `app/Base` components that hide the complexity of valid extensions, event hooking, and configuration cascading.
-- The `app/Modules` directory is the primary mechanism for depth. Each module must encapsulate its own routes, views, and logic, exposing only a minimal API to other modules.
+## Completed
 
-### 3. Destructive Evolution
-**Directives:** "Rewrite APIs freely; do not create migration paths for data."
-**Application:**
-- We will likely delete existing "standard" Controllers and Models if they don't fit the modular pattern.
-- We will not waste time creating adaptors for the old structure. It is a "rip and replace" operation.
+### Phase 3: Module Consolidation ✅
+- [x] `VerifyEmailController` → `Modules/Core/User/Controllers/Auth/`
+- [x] `Logout` action → `Modules/Core/User/Actions/`
+- [x] `DatabaseConnectionRecovery` middleware → `Base/Database/Middleware/`
+- [x] Deleted empty base `Controller.php` (no consumers)
+- [x] Deleted `app/Http/`, `app/Livewire/` directories
+- [x] Deleted premature ops commands (`belimbing:backup`, `belimbing:update`, `belimbing:create-admin`) and `app/Console/`
+- [x] Removed speculative `app/Admin/` from architecture spec (YAGNI — admin UI lives inside each module)
 
----
+## Deferred (YAGNI)
 
-## Migration Roadmap
+These phases are not yet needed. Introduce them only when a concrete consumer appears:
 
-### Phase 1: Foundation (The Support Layer)
-Before building the Base layer, we need the utilities that Base depends on.
-- [ ] Create `app/Support` structure.
-- [ ] Migrate universal traits/helpers from `app/Services` to `app/Support`.
+- **Support Layer** (`app/Support`): No universal traits/helpers exist yet to consolidate.
+- **Base Foundation** (`app/Base/Foundation`): No shared base Model/Controller needed — modules use Laravel's directly.
+- **Base Extension** (`app/Base/Extension`): Extension system not yet needed.
+- **Infrastructure** (`app/Infrastructure`): No cross-cutting infra services (caching, queues) beyond what Laravel provides.
 
-### Phase 2: The Base Layer Abstractions
-Define the interfaces that modules will implement.
-- [ ] Create `app/Base/Foundation` (Base Models, Controllers).
-- [ ] Create `app/Base/Extension` (The contract for what a Module *is*).
-- [ ] **Design Trade-off:** We will define these interfaces *before* we have many consumers, which risks "speculative generality" (a red flag). To mitigate, we will implement only what our *current* modules (`User`, `Company`) clearly need.
+## What's Next
 
-### Phase 3: Module Consolidation
-Move "homeless" code into Modules.
-- [ ] **Audit:** Identify logic in `app/Http/Controllers` that belongs to specific domains.
-- [ ] **Migrate:** Move User logic to `app/Modules/Core/User`.
-- [ ] **Migrate:** Move Company logic to `app/Modules/Core/Company`.
-- [ ] **Cleanup:** `app/Http` and `app/Models` should be empty (or deleted) by the end of this phase.
+The directory structure migration is complete. Focus shifts to **deepening existing modules** rather than creating new architectural layers:
 
-### Phase 4: Infrastructure
-- [ ] Create `app/Infrastructure` for Services that are not domain logic (Caching, Queues).
+1. **Route consolidation** — `routes/auth.php` contains User-domain auth routes that could move into `Modules/Core/User/Routes/`. Evaluate whether the route discovery system should handle auth routes or if they stay global (they need `guest` middleware, which may differ from module route patterns).
+2. **Module depth** — Invest in making existing modules (Company, User, Geonames, etc.) deeper: richer domain logic, better encapsulation, clearer public APIs between modules.
+3. **New Base modules as needed** — When cross-cutting concerns emerge organically (events, configuration, security), extract them into `Base/` modules with real consumers driving the interface design.
 
 ---
 
-## Technical Notes
-- **Namespaces:** Use `App\Base`, `App\Modules`, etc. Update `composer.json` autoloading if necessary (though standard PSR-4 for `App\` covers this).
-- **Service Providers:** Laravel 12 uses `bootstrap/providers.php`. We will likely need a `BaseServiceProvider` to bootstrap the custom directory loaders.
+## Principles (Reference)
+
+### Strategic Programming
+Invest in design quality to lower future development costs. Do not create abstractions without consumers.
+
+### Deep Modules
+Modules should provide powerful functionality through simple interfaces. The `app/Modules` directory is the primary mechanism for depth.
+
+### Destructive Evolution
+Rewrite APIs freely; do not create migration paths for data. Rip and replace over adaptor layers.

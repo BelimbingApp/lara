@@ -22,4 +22,3 @@ Route::middleware(['auth'])->group(function () {
     Volt::route('admin/setup/licensee', 'admin.setup.licensee')->name('admin.setup.licensee');
 });
 
-require __DIR__.'/auth.php';
