@@ -51,9 +51,8 @@ Move "homeless" code into Modules.
 - [ ] **Migrate:** Move Company logic to `app/Modules/Core/Company`.
 - [ ] **Cleanup:** `app/Http` and `app/Models` should be empty (or deleted) by the end of this phase.
 
-### Phase 4: Infrastructure & Admin
+### Phase 4: Infrastructure
 - [ ] Create `app/Infrastructure` for Services that are not domain logic (Caching, Queues).
-- [ ] Initialize `app/Admin` as a specialized module for system management.
 
 ---
 

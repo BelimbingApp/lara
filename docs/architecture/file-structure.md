@@ -97,7 +97,6 @@ belimbing/
 │   ├── Base/                # Framework infrastructure
 │   ├── Modules/             # Business process modules
 │   ├── Extensions/          # [Fluid] Extension integration layer
-│   ├── Admin/               # [Fluid] Admin panel (git workflow, extensions, config)
 │   ├── AI/                  # [Fluid] AI services and code generation
 │   ├── Infrastructure/      # [Fluid] Infrastructure services (cache, queue, etc.)
 │   └── Support/             # [Fluid] Helpers, utilities, base classes
