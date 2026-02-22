@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Core\Address\Models\Address;
+use App\Modules\Core\Geonames\Models\Country;
 use App\Modules\Core\User\Models\User;
 use Livewire\Livewire;
 
@@ -26,6 +27,14 @@ test('authenticated users can view address pages', function (): void {
 });
 
 test('address can be created from create page component', function (): void {
+    Country::query()->create([
+        'iso' => 'US',
+        'iso3' => 'USA',
+        'iso_numeric' => '840',
+        'country' => 'United States',
+        'continent' => 'NA',
+    ]);
+
     $user = User::factory()->create();
     $this->actingAs($user);
 
