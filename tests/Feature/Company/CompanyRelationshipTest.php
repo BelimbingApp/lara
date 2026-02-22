@@ -154,6 +154,8 @@ test('relationship can be made indefinite', function (): void {
 });
 
 test('active scope filters only active relationships', function (): void {
+    $before = CompanyRelationship::query()->active()->count();
+
     $company1 = Company::factory()->create();
     $company2 = Company::factory()->create();
     $type = RelationshipType::factory()->create();
@@ -187,14 +189,17 @@ test('active scope filters only active relationships', function (): void {
 
     $activeRelationships = CompanyRelationship::query()->active()->get();
 
-    expect($activeRelationships)->toHaveCount(1);
+    expect($activeRelationships)->toHaveCount($before + 1);
 });
 
 test('of type scope filters relationships by type code', function (): void {
+    $beforeCustomer = CompanyRelationship::query()->ofType('customer')->count();
+    $beforeSupplier = CompanyRelationship::query()->ofType('supplier')->count();
+
     $company1 = Company::factory()->create();
     $company2 = Company::factory()->create();
-    $customerType = RelationshipType::factory()->customer()->create();
-    $supplierType = RelationshipType::factory()->supplier()->create();
+    $customerType = RelationshipType::query()->firstOrCreate(['code' => 'customer'], RelationshipType::factory()->customer()->raw());
+    $supplierType = RelationshipType::query()->firstOrCreate(['code' => 'supplier'], RelationshipType::factory()->supplier()->raw());
 
     CompanyRelationship::create([
         'company_id' => $company1->id,
@@ -211,11 +216,13 @@ test('of type scope filters relationships by type code', function (): void {
     $customerRelationships = CompanyRelationship::query()->ofType('customer')->get();
     $supplierRelationships = CompanyRelationship::query()->ofType('supplier')->get();
 
-    expect($customerRelationships)->toHaveCount(1)
-        ->and($supplierRelationships)->toHaveCount(1);
+    expect($customerRelationships)->toHaveCount($beforeCustomer + 1)
+        ->and($supplierRelationships)->toHaveCount($beforeSupplier + 1);
 });
 
 test('external scope filters only external relationships', function (): void {
+    $before = CompanyRelationship::query()->external()->count();
+
     $company1 = Company::factory()->create();
     $company2 = Company::factory()->create();
     $externalType = RelationshipType::factory()->external()->create();
@@ -235,14 +242,14 @@ test('external scope filters only external relationships', function (): void {
 
     $externalRelationships = CompanyRelationship::query()->external()->get();
 
-    expect($externalRelationships)->toHaveCount(1);
+    expect($externalRelationships)->toHaveCount($before + 1);
 });
 
 test('same companies can have multiple relationship types', function (): void {
     $company1 = Company::factory()->create();
     $company2 = Company::factory()->create();
-    $customerType = RelationshipType::factory()->customer()->create();
-    $supplierType = RelationshipType::factory()->supplier()->create();
+    $customerType = RelationshipType::query()->firstOrCreate(['code' => 'customer'], RelationshipType::factory()->customer()->raw());
+    $supplierType = RelationshipType::query()->firstOrCreate(['code' => 'supplier'], RelationshipType::factory()->supplier()->raw());
 
     CompanyRelationship::create([
         'company_id' => $company1->id,

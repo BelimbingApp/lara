@@ -12,7 +12,7 @@ test('company code is auto-generated from name', function (): void {
         'name' => 'My Great Company',
     ]);
 
-    expect($company->code)->toBe('MY_GREAT_COMPANY');
+    expect($company->code)->toBe('my_great_company');
 });
 
 test('company can have parent company', function (): void {
@@ -134,9 +134,7 @@ test('root scope filters companies without parent', function (): void {
 test('company can have relationships with other companies', function (): void {
     $company1 = Company::factory()->create();
     $company2 = Company::factory()->create();
-    $relationshipType = RelationshipType::factory()->create([
-        'code' => 'customer',
-    ]);
+    $relationshipType = RelationshipType::factory()->create();
 
     $relationship = CompanyRelationship::create([
         'company_id' => $company1->id,

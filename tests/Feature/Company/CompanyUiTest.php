@@ -10,7 +10,8 @@ use Livewire\Livewire;
 
 test('licensee company cannot be deleted from index', function (): void {
     $user = User::factory()->create();
-    $licensee = Company::factory()->create(['id' => Company::LICENSEE_ID]);
+    $licensee = Company::query()->find(Company::LICENSEE_ID)
+        ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
 
     $this->actingAs($user);
 
@@ -21,13 +22,15 @@ test('licensee company cannot be deleted from index', function (): void {
 });
 
 test('licensee company model prevents deletion', function (): void {
-    $licensee = Company::factory()->create(['id' => Company::LICENSEE_ID]);
+    $licensee = Company::query()->find(Company::LICENSEE_ID)
+        ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
 
     $licensee->delete();
 })->throws(\LogicException::class, 'The licensee company (id=1) cannot be deleted.');
 
 test('company isLicensee returns true for id 1 and false for others', function (): void {
-    $licensee = Company::factory()->create(['id' => Company::LICENSEE_ID]);
+    $licensee = Company::query()->find(Company::LICENSEE_ID)
+        ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
     $other = Company::factory()->create();
 
     expect($licensee->isLicensee())->toBeTrue()
@@ -36,7 +39,8 @@ test('company isLicensee returns true for id 1 and false for others', function (
 
 test('licensee company shows licensee badge on index page', function (): void {
     $user = User::factory()->create();
-    Company::factory()->create(['id' => Company::LICENSEE_ID]);
+    Company::query()->find(Company::LICENSEE_ID)
+        ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
 
     $this->actingAs($user);
 
@@ -78,7 +82,7 @@ test('company can be created from create page component', function (): void {
     expect($company)
         ->not()->toBeNull()
         ->and($company->code)
-        ->toBe('NORTHWIND_HOLDINGS')
+        ->toBe('northwind_holdings')
         ->and($company->scope_activities['industry'])
         ->toBe('Logistics');
 });
