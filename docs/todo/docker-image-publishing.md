@@ -189,7 +189,7 @@ Output:
 - `docker/docker-compose.yml`
 - `scripts/start-docker.sh`
 - `scripts/stop-docker.sh`
-- `docs/installation/quickstart.md` (update with image usage)
+- `docs/guides/quickstart.md` (update with image usage)
 
 ## Notes
 

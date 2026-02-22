@@ -5,7 +5,7 @@
 
 **Document Type:** Tutorial
 **Purpose:** Explain Vite's critical roles in the Laravel development workflow
-**Related:** [Caddy-Based Development Architecture](../architecture/caddy-development-setup.md)
+**Related:** [Development Setup Guide](../guides/development-setup.md)
 **Last Updated:** 2025-12-02
 
 ---
@@ -230,7 +230,7 @@ Together, these roles make Vite an essential part of modern Laravel development,
 ---
 
 **Related Documentation:**
-- [Caddy-Based Development Architecture](../architecture/caddy-development-setup.md) - Full architecture overview
+- [Development Setup Guide](../guides/development-setup.md) - Full development environment setup
 - [Laravel Vite Documentation](https://laravel.com/docs/vite) - Official Laravel Vite integration guide
 - [Vite Documentation](https://vitejs.dev/) - Complete Vite documentation
 

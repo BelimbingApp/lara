@@ -80,7 +80,7 @@ Relationship types are **configurable** per deployment. Each deployment can cust
 
 To customize relationship types, edit the `relationship_types` array in the Company module config (Config/company.php). You can add, modify, or remove types as needed for your business model. For example, you might combine `supplier` and `agency` into a single `vendor` type, or add industry-specific types like `distributor`, `contractor`, etc.
 
-**Extension Configuration:** Custom extensions can add or override relationship types by merging their own configuration in a Service Provider. See `docs/extensions/config-overrides.md` for details on how extensions can modify configuration.
+**Extension Configuration:** Custom extensions can add or override relationship types by merging their own configuration in a Service Provider. See `docs/guides/extensions/config-overrides.md` for details on how extensions can modify configuration.
 
 **Example:**
 

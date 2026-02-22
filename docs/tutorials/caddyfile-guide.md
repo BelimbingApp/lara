@@ -5,7 +5,7 @@
 
 **Document Type:** Tutorial
 **Purpose:** Explain Caddy and Caddyfile configuration in Belimbing
-**Related:** [Caddy-Based Development Architecture](../architecture/caddy-development-setup.md), [Vite's Roles in Development Architecture](./vite-roles.md)
+**Related:** [Development Setup Guide](../guides/development-setup.md), [Vite's Roles in Development Architecture](./vite-roles.md)
 **Last Updated:** 2025-12-09
 
 ---

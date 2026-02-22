@@ -2,7 +2,7 @@
 
 This module provides **module-aware migration infrastructure** extending Laravel's migration commands. It enables selective migration/rollback by module and automatic seeder discovery.
 
-**See `docs/architecture/database.md` for migration and seeding architecture; `docs/development/database-conventions.md` for detailed naming conventions.**
+**See `docs/architecture/database.md` for migration and seeding architecture (including naming conventions and migration registry).**
 
 ## Key Components
 

@@ -99,7 +99,7 @@ return new class extends Migration {
 
 ### Step 2: Follow Database Standards
 
-Refer to `database/AGENTS.md` for migration standards:
+Refer to `app/Base/Database/AGENTS.md` for migration standards:
 
 - **Primary Keys**: Use `id()` method (creates `UNSIGNED BIGINT`)
 - **Foreign Keys**: Use `foreignId()` method (creates `UNSIGNED BIGINT`)
@@ -410,6 +410,6 @@ return new class extends Migration {
 
 ## Related Documentation
 
-- [Database Migration Guidelines](../database/AGENTS.md) - Core migration standards
+- [Database Migration Guidelines](../../../app/Base/Database/AGENTS.md) - Core migration standards
 - [Extension Configuration Overrides](./config-overrides.md) - Config management
-- [Extension Structure](../../architecture/file-structure.md) - Overall extension architecture
+- [Extension Structure](../../architecture/overview.md) - Overall extension architecture

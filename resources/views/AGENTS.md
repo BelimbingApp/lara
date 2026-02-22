@@ -24,7 +24,7 @@ You are a specialized UI/UX designer focused on responsive design, high-end aest
 - **Text:** `text-ink` (primary), `text-muted` (labels, secondary, placeholders), `text-link` (links, ghost actions)
 - **Accent:** `bg-accent`, `hover:bg-accent-hover`, `text-accent-on` (primary buttons)
 
-Add new tokens in `app.css` when a new role appears; then use them everywhere that role applies. Palette preference: `docs/development/palette-preference.md`.
+Add new tokens in `app.css` when a new role appears; then use them everywhere that role applies. Palette preference: `docs/guides/theming.md`.
 
 ## Spacing
 
