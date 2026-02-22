@@ -157,19 +157,23 @@ read_app_env() {
 check_hosts_entries() {
     local missing_hosts=()
     local result=0
+    local hosts_note=""
+    if is_wsl2; then
+        hosts_note=" (WSL /etc/hosts — separate from Windows hosts)"
+    fi
 
-    # Check Linux /etc/hosts
-    if ! grep -q "^127.0.0.1.*\s${FRONTEND_DOMAIN}\(\s\|$\)" /etc/hosts 2>/dev/null; then
+    # Check Linux /etc/hosts (uses shared domain_in_hosts: any IP, POSIX pattern)
+    if ! domain_in_hosts "$FRONTEND_DOMAIN"; then
         missing_hosts+=("$FRONTEND_DOMAIN")
     fi
 
-    if ! grep -q "^127.0.0.1.*\s${BACKEND_DOMAIN}\(\s\|$\)" /etc/hosts 2>/dev/null; then
+    if ! domain_in_hosts "$BACKEND_DOMAIN"; then
         missing_hosts+=("$BACKEND_DOMAIN")
     fi
 
     if [ ${#missing_hosts[@]} -gt 0 ]; then
         echo ""
-        echo -e "${YELLOW}⚠${NC} The following domains are not in /etc/hosts:"
+        echo -e "${YELLOW}⚠${NC} The following domains are not in /etc/hosts${hosts_note}:"
         for domain in "${missing_hosts[@]}"; do
             echo -e "  ${BULLET} $domain"
         done
