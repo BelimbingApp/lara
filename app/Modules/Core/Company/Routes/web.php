@@ -7,6 +7,9 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
+    // Setup
+    Volt::route('admin/setup/licensee', 'admin.setup.licensee')->name('admin.setup.licensee');
+
     Volt::route('admin/companies', 'companies.index')->name('admin.companies.index');
     Volt::route('admin/companies/create', 'companies.create')->name('admin.companies.create');
     Volt::route('admin/companies/legal-entity-types', 'companies.legal-entity-types')->name('admin.companies.legal-entity-types');
