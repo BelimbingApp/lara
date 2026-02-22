@@ -5,19 +5,19 @@
 
 namespace App\Modules\Core\Company\Database\Seeders\Dev;
 
+use App\Base\Database\Seeders\DevSeeder;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Company\Models\DepartmentType;
-use Illuminate\Database\Seeder;
 
-class DevDepartmentSeeder extends Seeder
+class DevDepartmentSeeder extends DevSeeder
 {
     /**
-     * Run the database seeds.
+     * Seed the database.
      *
      * Seeds standard departments for all existing companies.
      */
-    public function run(): void
+    protected function seed(): void
     {
         Company::query()->chunk(100, function ($companies): void {
             foreach ($companies as $company) {

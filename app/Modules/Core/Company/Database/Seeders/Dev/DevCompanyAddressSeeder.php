@@ -5,21 +5,21 @@
 
 namespace App\Modules\Core\Company\Database\Seeders\Dev;
 
+use App\Base\Database\Seeders\DevSeeder;
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\CompanyRelationship;
 use App\Modules\Core\Company\Models\LegalEntityType;
 use App\Modules\Core\Company\Models\RelationshipType;
-use Illuminate\Database\Seeder;
 
-class DevCompanyAddressSeeder extends Seeder
+class DevCompanyAddressSeeder extends DevSeeder
 {
     /**
-     * Run the database seeds.
+     * Seed the database.
      *
      * Creates realistic test companies, addresses, address links, and company relationships.
      */
-    public function run(): void
+    protected function seed(): void
     {
         $rootCompanies = $this->seedRootCompanies();
         $subsidiaries = $this->seedSubsidiaries($rootCompanies[0]);

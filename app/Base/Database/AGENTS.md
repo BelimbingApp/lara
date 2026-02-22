@@ -108,7 +108,7 @@ php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\R
 | **Development** | `Database/Seeders/Dev/` | `Dev{Description}Seeder` | No (run explicitly) |
 
 - **Production seeders** populate reference/config data needed in all environments.
-- **Development seeders** create fake data for UI work and manual testing. They live in `Dev/` subdirectory with a `Dev` class prefix.
+- **Development seeders** create fake data for UI work and manual testing. They extend `App\Base\Database\Seeders\DevSeeder`, implement `seed()` (not `run()`), and live in `Dev/` subdirectory with a `Dev` class prefix. DevSeeder may only run when `APP_ENV=local` (throws otherwise).
 
 ```bash
 # Run a dev seeder explicitly (note the Dev/ subdirectory in the path)

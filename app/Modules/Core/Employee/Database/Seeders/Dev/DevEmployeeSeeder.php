@@ -5,20 +5,20 @@
 
 namespace App\Modules\Core\Employee\Database\Seeders\Dev;
 
+use App\Base\Database\Seeders\DevSeeder;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Employee\Models\Employee;
-use Illuminate\Database\Seeder;
 
-class DevEmployeeSeeder extends Seeder
+class DevEmployeeSeeder extends DevSeeder
 {
     /**
-     * Run the database seeds.
+     * Seed the database.
      *
      * Creates realistic employee records for existing companies with
      * department placements and supervisor hierarchies.
      */
-    public function run(): void
+    protected function seed(): void
     {
         $stellar = Company::query()->where('name', 'Stellar Industries Sdn Bhd')->first();
         $nusantara = Company::query()->where('name', 'Nusantara Trading Co')->first();
