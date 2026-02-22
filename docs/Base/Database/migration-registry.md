@@ -130,7 +130,7 @@ Business Layer (0300+)
 ### If Module Dependencies Change
 
 1. May need to renumber migrations
-2. Use `migrate:fresh` in development (destructive evolution)
+2. Use `migrate:fresh --seed` in development (destructive evolution; --seed required)
 3. Update registry with new MM_DD assignment
 
 ---

@@ -142,9 +142,17 @@ $driver = DB::connection()->getDriverName(); // 'pgsql', 'mysql', 'sqlite'
 
 ## Development Workflow
 
+### migrate:fresh in Development
+
+`migrate:fresh` is allowed in development. **Must always use `--seed`** so production and dev seeders run:
+
+```bash
+php artisan migrate:fresh --seed
+```
+
 ### Rollback by Batch (Preserve Data)
 
-Never use `migrate:fresh` once you have development data. Use batch rollback:
+When you have development data to preserve, use batch rollback instead of migrate:fresh:
 
 ```bash
 # Check batch numbers

@@ -31,10 +31,8 @@
 
 **Development Commands:**
 ```bash
-# Never use migrate:fresh once you have development data
-php artisan migrate:status              # Check batch numbers
-php artisan migrate:rollback --batch=2  # Rollback specific batch
-php artisan migrate --seed              # Re-run migrations
+# migrate:fresh allowed in development; MUST follow with --seed (runs production + dev seeders)
+php artisan migrate:fresh --seed
 
 # Module-specific testing
 php artisan migrate:rollback --module=Company
@@ -216,8 +214,7 @@ When creating implementation plans:
 - **Not in modules** (too difficult for self-contained module ideal)
 
 ### Migration Philosophy
-- **Never `migrate:fresh`** once development data exists
-- **Use `--batch` rollback** to preserve data
+- **`migrate:fresh --seed`** is the primary development workflow
 - **Rework original migrations** in early stage (no migration-to-migration needed)
 
 ### String Literals
