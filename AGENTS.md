@@ -266,3 +266,13 @@ This project uses nested AGENTS.md files for specialized guidance. Agents should
 | Docs | `docs/AGENTS.md` | Documentation directory structure and placement |
 
 **Cursor users:** `.cursor/rules/ui-architect.mdc` is a thin adapter that triggers on `*.blade.php` and references `resources/views/AGENTS.md`. The AGENTS.md file is the canonical source; do not duplicate rules in `.cursor/rules/`.
+
+## 7. Module-First Placement Guard
+
+Before creating new framework/module assets, verify placement against `docs/architecture/file-structure.md`.
+If the task touches module config, migrations, or seeders, **stop and verify placement/prefix/registration rules first** before creating or moving files.
+
+**Pre-implementation checklist for new module work:**
+
+- **Config:** Module config in module `Config/` (not root `config/`); register with `mergeConfigFrom(__DIR__.'/Config/<name>.php', '<name>')` in the module service provider; keep key stable (`config('<name>...')`). Use root `config/*.php` only for framework-wide defaults.
+- **Migrations & seeders:** Migration location/prefix and seeder strategy → `app/Base/Database/AGENTS.md` and `docs/architecture/database.md`.

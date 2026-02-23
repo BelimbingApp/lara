@@ -5,6 +5,8 @@
 
 namespace App\Base\Menu;
 
+use App\Base\Authz\Contracts\AuthorizationService;
+use App\Base\Authz\DTO\Actor;
 use App\Base\Menu\Services\MenuDiscoveryService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -44,6 +46,7 @@ class MenuServiceProvider extends ServiceProvider
             $registry = $this->app->make(MenuRegistry::class);
             $discovery = $this->app->make(MenuDiscoveryService::class);
             $builder = $this->app->make(MenuBuilder::class);
+            $authorizationService = $this->app->make(AuthorizationService::class);
 
             // Environment-aware caching
             if ($this->app->environment('local')) {
@@ -71,7 +74,22 @@ class MenuServiceProvider extends ServiceProvider
 
             // Build tree with current route for active marking
             $currentRoute = request()->route()?->getName();
-            $menuTree = $builder->build($registry->getAll(), $currentRoute);
+            $user = auth()->user();
+            $actor = new Actor(
+                type: 'human_user',
+                id: (int) $user->getAuthIdentifier(),
+                companyId: $user->getAttribute('company_id') !== null ? (int) $user->getAttribute('company_id') : null,
+            );
+
+            $filteredItems = $registry->getAll()->filter(function (MenuItem $item) use ($authorizationService, $actor): bool {
+                if ($item->permission === null) {
+                    return true;
+                }
+
+                return $authorizationService->can($actor, $item->permission)->allowed;
+            });
+
+            $menuTree = $builder->build($filteredItems, $currentRoute);
 
             $view->with('menuTree', $menuTree);
         });

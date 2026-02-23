@@ -41,9 +41,15 @@ Route::middleware('auth')->group(function () {
         ->name('password.confirm');
 
     // User admin
-    Volt::route('admin/users', 'users.index')->name('admin.users.index');
-    Volt::route('admin/users/create', 'users.create')->name('admin.users.create');
-    Volt::route('admin/users/{user}', 'users.show')->name('admin.users.show');
+    Volt::route('admin/users', 'users.index')
+        ->middleware('authz:core.user.list')
+        ->name('admin.users.index');
+    Volt::route('admin/users/create', 'users.create')
+        ->middleware('authz:core.user.create')
+        ->name('admin.users.create');
+    Volt::route('admin/users/{user}', 'users.show')
+        ->middleware('authz:core.user.view')
+        ->name('admin.users.show');
 
     // User settings
     Route::redirect('settings', 'settings/profile');

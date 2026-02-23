@@ -10,6 +10,7 @@ return [
             'label' => 'User Management',
             'icon' => 'heroicon-o-users',
             'route' => 'admin.users.index',
+            'permission' => 'core.user.list',
             'parent' => 'admin',
             'position' => 205,
         ],

@@ -1938,6 +1938,10 @@ PA System:
 
 - `docs/brief.md` - BLB vision (AI-native architecture)
 - `docs/architecture/user-employee-company.md` - User/employee model
+- `docs/architecture/authorization.md` - shared AuthZ model for users and delegated personal agents
+- `docs/todo/ai-personal-agent/00-staged-delivery-plan.md` - staged implementation plan with testable UI per stage
+- `docs/todo/ai-personal-agent/01-stage-0-pa-playground.md` - concrete Stage 0 implementation checklist
+- `docs/todo/authorization/00-prd.md` - AuthZ delivery plan and prerequisites for PA approval flows
 - OpenClaw repository: `/home/kiat/repo/openclaw/` - Reference implementation
 
 ---

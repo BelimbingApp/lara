@@ -16,6 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // and generate https:// URLs behind the proxy.
         $middleware->trustProxies(at: '*');
 
+        $middleware->alias([
+            'authz' => \App\Base\Authz\Middleware\AuthorizeCapability::class,
+        ]);
+
         // Add database connection recovery middleware to web group
         $middleware->web(append: [
             \App\Base\Database\Middleware\DatabaseConnectionRecovery::class,

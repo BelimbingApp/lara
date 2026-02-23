@@ -1,6 +1,7 @@
 <?php
 
 return [
+    App\Base\Authz\AuthzServiceProvider::class,
     App\Base\Database\ServiceProvider::class,
     App\Base\Menu\MenuServiceProvider::class,
     App\Base\Routing\RouteServiceProvider::class,

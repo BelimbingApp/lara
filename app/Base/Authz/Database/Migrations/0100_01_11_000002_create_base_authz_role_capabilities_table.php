@@ -1,0 +1,41 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+use App\Base\Authz\Database\Seeders\AuthzRoleCapabilitySeeder;
+use App\Base\Database\Concerns\RegistersSeeders;
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    use RegistersSeeders;
+
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('base_authz_role_capabilities', function (Blueprint $table): void {
+            $table->id();
+            $table->foreignId('role_id')->constrained('base_authz_roles')->cascadeOnDelete();
+            $table->foreignId('capability_id')->constrained('base_authz_capabilities')->cascadeOnDelete();
+            $table->timestamps();
+
+            $table->unique(['role_id', 'capability_id']);
+        });
+
+        $this->registerSeeder(AuthzRoleCapabilitySeeder::class);
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('base_authz_role_capabilities');
+        $this->unregisterSeeder(AuthzRoleCapabilitySeeder::class);
+    }
+};
