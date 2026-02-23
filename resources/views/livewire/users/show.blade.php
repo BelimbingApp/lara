@@ -1,5 +1,10 @@
 <?php
 
+use App\Base\Authz\DTO\Actor;
+use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Authz\Models\PrincipalRole;
+use App\Base\Authz\Models\Role;
+use App\Base\Authz\Services\EffectivePermissions;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Hash;
@@ -15,6 +20,8 @@ new class extends Component
     public string $password = '';
 
     public string $password_confirmation = '';
+
+    public array $selectedRoleIds = [];
 
     public function mount(User $user): void
     {
@@ -85,10 +92,80 @@ new class extends Component
         Session::flash('success', __('Password updated successfully.'));
     }
 
+    /**
+     * Assign selected roles to this user.
+     */
+    public function assignRoles(): void
+    {
+        if (empty($this->selectedRoleIds) || $this->user->company_id === null) {
+            return;
+        }
+
+        foreach ($this->selectedRoleIds as $roleId) {
+            PrincipalRole::query()->firstOrCreate([
+                'company_id' => $this->user->company_id,
+                'principal_type' => PrincipalType::HUMAN_USER->value,
+                'principal_id' => $this->user->id,
+                'role_id' => (int) $roleId,
+            ]);
+        }
+
+        $this->selectedRoleIds = [];
+    }
+
+    /**
+     * Remove a role assignment from this user.
+     */
+    public function removeRole(int $principalRoleId): void
+    {
+        PrincipalRole::query()
+            ->where('id', $principalRoleId)
+            ->where('principal_id', $this->user->id)
+            ->where('principal_type', PrincipalType::HUMAN_USER->value)
+            ->delete();
+    }
+
     public function with(): array
     {
+        $assignedRoles = PrincipalRole::query()
+            ->with('role')
+            ->where('principal_type', PrincipalType::HUMAN_USER->value)
+            ->where('principal_id', $this->user->id)
+            ->get();
+
+        $assignedRoleIds = $assignedRoles->pluck('role_id')->all();
+
+        $availableRoles = Role::query()
+            ->whereNull('company_id')
+            ->where('is_system', true)
+            ->whereNotIn('id', $assignedRoleIds)
+            ->orderBy('name')
+            ->get();
+
+        $effectivePermissions = [];
+
+        if ($this->user->company_id !== null) {
+            $actor = new Actor(
+                type: PrincipalType::HUMAN_USER,
+                id: $this->user->id,
+                companyId: (int) $this->user->company_id,
+            );
+
+            $permissions = EffectivePermissions::forActor($actor);
+            $allowed = $permissions->allowed();
+            sort($allowed);
+
+            foreach ($allowed as $capability) {
+                $domain = explode('.', $capability, 2)[0];
+                $effectivePermissions[$domain][] = $capability;
+            }
+        }
+
         return [
             'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
+            'assignedRoles' => $assignedRoles,
+            'availableRoles' => $availableRoles,
+            'effectivePermissions' => $effectivePermissions,
         ];
     }
 }; ?>
@@ -206,6 +283,114 @@ new class extends Component
                 <div>
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Updated') }}</dt>
                     <dd class="mt-0.5 text-sm text-muted tabular-nums">{{ $user->updated_at->format('Y-m-d H:i') }}</dd>
+                </div>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card>
+            <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-4">{{ __('Roles & Permissions') }}</h3>
+
+            {{-- Assigned Roles --}}
+            <div class="mb-4">
+                <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Assigned Roles') }}</dt>
+                <dd>
+                    @if($assignedRoles->isEmpty())
+                        <span class="text-sm text-muted">{{ __('No roles assigned.') }}</span>
+                    @else
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($assignedRoles as $assignment)
+                                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-subtle text-ink">
+                                    {{ $assignment->role->name }}
+                                    <button
+                                        type="button"
+                                        wire:click="removeRole({{ $assignment->id }})"
+                                        wire:confirm="{{ __('Remove :role from this user?', ['role' => $assignment->role->name]) }}"
+                                        class="ml-0.5 text-muted hover:text-status-danger transition-colors"
+                                        title="{{ __('Remove role') }}"
+                                    >
+                                        <x-icon name="heroicon-o-x-mark" class="w-3 h-3" />
+                                    </button>
+                                </span>
+                            @endforeach
+                        </div>
+                    @endif
+                </dd>
+            </div>
+
+            {{-- Assign Roles --}}
+            @if($availableRoles->isNotEmpty())
+                <div
+                    x-data="{ roleFilter: '', selected: @entangle('selectedRoleIds') }"
+                    class="mb-6"
+                >
+                    <label class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Add Roles') }}</label>
+                    <div class="mt-1">
+                        <x-ui.search-input
+                            x-model="roleFilter"
+                            placeholder="{{ __('Search roles...') }}"
+                        />
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 mt-2 max-h-48 overflow-y-auto">
+                        @foreach($availableRoles as $role)
+                            <label
+                                x-show="!roleFilter || @js(strtolower($role->name)).includes(roleFilter.toLowerCase()) || @js(strtolower($role->code)).includes(roleFilter.toLowerCase())"
+                                class="flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-surface-subtle cursor-pointer"
+                            >
+                                <input
+                                    type="checkbox"
+                                    value="{{ $role->id }}"
+                                    x-model="selected"
+                                    class="rounded border-border-input text-accent focus:ring-accent"
+                                >
+                                <span class="text-ink truncate" title="{{ $role->description ?? $role->name }}">{{ $role->name }}</span>
+                            </label>
+                        @endforeach
+                    </div>
+                    <div x-show="selected.length > 0" x-cloak class="mt-2">
+                        <x-ui.button variant="primary" size="sm" wire:click="assignRoles">
+                            {{ __('Assign') }} (<span x-text="selected.length"></span>)
+                        </x-ui.button>
+                    </div>
+                </div>
+            @endif
+
+            {{-- Effective Permissions --}}
+            <div x-data="{ open: false }">
+                <button
+                    @click="open = !open"
+                    class="flex items-center gap-2 w-full text-left"
+                    type="button"
+                >
+                    <span class="text-[12px] shrink-0 text-accent w-3.5 text-center" aria-hidden="true">
+                        <span x-show="!open">⮞</span>
+                        <span x-show="open">⮟</span>
+                    </span>
+                    <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                        {{ __('Effective Permissions') }}
+                        <x-ui.badge>{{ collect($effectivePermissions)->flatten()->count() }}</x-ui.badge>
+                    </h3>
+                </button>
+
+                <div
+                    x-show="open"
+                    x-transition:enter="transition ease-out duration-200"
+                    x-transition:enter-start="opacity-0 -translate-y-1"
+                    x-transition:enter-end="opacity-100 translate-y-0"
+                    class="mt-3"
+                    style="display: none;"
+                >
+                    @forelse($effectivePermissions as $domain => $capabilities)
+                        <div class="mb-3">
+                            <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">{{ $domain }}</dt>
+                            <dd class="flex flex-wrap gap-1">
+                                @foreach($capabilities as $capability)
+                                    <x-ui.badge variant="success">{{ $capability }}</x-ui.badge>
+                                @endforeach
+                            </dd>
+                        </div>
+                    @empty
+                        <p class="text-sm text-muted">{{ __('No permissions. Assign a role or company first.') }}</p>
+                    @endforelse
                 </div>
             </div>
         </x-ui.card>

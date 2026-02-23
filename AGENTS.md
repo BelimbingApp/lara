@@ -21,6 +21,18 @@ Think of Laravel as the Level 0 foundation and BLB as a Level 1 framework built 
 - **Deep Modules:** Modules should provide powerful functionality through simple interfaces. Hide complexity; do not leak implementation details.
 - **Prefer strategic thinking over tactical patches.** Resist quick fixes; aim for structural simplicity.
 
+### Dev Seed Rule (MANDATORY)
+**After ANY action that truncates or destroys database data** — including `migrate:fresh`, `migrate:reset`, running tests that use `RefreshDatabase`, or any manual table truncation — **you MUST reseed the dev environment** by running:
+```bash
+php artisan migrate:fresh --seed --dev
+```
+If the above fails due to a PostgreSQL sequence collision, fix it and retry:
+```bash
+php artisan tinker --execute="DB::statement(\"SELECT setval('companies_id_seq', (SELECT COALESCE(MAX(id), 0) FROM companies));\");"
+php artisan migrate --seed --dev
+```
+An empty database is not usable — the user cannot log in without dev seeds. See `app/Base/Database/AGENTS.md` for full details.
+
 ## 3. Laravel Customization: Embrace When Needed
 
 **BLB is NOT a pure Laravel application.** It's a framework built on Laravel.

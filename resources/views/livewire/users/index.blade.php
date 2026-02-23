@@ -1,5 +1,9 @@
 <?php
 
+use App\Base\Authz\Contracts\AuthorizationService;
+use App\Base\Authz\DTO\Actor;
+use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Authz\Exceptions\AuthorizationDeniedException;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
@@ -18,6 +22,18 @@ new class extends Component
 
     public function with(): array
     {
+        $authUser = auth()->user();
+
+        $actor = new Actor(
+            type: PrincipalType::HUMAN_USER,
+            id: (int) $authUser->getAuthIdentifier(),
+            companyId: $authUser->company_id !== null ? (int) $authUser->company_id : null,
+        );
+
+        $canDelete = app(AuthorizationService::class)
+            ->can($actor, 'core.user.delete')
+            ->allowed;
+
         return [
             'users' => User::query()
                 ->with('company')
@@ -29,14 +45,31 @@ new class extends Component
                 })
                 ->latest()
                 ->paginate(10),
+            'canDelete' => $canDelete,
         ];
     }
 
     public function delete(int $userId): void
     {
+        $authUser = auth()->user();
+
+        $actor = new Actor(
+            type: PrincipalType::HUMAN_USER,
+            id: (int) $authUser->getAuthIdentifier(),
+            companyId: $authUser->company_id !== null ? (int) $authUser->company_id : null,
+        );
+
+        try {
+            app(AuthorizationService::class)->authorize($actor, 'core.user.delete');
+        } catch (AuthorizationDeniedException) {
+            Session::flash('error', __('You do not have permission to delete users.'));
+
+            return;
+        }
+
         $user = User::findOrFail($userId);
 
-        if ($user->id === auth()->id()) {
+        if ($user->id === $authUser->getAuthIdentifier()) {
             Session::flash('error', __('You cannot delete your own account.'));
 
             return;
@@ -125,8 +158,8 @@ new class extends Component
                                             size="sm"
                                             wire:click="delete({{ $user->id }})"
                                             wire:confirm="{{ __('Are you sure you want to delete this user?') }}"
-                                            :disabled="$user->id === auth()->id()"
-                                            :title="$user->id === auth()->id() ? __('You cannot delete your own account') : null"
+                                            :disabled="!$canDelete || $user->id === auth()->id()"
+                                            :title="!$canDelete ? __('You do not have permission to delete users') : ($user->id === auth()->id() ? __('You cannot delete your own account') : null)"
                                         >
                                             <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                             {{ __('Delete') }}

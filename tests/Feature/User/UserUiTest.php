@@ -1,8 +1,53 @@
 <?php
 
+use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Authz\Models\PrincipalRole;
+use App\Base\Authz\Models\Role;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
+use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
+
+beforeEach(function (): void {
+    $roles = config('authz.roles', []);
+
+    foreach ($roles as $code => $roleDef) {
+        $role = Role::query()->firstOrCreate(
+            ['company_id' => null, 'code' => $code],
+            ['name' => $roleDef['name'], 'description' => $roleDef['description'] ?? null, 'is_system' => true]
+        );
+
+        $now = now();
+
+        foreach ($roleDef['capabilities'] as $capKey) {
+            DB::table('base_authz_role_capabilities')->insertOrIgnore([
+                'role_id' => $role->id,
+                'capability_key' => strtolower($capKey),
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+        }
+    }
+});
+
+/**
+ * Create a user with core_admin role for tests that need authz capabilities.
+ */
+function createAdminUser(): User
+{
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $role = Role::query()->where('code', 'core_admin')->whereNull('company_id')->firstOrFail();
+
+    PrincipalRole::query()->create([
+        'company_id' => $company->id,
+        'principal_type' => PrincipalType::HUMAN_USER->value,
+        'principal_id' => $user->id,
+        'role_id' => $role->id,
+    ]);
+
+    return $user;
+}
 
 test('guests are redirected to login from user pages', function (): void {
     $user = User::factory()->create();
@@ -12,8 +57,8 @@ test('guests are redirected to login from user pages', function (): void {
     $this->get(route('admin.users.show', $user))->assertRedirect(route('login'));
 });
 
-test('authenticated users can view user pages', function (): void {
-    $user = User::factory()->create();
+test('authenticated users with capability can view user pages', function (): void {
+    $user = createAdminUser();
     $other = User::factory()->create();
 
     $this->actingAs($user);
@@ -23,8 +68,20 @@ test('authenticated users can view user pages', function (): void {
     $this->get(route('admin.users.show', $other))->assertOk();
 });
 
+test('authenticated users without capability are denied', function (): void {
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $other = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $this->get(route('admin.users.index'))->assertStatus(403);
+    $this->get(route('admin.users.create'))->assertStatus(403);
+    $this->get(route('admin.users.show', $other))->assertStatus(403);
+});
+
 test('user can be created from create page component', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $this->actingAs($actor);
 
     Livewire::test('users.create')
@@ -44,7 +101,7 @@ test('user can be created from create page component', function (): void {
 });
 
 test('user can be created with company', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $company = Company::factory()->create();
     $this->actingAs($actor);
 
@@ -65,7 +122,7 @@ test('user can be created with company', function (): void {
 });
 
 test('user fields can be inline edited from show page', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $user = User::factory()->create(['name' => 'Old Name', 'email' => 'old@example.com']);
     $this->actingAs($actor);
 
@@ -83,7 +140,7 @@ test('user fields can be inline edited from show page', function (): void {
 });
 
 test('email change resets email_verified_at', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $user = User::factory()->create([
         'email' => 'verified@example.com',
         'email_verified_at' => now(),
@@ -99,7 +156,7 @@ test('email change resets email_verified_at', function (): void {
 });
 
 test('company can be changed from show page', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $company = Company::factory()->create();
     $user = User::factory()->create(['company_id' => null]);
     $this->actingAs($actor);
@@ -118,7 +175,7 @@ test('company can be changed from show page', function (): void {
 });
 
 test('password can be updated from show page', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $user = User::factory()->create();
     $this->actingAs($actor);
 
@@ -130,7 +187,7 @@ test('password can be updated from show page', function (): void {
 });
 
 test('password update requires confirmation', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $user = User::factory()->create();
     $this->actingAs($actor);
 
@@ -141,8 +198,29 @@ test('password update requires confirmation', function (): void {
         ->assertHasErrors(['password']);
 });
 
+test('user without delete capability cannot delete users', function (): void {
+    $company = Company::factory()->create();
+    $viewer = User::factory()->create(['company_id' => $company->id]);
+    $viewerRole = Role::query()->where('code', 'user_viewer')->whereNull('company_id')->firstOrFail();
+
+    PrincipalRole::query()->create([
+        'company_id' => $company->id,
+        'principal_type' => PrincipalType::HUMAN_USER->value,
+        'principal_id' => $viewer->id,
+        'role_id' => $viewerRole->id,
+    ]);
+
+    $other = User::factory()->create();
+    $this->actingAs($viewer);
+
+    Livewire::test('users.index')
+        ->call('delete', $other->id);
+
+    expect(User::query()->find($other->id))->not()->toBeNull();
+});
+
 test('user can be deleted from index and cannot delete self', function (): void {
-    $actor = User::factory()->create();
+    $actor = createAdminUser();
     $other = User::factory()->create();
     $this->actingAs($actor);
 

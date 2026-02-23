@@ -86,6 +86,30 @@ final class EffectivePermissions
     }
 
     /**
+     * All capabilities the actor is effectively allowed.
+     *
+     * Merges direct allows and role grants, then subtracts explicit denies.
+     *
+     * @return array<int, string>
+     */
+    public function allowed(): array
+    {
+        $allowed = array_keys($this->directAllows) + array_keys($this->roleGrants);
+
+        return array_values(array_unique(array_diff($allowed, array_keys($this->directDenies))));
+    }
+
+    /**
+     * All capabilities explicitly denied for this actor.
+     *
+     * @return array<int, string>
+     */
+    public function denied(): array
+    {
+        return array_keys($this->directDenies);
+    }
+
+    /**
      * Evaluate whether the actor has the given capability.
      *
      * Priority: explicit deny > explicit allow > role grant > deny.
