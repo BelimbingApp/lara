@@ -18,8 +18,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
     #[Validate('required|string')]
     public string $password = '';
 
-    public bool $remember = false;
-
     /**
      * Handle an incoming authentication request.
      */
@@ -29,7 +27,7 @@ new #[Layout('components.layouts.auth')] class extends Component {
 
         $this->ensureIsNotRateLimited();
 
-        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password], $this->remember)) {
+        if (! Auth::attempt(['email' => $this->email, 'password' => $this->password])) {
             RateLimiter::hit($this->throttleKey());
 
             throw ValidationException::withMessages([
@@ -110,9 +108,6 @@ new #[Layout('components.layouts.auth')] class extends Component {
                 </a>
             @endif
         </div>
-
-        <!-- Remember Me -->
-        <x-ui.checkbox wire:model="remember" label="{{ __('Remember me') }}" />
 
         <div class="flex items-center justify-end">
             <x-ui.button type="submit" variant="primary" class="w-full" data-test="login-button">
