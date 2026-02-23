@@ -192,4 +192,4 @@ VITE_REVERB_SCHEME="${REVERB_SCHEME}"
 ## 6. Related Documentation
 
 -   `docs/architecture/database.md`: Database architecture and module conventions.
--   `docs/architecture/overview.md`: Full project directory layout.
+-   `docs/architecture/file-structure.md`: Full project directory layout.

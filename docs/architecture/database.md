@@ -309,4 +309,4 @@ Business Layer (0300+)
 ## 7. Related Documentation
 
 -   `app/Base/Database/AGENTS.md`: Migrate/seeding CLI (e.g. `migrate --seed`, `--module`, `--seeder`).
--   `docs/architecture/overview.md`: Full project directory layout.
+-   `docs/architecture/file-structure.md`: Full project directory layout.

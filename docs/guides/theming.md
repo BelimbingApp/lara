@@ -475,7 +475,7 @@ php artisan vendor:publish --tag=acme-theme
 ## Related Documents
 
 - `docs/brief.md` - BLB's customization philosophy
-- `docs/architecture/overview.md` - Module organization
+- `docs/architecture/file-structure.md` - Module organization
 
 ---
 
