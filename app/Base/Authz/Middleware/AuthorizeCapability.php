@@ -7,6 +7,7 @@ namespace App\Base\Authz\Middleware;
 
 use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\DTO\Actor;
+use App\Base\Authz\Enums\PrincipalType;
 use App\Base\Authz\Exceptions\AuthorizationDeniedException;
 use Closure;
 use Illuminate\Http\Request;
@@ -30,7 +31,7 @@ class AuthorizeCapability
         $companyId = $user->getAttribute('company_id');
 
         $actor = new Actor(
-            type: 'human_user',
+            type: $this->resolvePrincipalType($user),
             id: (int) $user->getAuthIdentifier(),
             companyId: $companyId !== null ? (int) $companyId : null,
         );
@@ -44,5 +45,20 @@ class AuthorizeCapability
         }
 
         return $next($request);
+    }
+
+    /**
+     * Resolve the principal type from the authenticated user.
+     *
+     * Checks for a principalType() method on the user model,
+     * falling back to HUMAN_USER for standard web authentication.
+     */
+    private function resolvePrincipalType(mixed $user): PrincipalType
+    {
+        if (method_exists($user, 'principalType')) {
+            return $user->principalType();
+        }
+
+        return PrincipalType::HUMAN_USER;
     }
 }

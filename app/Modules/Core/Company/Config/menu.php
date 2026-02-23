@@ -10,6 +10,7 @@ return [
             'label' => 'Companies',
             'icon' => 'heroicon-o-building-office',
             'route' => 'admin.companies.index',
+            'permission' => 'core.company.list',
             'parent' => 'admin',
             'position' => 220,
         ],

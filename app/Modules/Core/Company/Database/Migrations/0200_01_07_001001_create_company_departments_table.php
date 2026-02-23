@@ -3,16 +3,12 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-use App\Base\Database\Concerns\RegistersSeeders;
-use App\Modules\Core\Company\Database\Seeders\DepartmentSeeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    use RegistersSeeders;
-
     /**
      * Run the migrations.
      */
@@ -32,8 +28,6 @@ return new class extends Migration
             // One department type per company
             $table->unique(['company_id', 'department_type_id']);
         });
-
-        $this->registerSeeder(DepartmentSeeder::class);
     }
 
     /**
@@ -42,6 +36,5 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('company_departments');
-        $this->unregisterSeeder(DepartmentSeeder::class);
     }
 };

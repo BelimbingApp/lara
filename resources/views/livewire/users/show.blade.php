@@ -99,6 +99,15 @@ new class extends Component
     <div class="space-y-section-gap">
         <x-ui.page-header :title="$user->name" :subtitle="__('User details')">
             <x-slot name="actions">
+                @if($user->id !== auth()->id() && !session('impersonation.original_user_id'))
+                    <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
+                        @csrf
+                        <x-ui.button type="submit" variant="ghost" title="{{ __('View as this user') }}">
+                            <x-icon name="heroicon-o-eye" class="w-4 h-4" />
+                            {{ __('Impersonate') }}
+                        </x-ui.button>
+                    </form>
+                @endif
                 <x-ui.button variant="ghost" as="a" href="{{ route('admin.users.index') }}" wire:navigate>
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                     {{ __('Back') }}

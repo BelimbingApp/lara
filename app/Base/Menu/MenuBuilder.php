@@ -48,13 +48,20 @@ class MenuBuilder
             ->values();
 
         return $children->map(function (MenuItem $item) use ($items) {
+            $childTree = $this->buildTree($items, $item->id);
+
+            // Hide containers that have no visible children after permission filtering
+            if ($item->isContainer() && empty($childTree)) {
+                return null;
+            }
+
             return [
                 'item' => $item,
                 'is_active' => false,
                 'has_active_child' => false,
-                'children' => $this->buildTree($items, $item->id),
+                'children' => $childTree,
             ];
-        })->all();
+        })->filter()->values()->all();
     }
 
     /**

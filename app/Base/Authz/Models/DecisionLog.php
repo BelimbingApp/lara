@@ -5,10 +5,19 @@
 
 namespace App\Base\Authz\Models;
 
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\MassPrunable;
 use Illuminate\Database\Eloquent\Model;
 
 class DecisionLog extends Model
 {
+    use MassPrunable;
+
+    /**
+     * Default retention period in days.
+     */
+    private const RETENTION_DAYS = 90;
+
     /**
      * @var string
      */
@@ -42,4 +51,14 @@ class DecisionLog extends Model
         'context' => 'array',
         'occurred_at' => 'datetime',
     ];
+
+    /**
+     * Prune decision logs older than the configured retention period.
+     */
+    public function prunable(): Builder
+    {
+        $days = (int) config('authz.decision_log_retention_days', self::RETENTION_DAYS);
+
+        return static::query()->where('occurred_at', '<', now()->subDays($days));
+    }
 }

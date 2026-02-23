@@ -112,6 +112,14 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $user->created_at->format('Y-m-d H:i') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     <div class="flex items-center justify-end gap-2">
+                                        @if($user->id !== auth()->id() && !session('impersonation.original_user_id'))
+                                            <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
+                                                @csrf
+                                                <x-ui.button type="submit" variant="ghost" size="sm" title="{{ __('View as this user') }}">
+                                                    <x-icon name="heroicon-o-eye" class="w-4 h-4" />
+                                                </x-ui.button>
+                                            </form>
+                                        @endif
                                         <x-ui.button
                                             variant="danger"
                                             size="sm"

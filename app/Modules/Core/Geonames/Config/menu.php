@@ -9,6 +9,7 @@ return [
             'id' => 'admin.geonames',
             'label' => 'Geonames',
             'icon' => 'heroicon-o-globe-alt',
+            'permission' => 'core.geonames.list',
             'parent' => 'admin',
             'position' => 200,
         ],

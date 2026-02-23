@@ -10,6 +10,7 @@ return [
             'label' => 'Employees',
             'icon' => 'heroicon-o-user-group',
             'route' => 'admin.employees.index',
+            'permission' => 'core.employee.list',
             'parent' => 'admin',
             'position' => 230,
         ],

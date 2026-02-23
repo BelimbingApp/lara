@@ -6,15 +6,18 @@
 namespace App\Base\Authz\Database\Seeders;
 
 use App\Base\Authz\Capability\CapabilityRegistry;
-use App\Base\Authz\Models\Capability;
 use App\Base\Authz\Models\Role;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 use RuntimeException;
 
 class AuthzRoleCapabilitySeeder extends Seeder
 {
     /**
      * Run the database seeds.
+     *
+     * Maps role capability keys from config. Uses string keys
+     * directly — no capabilities table dependency.
      */
     public function run(): void
     {
@@ -34,22 +37,39 @@ class AuthzRoleCapabilitySeeder extends Seeder
                 throw new RuntimeException("Missing role [$roleCode] before seeding role capabilities.");
             }
 
-            $capabilityIds = [];
+            $existingKeys = DB::table('base_authz_role_capabilities')
+                ->where('role_id', $role->id)
+                ->pluck('capability_key')
+                ->all();
+
+            $desiredKeys = [];
 
             foreach ($roleConfig['capabilities'] as $capabilityKey) {
+                $capabilityKey = strtolower($capabilityKey);
                 $capabilityRegistry->assertKnown($capabilityKey);
-
-                $capability = Capability::query()->where('key', $capabilityKey)->first();
-
-                if ($capability === null) {
-                    throw new RuntimeException("Missing capability [$capabilityKey] before role mapping.");
-                }
-
-                $capabilityIds[] = $capability->id;
+                $desiredKeys[] = $capabilityKey;
             }
 
-            // Keep role templates deterministic across repeated seeding.
-            $role->capabilities()->sync($capabilityIds);
+            $toInsert = array_diff($desiredKeys, $existingKeys);
+            $toDelete = array_diff($existingKeys, $desiredKeys);
+
+            if (! empty($toDelete)) {
+                DB::table('base_authz_role_capabilities')
+                    ->where('role_id', $role->id)
+                    ->whereIn('capability_key', $toDelete)
+                    ->delete();
+            }
+
+            $now = now();
+
+            foreach ($toInsert as $key) {
+                DB::table('base_authz_role_capabilities')->insert([
+                    'role_id' => $role->id,
+                    'capability_key' => $key,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+            }
         }
     }
 }

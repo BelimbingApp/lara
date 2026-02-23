@@ -7,6 +7,7 @@ namespace App\Base\Menu;
 
 use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\DTO\Actor;
+use App\Base\Authz\Enums\PrincipalType;
 use App\Base\Menu\Services\MenuDiscoveryService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -76,7 +77,7 @@ class MenuServiceProvider extends ServiceProvider
             $currentRoute = request()->route()?->getName();
             $user = auth()->user();
             $actor = new Actor(
-                type: 'human_user',
+                type: PrincipalType::HUMAN_USER,
                 id: (int) $user->getAuthIdentifier(),
                 companyId: $user->getAttribute('company_id') !== null ? (int) $user->getAttribute('company_id') : null,
             );

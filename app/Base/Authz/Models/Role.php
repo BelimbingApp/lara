@@ -6,7 +6,6 @@
 namespace App\Base\Authz\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
@@ -33,16 +32,6 @@ class Role extends Model
     protected $casts = [
         'is_system' => 'boolean',
     ];
-
-    public function capabilities(): BelongsToMany
-    {
-        return $this->belongsToMany(
-            Capability::class,
-            'base_authz_role_capabilities',
-            'role_id',
-            'capability_id'
-        )->withTimestamps();
-    }
 
     public function principalRoles(): HasMany
     {

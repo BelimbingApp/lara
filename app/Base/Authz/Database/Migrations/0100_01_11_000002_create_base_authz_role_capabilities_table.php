@@ -21,10 +21,11 @@ return new class extends Migration
         Schema::create('base_authz_role_capabilities', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('role_id')->constrained('base_authz_roles')->cascadeOnDelete();
-            $table->foreignId('capability_id')->constrained('base_authz_capabilities')->cascadeOnDelete();
+            $table->string('capability_key');
             $table->timestamps();
 
-            $table->unique(['role_id', 'capability_id']);
+            $table->unique(['role_id', 'capability_key']);
+            $table->index('capability_key');
         });
 
         $this->registerSeeder(AuthzRoleCapabilitySeeder::class);

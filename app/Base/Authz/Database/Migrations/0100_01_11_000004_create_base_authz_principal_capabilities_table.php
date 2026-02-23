@@ -17,14 +17,18 @@ return new class extends Migration
         Schema::create('base_authz_principal_capabilities', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('company_id')->nullable()->index();
-            $table->string('principal_type', 40); // user | personal_agent
+            $table->string('principal_type', 40);
             $table->unsignedBigInteger('principal_id');
-            $table->foreignId('capability_id')->constrained('base_authz_capabilities')->cascadeOnDelete();
+            $table->string('capability_key');
             $table->boolean('is_allowed')->default(true);
             $table->timestamps();
 
             $table->index(['principal_type', 'principal_id']);
-            $table->unique(['company_id', 'principal_type', 'principal_id', 'capability_id'], 'base_authz_principal_caps_unique');
+            $table->index('capability_key');
+            $table->unique(
+                ['company_id', 'principal_type', 'principal_id', 'capability_key'],
+                'base_authz_principal_caps_unique'
+            );
         });
     }
 

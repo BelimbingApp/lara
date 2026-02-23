@@ -10,6 +10,7 @@ return [
             'label' => 'Addresses',
             'icon' => 'heroicon-o-map-pin',
             'route' => 'admin.addresses.index',
+            'permission' => 'core.address.list',
             'parent' => 'admin',
             'position' => 210,
         ],

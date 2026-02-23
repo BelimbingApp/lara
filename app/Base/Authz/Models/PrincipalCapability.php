@@ -6,7 +6,6 @@
 namespace App\Base\Authz\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PrincipalCapability extends Model
 {
@@ -22,7 +21,7 @@ class PrincipalCapability extends Model
         'company_id',
         'principal_type',
         'principal_id',
-        'capability_id',
+        'capability_key',
         'is_allowed',
     ];
 
@@ -32,9 +31,4 @@ class PrincipalCapability extends Model
     protected $casts = [
         'is_allowed' => 'boolean',
     ];
-
-    public function capability(): BelongsTo
-    {
-        return $this->belongsTo(Capability::class, 'capability_id');
-    }
 }

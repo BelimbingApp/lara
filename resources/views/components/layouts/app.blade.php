@@ -14,6 +14,9 @@
     @endif
 </head>
 <body class="h-screen overflow-hidden bg-surface-page flex flex-col">
+    {{-- Impersonation Banner --}}
+    <x-layouts.impersonation-banner />
+
     {{-- Top Bar --}}
     <x-layouts.top-bar />
 
