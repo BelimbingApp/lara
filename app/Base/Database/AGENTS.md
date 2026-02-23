@@ -2,7 +2,24 @@
 
 This module provides **module-aware migration infrastructure** extending Laravel's migration commands. It enables selective migration/rollback by module and automatic seeder discovery.
 
-**See `docs/architecture/database.md` for migration and seeding architecture (including naming conventions and migration registry).**
+**Full architecture:** [docs/architecture/database.md](../../../docs/architecture/database.md) — naming conventions, migration registry, table naming, dependency graph.
+
+## Migration file names (brief)
+
+- **Format:** `YYYY_MM_DD_HHMMSS_description.php`
+- **Layer prefixes (year):** `0001` Laravel core · `0100` Base · `0200` Core · `0300+` Business · `2026+` Extensions
+- **Module id:** Within a layer, `MM_DD` identifies the module (e.g. `0200_01_03_*` = Geonames). See the **Migration Registry** in `docs/architecture/database.md` for assigned prefixes and dependencies.
+- **Hard rule:** For `app/Base/*` and `app/Modules/*/*`, do **not** use real calendar year prefixes. Use layered prefixes (`0100`, `0200`, `0300+`) only. Real years (`2026+`) are for extensions.
+
+### Naming examples
+
+- **Base module:** `0100_01_11_000000_create_base_authz_roles_table.php`
+- **Core module:** `0200_01_20_000000_create_users_table.php`
+- **Extension module:** `2026_01_15_000000_create_vendor_feature_table.php`
+
+### Prefix reservation (required)
+
+Before creating a new module migration series, reserve/confirm the module `MM_DD` prefix in the **Migration Registry** at `docs/architecture/database.md` to avoid collisions and to document dependencies.
 
 ## Key Components
 

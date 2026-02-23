@@ -213,6 +213,7 @@ This registry tracks the YYYY_MM_DD prefixes assigned to each module to prevent 
 |--------|-------|--------|--------------|
 | `0001_01_01_*` | Base | Database | None |
 | `0100_01_01_*` | Base | Other module | None |
+| `0100_01_11_*` | Base | Authz | Database |
 | `0200_01_03_*` | Modules/Core | Geonames | None |
 | `0200_01_05_*` | Modules/Core | Address | Geonames |
 | `0200_01_07_*` | Modules/Core | Company | Geonames, Address |
