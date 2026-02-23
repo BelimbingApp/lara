@@ -12,6 +12,10 @@ use App\Modules\Core\Company\Models\DepartmentType;
 
 class DevDepartmentSeeder extends DevSeeder
 {
+    protected array $dependencies = [
+        DevCompanyAddressSeeder::class,
+    ];
+
     /**
      * Seed the database.
      *

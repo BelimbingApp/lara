@@ -159,9 +159,24 @@ $driver = DB::connection()->getDriverName(); // 'pgsql', 'mysql', 'sqlite'
 
 ## Development Workflow
 
-### migrate:fresh in Development
+### Reseeding in Development
 
-`migrate:fresh` is allowed in development. **Must always use `--seed`** so production seeders run, then **re-run dev seeders** to restore test data (dev seeders are not registered in migrations and won't run automatically):
+**Primary approach — add `--dev` to any migrate command:**
+
+```bash
+# Full wipe + reseed (most common)
+php artisan migrate:fresh --seed --dev
+
+# Layer dev data onto current DB (no wipe)
+php artisan migrate --seed --dev
+
+# Dev seed only one module
+php artisan migrate --seed --dev --module=Company
+```
+
+`--dev` implies `--seed`, creates the licensee company (id=1) if needed, then runs all dev seeders in dependency order. Only works when `APP_ENV=local`.
+
+**Manual fallback** (if you need more control, e.g., only re-run specific dev seeders):
 
 ```bash
 # Step 1: Fresh migrate + production seeders
@@ -179,7 +194,7 @@ php artisan migrate --seed --seeder=Company/Dev/DevDepartmentSeeder
 php artisan migrate --seed --seeder='App\Base\Authz\Database\Seeders\Dev\DevAuthzCompanyAssignmentSeeder'
 ```
 
-**⚠️ Agent rule:** After running `migrate:fresh`, `migrate:reset`, or any operation that truncates tables, **always re-run the dev seeders above** to restore working test data. An empty database is not usable for local testing.
+**⚠️ Agent rule:** After running `migrate:fresh`, `migrate:reset`, or any operation that truncates tables, **always add `--dev`** (or run the manual steps above) to restore working test data. An empty database is not usable for local testing.
 
 ### Rollback by Batch (Preserve Data)
 

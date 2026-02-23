@@ -12,6 +12,10 @@ use App\Modules\Core\Employee\Models\Employee;
 
 class DevEmployeeSeeder extends DevSeeder
 {
+    protected array $dependencies = [
+        \App\Modules\Core\Company\Database\Seeders\Dev\DevDepartmentSeeder::class,
+    ];
+
     /**
      * Seed the database.
      *

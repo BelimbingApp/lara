@@ -7,6 +7,8 @@ namespace App\Base\Database\Console\Commands;
 
 use App\Base\Database\Concerns\InteractsWithModuleMigrations;
 use App\Base\Database\Models\SeederRegistry;
+use App\Base\Database\Seeders\DevSeeder;
+use App\Modules\Core\Company\Models\Company;
 use Illuminate\Database\Console\Migrations\MigrateCommand as IlluminateMigrateCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputOption;
@@ -24,7 +26,7 @@ class MigrateCommand extends IlluminateMigrateCommand
     protected $description = 'Run the database migrations (with module support)';
 
     /**
-     * Configure the command options by adding --module to the parent definition.
+     * Configure the command options by adding --module and --dev to the parent definition.
      *
      * {@inheritdoc}
      */
@@ -40,6 +42,15 @@ class MigrateCommand extends IlluminateMigrateCommand
                 'Load migrations by module(s) (comma-delimited, case-sensitive)',
             ),
         );
+
+        $this->getDefinition()->addOption(
+            new InputOption(
+                'dev',
+                null,
+                InputOption::VALUE_NONE,
+                'Run dev seeders after production seeders (APP_ENV=local only). Implies --seed.',
+            ),
+        );
     }
 
     /**
@@ -50,6 +61,11 @@ class MigrateCommand extends IlluminateMigrateCommand
      */
     public function handle(): int
     {
+        // --dev implies --seed (dev seeders need production seeders to have run first)
+        if ($this->option('dev') && ! $this->option('seed')) {
+            $this->input->setOption('seed', true);
+        }
+
         $this->loadAllModuleMigrations();
 
         return parent::handle();
@@ -80,6 +96,11 @@ class MigrateCommand extends IlluminateMigrateCommand
                 // Handle seeding with module-aware auto-discovery
                 if ($this->option('seed') && ! $this->option('pretend')) {
                     $this->runModuleSeeders();
+                }
+
+                // Handle dev seeders (--dev flag)
+                if ($this->option('dev') && ! $this->option('pretend')) {
+                    $this->runDevSeeders();
                 }
             },
         );
@@ -135,6 +156,175 @@ class MigrateCommand extends IlluminateMigrateCommand
                 throw $e;
             }
         }
+    }
+
+    /**
+     * Run dev seeders for local development.
+     *
+     * Creates the licensee company (required by dev seeders), then runs
+     * all dev seeders in dependency order.
+     *
+     * Only allowed when APP_ENV=local — DevSeeder base class enforces
+     * this guard, but we also check here for a clear early error.
+     */
+    protected function runDevSeeders(): void
+    {
+        if (! app()->environment('local')) {
+            $this->error('--dev may only be used when APP_ENV=local. Current: '.app()->environment());
+
+            return;
+        }
+
+        $this->info('Running dev seeders…');
+
+        // Ensure licensee company exists (dev seeders reference Company::LICENSEE_ID)
+        $this->ensureLicenseeCompanyExists();
+
+        $seeders = $this->discoverDevSeeders();
+
+        foreach ($seeders as $class) {
+            $this->line("  → {$class}");
+            $this->call('db:seed', [
+                '--class' => $class,
+                '--force' => true,
+            ]);
+        }
+
+        $this->newLine();
+        $this->info('✓ Dev seeders complete.');
+        $this->line('  Admin: '.env('DEV_ADMIN_EMAIL', 'admin@example.com').' / password');
+    }
+
+    /**
+     * Ensure the licensee company (id=1) exists.
+     *
+     * DevAdminUserSeeder and others reference Company::LICENSEE_ID.
+     * After migrate:fresh the table is empty, so we create it here.
+     */
+    private function ensureLicenseeCompanyExists(): void
+    {
+        if (Company::query()->where('id', Company::LICENSEE_ID)->exists()) {
+            return;
+        }
+
+        $name = env('DEV_LICENSEE_NAME', 'My Company');
+
+        Company::unguarded(fn () => Company::query()->create([
+            'id' => Company::LICENSEE_ID,
+            'name' => $name,
+            'status' => 'active',
+        ]));
+
+        $this->line("  Created licensee company: {$name}");
+    }
+
+    /**
+     * Auto-discover dev seeders and return them in dependency order.
+     *
+     * Scans Dev/ seeder directories, finds classes extending DevSeeder,
+     * then topologically sorts them by their declared $dependencies.
+     *
+     * @return array<int, class-string<DevSeeder>>
+     *
+     * @throws \RuntimeException If a circular dependency is detected.
+     */
+    private function discoverDevSeeders(): array
+    {
+        $classes = [];
+        $patterns = [
+            app_path('Modules/*/*/Database/Seeders/Dev/*.php'),
+            app_path('Base/*/Database/Seeders/Dev/*.php'),
+        ];
+
+        foreach ($patterns as $pattern) {
+            foreach (glob($pattern) as $file) {
+                $class = $this->classFromPath($file);
+
+                if (class_exists($class) && is_subclass_of($class, DevSeeder::class)) {
+                    $classes[] = $class;
+                }
+            }
+        }
+
+        return $this->topologicalSort($classes);
+    }
+
+    /**
+     * Topologically sort dev seeder classes by their declared dependencies.
+     *
+     * Uses Kahn's algorithm (BFS). Seeders with no dependencies run first;
+     * seeders whose dependencies have all been scheduled run next.
+     *
+     * @param  array<int, class-string<DevSeeder>>  $classes
+     * @return array<int, class-string<DevSeeder>>
+     *
+     * @throws \RuntimeException If a circular dependency is detected.
+     */
+    private function topologicalSort(array $classes): array
+    {
+        $graph = [];
+        $inDegree = [];
+
+        foreach ($classes as $class) {
+            $graph[$class] ??= [];
+            $inDegree[$class] ??= 0;
+        }
+
+        // Build edges: dependency → dependent
+        foreach ($classes as $class) {
+            $deps = (new \ReflectionClass($class))
+                ->getDefaultProperties()['dependencies'] ?? [];
+
+            foreach ($deps as $dep) {
+                if (! isset($graph[$dep])) {
+                    continue; // dependency not in discovered set, skip
+                }
+
+                $graph[$dep][] = $class;
+                $inDegree[$class]++;
+            }
+        }
+
+        // Start with seeders that have no dependencies
+        $queue = array_keys(array_filter($inDegree, fn (int $deg) => $deg === 0));
+        sort($queue); // deterministic order for zero-dep seeders
+
+        $sorted = [];
+
+        while ($queue) {
+            $current = array_shift($queue);
+            $sorted[] = $current;
+
+            foreach ($graph[$current] as $dependent) {
+                $inDegree[$dependent]--;
+
+                if ($inDegree[$dependent] === 0) {
+                    $queue[] = $dependent;
+                    sort($queue);
+                }
+            }
+        }
+
+        if (count($sorted) !== count($classes)) {
+            $stuck = array_diff($classes, $sorted);
+            throw new \RuntimeException(
+                'Circular dependency detected among dev seeders: '.implode(', ', $stuck)
+            );
+        }
+
+        return $sorted;
+    }
+
+    /**
+     * Derive FQCN from a file path under app/.
+     *
+     * @param  string  $path  Absolute path to a PHP file under app/
+     */
+    private function classFromPath(string $path): string
+    {
+        $relative = substr($path, strlen(app_path()) + 1, -4);
+
+        return 'App\\'.str_replace('/', '\\', $relative);
     }
 
     /**

@@ -10,6 +10,13 @@ use Illuminate\Database\Seeder;
 abstract class DevSeeder extends Seeder
 {
     /**
+     * Dev seeders that must run before this one.
+     *
+     * @var array<int, class-string<DevSeeder>>
+     */
+    protected array $dependencies = [];
+
+    /**
      * Run the database seeds.
      *
      * Guards against production, then delegates to seed().

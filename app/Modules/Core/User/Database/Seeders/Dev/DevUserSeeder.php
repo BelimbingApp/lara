@@ -11,6 +11,10 @@ use App\Modules\Core\User\Models\User;
 
 class DevUserSeeder extends DevSeeder
 {
+    protected array $dependencies = [
+        \App\Modules\Core\Company\Database\Seeders\Dev\DevCompanyAddressSeeder::class,
+    ];
+
     /**
      * Seed the database.
      *

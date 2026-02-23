@@ -5,12 +5,14 @@
 
 namespace App\Base\Database;
 
+use App\Base\Database\Console\Commands\FreshCommand;
 use App\Base\Database\Console\Commands\MigrateCommand;
 use App\Base\Database\Console\Commands\RefreshCommand;
 use App\Base\Database\Console\Commands\ResetCommand;
 use App\Base\Database\Console\Commands\RollbackCommand;
 use App\Base\Database\Console\Commands\StatusCommand;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Console\Migrations\FreshCommand as LaravelFreshCommand;
 use Illuminate\Database\Console\Migrations\MigrateCommand as LaravelMigrateCommand;
 use Illuminate\Database\Console\Migrations\RefreshCommand as LaravelRefreshCommand;
 use Illuminate\Database\Console\Migrations\ResetCommand as LaravelResetCommand;
@@ -51,6 +53,10 @@ class ServiceProvider extends BaseServiceProvider
 
         $this->app->extend(LaravelRefreshCommand::class, function ($command, $app) {
             return new RefreshCommand;
+        });
+
+        $this->app->extend(LaravelFreshCommand::class, function ($command, $app) {
+            return new FreshCommand($app->make(Migrator::class));
         });
     }
 }

@@ -8,6 +8,7 @@ namespace App\Base\Database\Console\Commands;
 use App\Base\Database\Concerns\InteractsWithModuleOption;
 use Illuminate\Console\Command;
 use Illuminate\Database\Console\Migrations\RefreshCommand as IlluminateRefreshCommand;
+use Symfony\Component\Console\Input\InputOption;
 
 class RefreshCommand extends IlluminateRefreshCommand
 {
@@ -71,6 +72,7 @@ class RefreshCommand extends IlluminateRefreshCommand
             '--module' => $moduleOption,
             '--seed' => $this->needsSeeding(),
             '--seeder' => $this->option('seeder'),
+            '--dev' => $this->option('dev'),
         ]));
 
         if ($this->laravel->bound(\Illuminate\Contracts\Events\Dispatcher::class)) {
@@ -91,6 +93,15 @@ class RefreshCommand extends IlluminateRefreshCommand
      */
     protected function getOptions(): array
     {
-        return $this->addModuleOption(parent::getOptions());
+        $options = $this->addModuleOption(parent::getOptions());
+
+        $options[] = [
+            'dev',
+            null,
+            InputOption::VALUE_NONE,
+            'Run dev seeders after production seeders (APP_ENV=local only). Implies --seed.',
+        ];
+
+        return $options;
     }
 }
