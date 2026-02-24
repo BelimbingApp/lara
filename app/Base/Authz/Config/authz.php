@@ -30,7 +30,9 @@ return [
         'admin.user.impersonate',
         'admin.role.list',
         'admin.role.view',
+        'admin.role.create',
         'admin.role.update',
+        'admin.role.delete',
     ],
 
     'decision_log_retention_days' => 90,
@@ -69,7 +71,9 @@ return [
                 'admin.user.impersonate',
                 'admin.role.list',
                 'admin.role.view',
+                'admin.role.create',
                 'admin.role.update',
+                'admin.role.delete',
             ],
         ],
         'user_viewer' => [

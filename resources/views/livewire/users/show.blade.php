@@ -1,8 +1,10 @@
 <?php
 
+use App\Base\Authz\Capability\CapabilityRegistry;
 use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\DTO\Actor;
 use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Authz\Models\PrincipalCapability;
 use App\Base\Authz\Models\PrincipalRole;
 use App\Base\Authz\Models\Role;
 use App\Base\Authz\Services\EffectivePermissions;
@@ -23,6 +25,8 @@ new class extends Component
     public string $password_confirmation = '';
 
     public array $selectedRoleIds = [];
+
+    public array $selectedCapabilityKeys = [];
 
     public function mount(User $user): void
     {
@@ -135,6 +139,78 @@ new class extends Component
     }
 
     /**
+     * Add direct capabilities to this user.
+     */
+    public function addCapabilities(): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        if (empty($this->selectedCapabilityKeys) || $this->user->company_id === null) {
+            return;
+        }
+
+        foreach ($this->selectedCapabilityKeys as $capKey) {
+            PrincipalCapability::query()->firstOrCreate(
+                [
+                    'company_id' => $this->user->company_id,
+                    'principal_type' => PrincipalType::HUMAN_USER->value,
+                    'principal_id' => $this->user->id,
+                    'capability_key' => $capKey,
+                ],
+                [
+                    'is_allowed' => true,
+                ]
+            );
+        }
+
+        $this->selectedCapabilityKeys = [];
+    }
+
+    /**
+     * Remove a direct capability (grant or deny) from this user.
+     */
+    public function removeCapability(int $capabilityId): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        PrincipalCapability::query()
+            ->where('id', $capabilityId)
+            ->where('principal_id', $this->user->id)
+            ->where('principal_type', PrincipalType::HUMAN_USER->value)
+            ->delete();
+    }
+
+    /**
+     * Deny a role-granted capability for this user.
+     */
+    public function denyCapability(string $capabilityKey): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        if ($this->user->company_id === null) {
+            return;
+        }
+
+        PrincipalCapability::query()->firstOrCreate(
+            [
+                'company_id' => $this->user->company_id,
+                'principal_type' => PrincipalType::HUMAN_USER->value,
+                'principal_id' => $this->user->id,
+                'capability_key' => $capabilityKey,
+            ],
+            [
+                'is_allowed' => false,
+            ]
+        );
+    }
+
+    /**
      * Check if the current user has the given capability.
      *
      * Flashes a friendly error if denied.
@@ -183,13 +259,30 @@ new class extends Component
         $assignedRoleIds = $assignedRoles->pluck('role_id')->all();
 
         $availableRoles = Role::query()
-            ->whereNull('company_id')
-            ->where('is_system', true)
+            ->with('company')
             ->whereNotIn('id', $assignedRoleIds)
             ->orderBy('name')
             ->get();
 
+        // Direct capabilities — keyed by capability_key → id
+        $directEntries = PrincipalCapability::query()
+            ->where('principal_type', PrincipalType::HUMAN_USER->value)
+            ->where('principal_id', $this->user->id)
+            ->get(['id', 'capability_key', 'is_allowed']);
+
+        $directGrantIds = [];
+        $directDenyIds = [];
+
+        foreach ($directEntries as $entry) {
+            if ($entry->is_allowed) {
+                $directGrantIds[$entry->capability_key] = $entry->id;
+            } else {
+                $directDenyIds[$entry->capability_key] = $entry->id;
+            }
+        }
+
         $effectivePermissions = [];
+        $effectiveKeys = [];
 
         if ($this->user->company_id !== null) {
             $actor = new Actor(
@@ -199,13 +292,37 @@ new class extends Component
             );
 
             $permissions = EffectivePermissions::forActor($actor);
-            $allowed = $permissions->allowed();
-            sort($allowed);
+            $effectiveKeys = $permissions->allowed();
+            sort($effectiveKeys);
 
-            foreach ($allowed as $capability) {
+            foreach ($effectiveKeys as $capability) {
                 $domain = explode('.', $capability, 2)[0];
                 $effectivePermissions[$domain][] = $capability;
             }
+        }
+
+        // Denied capabilities grouped by domain (for red badges)
+        $deniedKeys = array_keys($directDenyIds);
+        sort($deniedKeys);
+
+        $deniedPermissions = [];
+        foreach ($deniedKeys as $cap) {
+            $domain = explode('.', $cap, 2)[0];
+            $deniedPermissions[$domain][] = $cap;
+        }
+
+        // Available = all capabilities minus effective and denied
+        $excludedKeys = array_merge($effectiveKeys, $deniedKeys);
+        $allCapabilities = app(CapabilityRegistry::class)->all();
+        sort($allCapabilities);
+
+        $availableCapabilities = [];
+        foreach ($allCapabilities as $cap) {
+            if (in_array($cap, $excludedKeys, true)) {
+                continue;
+            }
+            $domain = explode('.', $cap, 2)[0];
+            $availableCapabilities[$domain][] = $cap;
         }
 
         return [
@@ -213,6 +330,10 @@ new class extends Component
             'assignedRoles' => $assignedRoles,
             'availableRoles' => $availableRoles,
             'canManageRoles' => $canManageRoles,
+            'directGrantIds' => $directGrantIds,
+            'directDenyIds' => $directDenyIds,
+            'deniedPermissions' => $deniedPermissions,
+            'availableCapabilities' => $availableCapabilities,
             'effectivePermissions' => $effectivePermissions,
         ];
     }
@@ -396,6 +517,9 @@ new class extends Component
                                     class="rounded border-border-input text-accent focus:ring-accent"
                                 >
                                 <span class="text-ink truncate" title="{{ $role->description ?? $role->name }}">{{ $role->name }}</span>
+                                @if ($role->company)
+                                    <span class="text-muted text-xs truncate">({{ $role->company->name }})</span>
+                                @endif
                             </label>
                         @endforeach
                     </div>
@@ -432,18 +556,114 @@ new class extends Component
                     class="mt-3"
                     style="display: none;"
                 >
+                    <p class="text-xs text-muted mb-3">{{ __('Green = from roles. Blue = direct grant. Red = denied. Click ✕ to remove or deny.') }}</p>
+
                     @forelse($effectivePermissions as $domain => $capabilities)
                         <div class="mb-3">
                             <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">{{ $domain }}</dt>
                             <dd class="flex flex-wrap gap-1">
                                 @foreach($capabilities as $capability)
-                                    <x-ui.badge variant="success">{{ $capability }}</x-ui.badge>
+                                    @if (isset($directGrantIds[$capability]))
+                                        <x-ui.badge variant="info">
+                                            {{ $capability }}
+                                            @if ($canManageRoles)
+                                                <button
+                                                    type="button"
+                                                    wire:click="removeCapability({{ $directGrantIds[$capability] }})"
+                                                    class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
+                                                    title="{{ __('Remove direct grant') }}"
+                                                >
+                                                    <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
+                                                </button>
+                                            @endif
+                                        </x-ui.badge>
+                                    @else
+                                        <x-ui.badge variant="success">
+                                            {{ $capability }}
+                                            @if ($canManageRoles && $user->company_id !== null)
+                                                <button
+                                                    type="button"
+                                                    wire:click="denyCapability('{{ $capability }}')"
+                                                    class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
+                                                    title="{{ __('Deny this capability') }}"
+                                                >
+                                                    <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
+                                                </button>
+                                            @endif
+                                        </x-ui.badge>
+                                    @endif
                                 @endforeach
                             </dd>
                         </div>
                     @empty
                         <p class="text-sm text-muted">{{ __('No permissions. Assign a role or company first.') }}</p>
                     @endforelse
+
+                    {{-- Denied capabilities --}}
+                    @if (! empty($deniedPermissions))
+                        <div class="mt-4 pt-4 border-t border-border-default">
+                            <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Denied') }}</dt>
+                            @foreach ($deniedPermissions as $domain => $capabilities)
+                                <div class="mb-3">
+                                    <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">{{ $domain }}</div>
+                                    <div class="flex flex-wrap gap-1">
+                                        @foreach ($capabilities as $capability)
+                                            <x-ui.badge variant="danger">
+                                                {{ $capability }}
+                                                @if ($canManageRoles)
+                                                    <button
+                                                        type="button"
+                                                        wire:click="removeCapability({{ $directDenyIds[$capability] }})"
+                                                        class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
+                                                        title="{{ __('Remove deny') }}"
+                                                    >
+                                                        <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
+                                                    </button>
+                                                @endif
+                                            </x-ui.badge>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
+                    {{-- Add Capabilities --}}
+                    @if ($canManageRoles && $user->company_id !== null && ! empty($availableCapabilities))
+                        <div
+                            x-data="{ capFilter: '', selected: @entangle('selectedCapabilityKeys') }"
+                            class="mt-4 pt-4 border-t border-border-default"
+                        >
+                            <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Add Capabilities') }}</dt>
+                            <x-ui.search-input
+                                x-model="capFilter"
+                                placeholder="{{ __('Search capabilities...') }}"
+                            />
+                            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 mt-2 max-h-48 overflow-y-auto">
+                                @foreach ($availableCapabilities as $domain => $caps)
+                                    @foreach ($caps as $cap)
+                                        <label
+                                            x-show="!capFilter || @js(strtolower($cap)).includes(capFilter.toLowerCase())"
+                                            class="flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-surface-subtle cursor-pointer"
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                value="{{ $cap }}"
+                                                x-model="selected"
+                                                class="rounded border-border-input text-accent focus:ring-accent"
+                                            >
+                                            <span class="text-ink truncate" title="{{ $cap }}">{{ $cap }}</span>
+                                        </label>
+                                    @endforeach
+                                @endforeach
+                            </div>
+                            <div x-show="selected.length > 0" x-cloak class="mt-2">
+                                <x-ui.button variant="primary" size="sm" wire:click="addCapabilities">
+                                    {{ __('Add') }} (<span x-text="selected.length"></span>)
+                                </x-ui.button>
+                            </div>
+                        </div>
+                    @endif
                 </div>
             </div>
         </x-ui.card>

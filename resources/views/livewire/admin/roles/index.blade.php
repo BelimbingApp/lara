@@ -1,5 +1,8 @@
 <?php
 
+use App\Base\Authz\Contracts\AuthorizationService;
+use App\Base\Authz\DTO\Actor;
+use App\Base\Authz\Enums\PrincipalType;
 use App\Base\Authz\Models\Role;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -17,8 +20,22 @@ new class extends Component
 
     public function with(): array
     {
+        $authUser = auth()->user();
+
+        $authActor = new Actor(
+            type: PrincipalType::HUMAN_USER,
+            id: (int) $authUser->getAuthIdentifier(),
+            companyId: $authUser->company_id !== null ? (int) $authUser->company_id : null,
+        );
+
+        $canCreate = app(AuthorizationService::class)
+            ->can($authActor, 'admin.role.create')
+            ->allowed;
+
         return [
+            'canCreate' => $canCreate,
             'roles' => Role::query()
+                ->with('company')
                 ->withCount('capabilities', 'principalRoles')
                 ->when($this->search, function ($query, $search): void {
                     $query->where(function ($q) use ($search): void {
@@ -38,7 +55,16 @@ new class extends Component
     <x-slot name="title">{{ __('Role Management') }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="__('Role Management')" :subtitle="__('Manage roles and their capabilities')" />
+        <x-ui.page-header :title="__('Role Management')" :subtitle="__('Manage roles and their capabilities')">
+            @if ($canCreate)
+                <x-slot name="actions">
+                    <x-ui.button variant="primary" as="a" href="{{ route('admin.roles.create') }}" wire:navigate>
+                        <x-icon name="heroicon-o-plus" class="w-4 h-4" />
+                        {{ __('Create Role') }}
+                    </x-ui.button>
+                </x-slot>
+            @endif
+        </x-ui.page-header>
 
         <x-ui.card>
             <div class="mb-2">
@@ -55,6 +81,7 @@ new class extends Component
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Name') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Code') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Type') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Scope') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Capabilities') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Assigned Users') }}</th>
                         </tr>
@@ -73,12 +100,13 @@ new class extends Component
                                         <x-ui.badge variant="success">{{ __('Custom') }}</x-ui.badge>
                                     @endif
                                 </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $role->company?->name ?? __('Global') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $role->capabilities_count }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $role->principal_roles_count }}</td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="5" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No roles found.') }}</td>
+                                <td colspan="6" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No roles found.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
