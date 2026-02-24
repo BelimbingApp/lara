@@ -67,8 +67,7 @@
         ],
         "test": [
             "@php artisan config:clear --ansi",
-            "@php artisan test",
-            "@php artisan migrate:fresh --seed --dev --ansi"
+            "@php artisan test"
         ],
         "lint": [
             "@php artisan pint"
