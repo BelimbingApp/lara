@@ -7,7 +7,7 @@ return [
     'items' => [
         [
             'id' => 'admin.users',
-            'label' => 'User Management',
+            'label' => 'Users',
             'icon' => 'heroicon-o-users',
             'route' => 'admin.users.index',
             'permission' => 'core.user.list',

@@ -30,7 +30,19 @@ $iconPaths = [
     'heroicon-s-arrow-path' => ['viewBox' => '0 0 24 24', 'fill' => 'currentColor', 'path' => 'M4.755 10.059a7.5 7.5 0 0 1 14.146-3.21l.75.75a.75.75 0 0 0 1.06-1.06l-.75-.75a9 9 0 0 0-16.97 4.125 9.004 9.004 0 0 0 1.524 6.06l-1.524 1.524a.75.75 0 0 0 1.06 1.06l1.524-1.524a9.004 9.004 0 0 0 5.402-5.402l1.524-1.524a.75.75 0 0 0-1.06-1.06l-1.524 1.524a7.5 7.5 0 0 1-4.94-4.94ZM19.245 13.941a7.5 7.5 0 0 1-14.146 3.21l-.75-.75a.75.75 0 0 0-1.06 1.06l.75.75a9 9 0 0 0 16.97-4.125 9.004 9.004 0 0 0-1.524-6.06l1.524-1.524a.75.75 0 0 0-1.06-1.06l-1.524 1.524a9.004 9.004 0 0 0-5.402 5.402l-1.524 1.524a.75.75 0 0 0 1.06 1.06l1.524-1.524a7.5 7.5 0 0 1 4.94 4.94Z'],
 ];
 
-$icon = $iconPaths[$name] ?? ['viewBox' => '0 0 24 24', 'fill' => 'none', 'path' => 'M12 12h.01'];
+$iconAliases = [
+    'heroicon-o-shield-check' => 'heroicon-o-check-circle',
+    'heroicon-o-user-group' => 'heroicon-o-users',
+    'heroicon-o-scale' => 'heroicon-o-building-office',
+    'heroicon-o-rectangle-group' => 'heroicon-o-squares-2x2',
+    'heroicon-o-map' => 'heroicon-o-map-pin',
+];
+
+$resolvedName = isset($iconPaths[$name])
+    ? $name
+    : ($iconAliases[$name] ?? 'heroicon-o-squares-2x2');
+
+$icon = $iconPaths[$resolvedName];
 $strokeWidth = $icon['fill'] === 'none' ? 'stroke-width="1.5"' : '';
 @endphp
 

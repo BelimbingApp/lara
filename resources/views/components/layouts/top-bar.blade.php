@@ -1,6 +1,15 @@
 <div class="h-11 bg-surface-bar border-b border-border-default flex items-center justify-between px-4 shrink-0 z-10">
     {{-- Left: App Name --}}
     <div class="flex items-center gap-4">
+        <button
+            type="button"
+            @click="$dispatch('toggle-sidebar')"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-sm text-link hover:bg-surface-subtle transition"
+            aria-label="{{ __('Toggle sidebar') }}"
+            title="{{ __('Toggle sidebar') }}"
+        >
+            <x-icon name="heroicon-o-bars-3" class="w-5 h-5" />
+        </button>
         <h1 class="text-base font-semibold text-ink">
             Belimbing
         </h1>

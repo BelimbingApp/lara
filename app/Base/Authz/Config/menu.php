@@ -7,7 +7,7 @@ return [
     'items' => [
         [
             'id' => 'admin.roles',
-            'label' => 'Role Management',
+            'label' => 'Roles',
             'icon' => 'heroicon-o-shield-check',
             'route' => 'admin.roles.index',
             'permission' => 'admin.role.list',
