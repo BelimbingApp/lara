@@ -215,6 +215,15 @@ class MigrateCommand extends IlluminateMigrateCommand
             'status' => 'active',
         ]));
 
+        // PostgreSQL sequences don't advance on explicit-ID inserts — reset to
+        // avoid unique-constraint violations when dev seeders auto-increment.
+        $connection = Company::resolveConnection();
+        if ($connection->getDriverName() === 'pgsql') {
+            $connection->statement(
+                "SELECT setval(pg_get_serial_sequence('companies', 'id'), (SELECT COALESCE(MAX(id), 0) FROM companies))"
+            );
+        }
+
         $this->line("  Created licensee company: {$name}");
     }
 

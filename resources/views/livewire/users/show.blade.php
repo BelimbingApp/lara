@@ -1,5 +1,6 @@
 <?php
 
+use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\DTO\Actor;
 use App\Base\Authz\Enums\PrincipalType;
 use App\Base\Authz\Models\PrincipalRole;
@@ -97,6 +98,10 @@ new class extends Component
      */
     public function assignRoles(): void
     {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
         if (empty($this->selectedRoleIds) || $this->user->company_id === null) {
             return;
         }
@@ -118,6 +123,10 @@ new class extends Component
      */
     public function removeRole(int $principalRoleId): void
     {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
         PrincipalRole::query()
             ->where('id', $principalRoleId)
             ->where('principal_id', $this->user->id)
@@ -125,8 +134,46 @@ new class extends Component
             ->delete();
     }
 
+    /**
+     * Check if the current user has the given capability.
+     *
+     * Flashes a friendly error if denied.
+     */
+    private function checkCapability(string $capability): bool
+    {
+        $authUser = auth()->user();
+
+        $actor = new Actor(
+            type: PrincipalType::HUMAN_USER,
+            id: (int) $authUser->getAuthIdentifier(),
+            companyId: $authUser->company_id !== null ? (int) $authUser->company_id : null,
+        );
+
+        $decision = app(AuthorizationService::class)->can($actor, $capability);
+
+        if (! $decision->allowed) {
+            Session::flash('error', __('You do not have permission to perform this action.'));
+
+            return false;
+        }
+
+        return true;
+    }
+
     public function with(): array
     {
+        $authUser = auth()->user();
+
+        $authActor = new Actor(
+            type: PrincipalType::HUMAN_USER,
+            id: (int) $authUser->getAuthIdentifier(),
+            companyId: $authUser->company_id !== null ? (int) $authUser->company_id : null,
+        );
+
+        $canManageRoles = app(AuthorizationService::class)
+            ->can($authActor, 'core.user.update')
+            ->allowed;
+
         $assignedRoles = PrincipalRole::query()
             ->with('role')
             ->where('principal_type', PrincipalType::HUMAN_USER->value)
@@ -165,6 +212,7 @@ new class extends Component
             'companies' => Company::query()->orderBy('name')->get(['id', 'name']),
             'assignedRoles' => $assignedRoles,
             'availableRoles' => $availableRoles,
+            'canManageRoles' => $canManageRoles,
             'effectivePermissions' => $effectivePermissions,
         ];
     }
@@ -288,11 +336,15 @@ new class extends Component
         </x-ui.card>
 
         <x-ui.card>
-            <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-4">{{ __('Roles & Permissions') }}</h3>
+            <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                {{ __('Roles & Permissions') }}
+                <x-ui.badge>{{ $assignedRoles->count() }}</x-ui.badge>
+            </h3>
+            <p class="text-xs text-muted mt-0.5 mb-4">{{ __('Roles determine what this user can do. Each role grants a set of capabilities. Effective permissions show the combined result of all assigned roles.') }}</p>
 
-            {{-- Assigned Roles --}}
+            {{-- Roles --}}
             <div class="mb-4">
-                <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Assigned Roles') }}</dt>
+                <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Roles') }}</dt>
                 <dd>
                     @if($assignedRoles->isEmpty())
                         <span class="text-sm text-muted">{{ __('No roles assigned.') }}</span>
@@ -301,15 +353,17 @@ new class extends Component
                             @foreach($assignedRoles as $assignment)
                                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-surface-subtle text-ink">
                                     {{ $assignment->role->name }}
-                                    <button
-                                        type="button"
-                                        wire:click="removeRole({{ $assignment->id }})"
-                                        wire:confirm="{{ __('Remove :role from this user?', ['role' => $assignment->role->name]) }}"
-                                        class="ml-0.5 text-muted hover:text-status-danger transition-colors"
-                                        title="{{ __('Remove role') }}"
-                                    >
-                                        <x-icon name="heroicon-o-x-mark" class="w-3 h-3" />
-                                    </button>
+                                    @if($canManageRoles)
+                                        <button
+                                            type="button"
+                                            wire:click="removeRole({{ $assignment->id }})"
+                                            wire:confirm="{{ __('Remove :role from this user?', ['role' => $assignment->role->name]) }}"
+                                            class="ml-0.5 text-muted hover:text-status-danger transition-colors"
+                                            title="{{ __('Remove role') }}"
+                                        >
+                                            <x-icon name="heroicon-o-x-mark" class="w-3 h-3" />
+                                        </button>
+                                    @endif
                                 </span>
                             @endforeach
                         </div>
@@ -318,13 +372,12 @@ new class extends Component
             </div>
 
             {{-- Assign Roles --}}
-            @if($availableRoles->isNotEmpty())
+            @if($canManageRoles && $availableRoles->isNotEmpty())
                 <div
                     x-data="{ roleFilter: '', selected: @entangle('selectedRoleIds') }"
                     class="mb-6"
                 >
-                    <label class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Add Roles') }}</label>
-                    <div class="mt-1">
+                    <div>
                         <x-ui.search-input
                             x-model="roleFilter"
                             placeholder="{{ __('Search roles...') }}"

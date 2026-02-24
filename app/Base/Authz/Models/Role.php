@@ -37,4 +37,14 @@ class Role extends Model
     {
         return $this->hasMany(PrincipalRole::class, 'role_id');
     }
+
+    public function capabilities(): HasMany
+    {
+        return $this->hasMany(RoleCapability::class, 'role_id');
+    }
+
+    public function principalCount(): int
+    {
+        return $this->principalRoles()->count();
+    }
 }

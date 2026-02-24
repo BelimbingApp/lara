@@ -28,6 +28,9 @@ return [
         'ai.personal_agent.view',
         'ai.personal_agent.execute',
         'admin.user.impersonate',
+        'admin.role.list',
+        'admin.role.view',
+        'admin.role.update',
     ],
 
     'decision_log_retention_days' => 90,
@@ -64,6 +67,9 @@ return [
                 'ai.personal_agent.view',
                 'ai.personal_agent.execute',
                 'admin.user.impersonate',
+                'admin.role.list',
+                'admin.role.view',
+                'admin.role.update',
             ],
         ],
         'user_viewer' => [

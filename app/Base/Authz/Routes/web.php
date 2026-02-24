@@ -6,6 +6,7 @@
 use App\Base\Authz\Services\ImpersonationManager;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Route;
+use Livewire\Volt\Volt;
 
 Route::middleware('auth')->group(function () {
     Route::post('admin/impersonate/leave', function (ImpersonationManager $manager) {
@@ -21,4 +22,12 @@ Route::middleware('auth')->group(function () {
     })
         ->middleware('authz:admin.user.impersonate')
         ->name('admin.impersonate.start');
+
+    // Role management
+    Volt::route('admin/roles', 'admin.roles.index')
+        ->middleware('authz:admin.role.list')
+        ->name('admin.roles.index');
+    Volt::route('admin/roles/{role}', 'admin.roles.show')
+        ->middleware('authz:admin.role.view')
+        ->name('admin.roles.show');
 });
