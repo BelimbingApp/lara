@@ -51,11 +51,25 @@ new class extends Component
 
         $hasData = ! empty($importedIsos);
 
+        $countryRecordCounts = collect();
+        if ($hasData) {
+            $countryRecordCounts = DB::table('geonames_postcodes')
+                ->leftJoin('geonames_countries', 'geonames_postcodes.country_iso', '=', 'geonames_countries.iso')
+                ->select('geonames_postcodes.country_iso')
+                ->selectRaw('geonames_countries.country as country_name')
+                ->selectRaw('count(*) as record_count')
+                ->groupBy('geonames_postcodes.country_iso', 'geonames_countries.country')
+                ->orderBy('geonames_countries.country')
+                ->orderBy('geonames_postcodes.country_iso')
+                ->get();
+        }
+
         return [
             'postcodes' => $query->paginate(20),
             'allCountries' => $allCountries,
             'importedIsos' => $importedIsos,
             'hasData' => $hasData,
+            'countryRecordCounts' => $countryRecordCounts,
         ];
     }
 
@@ -227,6 +241,34 @@ new class extends Component
                 </div>
             </template>
         </div>
+
+        {{-- Country record counts --}}
+        @if ($hasData && $countryRecordCounts->isNotEmpty())
+            <x-ui.card>
+                <h2 class="text-sm font-semibold text-ink mb-3">{{ __('Postcodes by country') }}</h2>
+                <div class="overflow-x-auto -mx-card-inner px-card-inner">
+                    <table class="min-w-full divide-y divide-border-default text-sm">
+                        <thead class="bg-surface-subtle/80">
+                            <tr>
+                                <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Country') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Records') }}</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-surface-card divide-y divide-border-default">
+                            @foreach ($countryRecordCounts as $row)
+                                <tr class="hover:bg-surface-subtle/50 transition-colors">
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm">
+                                        <span class="font-mono text-xs text-muted">{{ $row->country_iso }}</span>
+                                        <span class="ml-1 text-ink">{{ $row->country_name ?? $row->country_iso }}</span>
+                                    </td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right font-medium text-ink tabular-nums">{{ number_format($row->record_count) }}</td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            </x-ui.card>
+        @endif
 
         <x-ui.card>
             <div class="mb-2">
