@@ -6,6 +6,7 @@
 namespace App\Modules\Core\User\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Base\Foundation\Contracts\CompanyScoped;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\ExternalAccess;
 use App\Modules\Core\Employee\Models\Employee;
@@ -17,7 +18,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
-class User extends Authenticatable
+class User extends Authenticatable implements CompanyScoped
 {
     /** @use HasFactory<\App\Modules\Core\User\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -67,6 +68,14 @@ class User extends Authenticatable
             ->take(2)
             ->map(fn ($word) => Str::substr($word, 0, 1))
             ->implode('');
+    }
+
+    /**
+     * Get the company ID the user belongs to.
+     */
+    public function getCompanyId(): ?int
+    {
+        return $this->company_id !== null ? (int) $this->company_id : null;
     }
 
     /**

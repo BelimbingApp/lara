@@ -14,12 +14,14 @@ use App\Base\Authz\Policies\CompanyScopePolicy;
 use App\Base\Authz\Policies\GrantPolicy;
 use App\Base\Authz\Policies\KnownCapabilityPolicy;
 use App\Base\Authz\Services\AuditingAuthorizationService;
+use App\Base\Authz\Services\AuthzMenuAccessChecker;
 use App\Base\Authz\Services\AuthorizationEngine;
 use App\Base\Authz\Services\DatabaseDecisionLogger;
 use App\Base\Authz\Services\ImpersonationManager;
-use Illuminate\Support\ServiceProvider;
+use App\Base\Menu\Contracts\MenuAccessChecker;
+use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
-class AuthzServiceProvider extends ServiceProvider
+class ServiceProvider extends BaseServiceProvider
 {
     /**
      * Register services.
@@ -59,6 +61,7 @@ class AuthzServiceProvider extends ServiceProvider
         $this->app->singleton(DecisionLogger::class, DatabaseDecisionLogger::class);
 
         $this->app->singleton(AuthorizationService::class, AuditingAuthorizationService::class);
+        $this->app->singleton(MenuAccessChecker::class, AuthzMenuAccessChecker::class);
 
         $this->app->singleton(ImpersonationManager::class);
     }

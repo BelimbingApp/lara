@@ -23,7 +23,7 @@ return [
 
     // Capabilities owned by the base framework (no module to host them yet).
     // Module-owned capabilities live in each module's Config/authz.php
-    // and are auto-discovered by the AuthzServiceProvider.
+    // and are auto-discovered by App\Base\Authz\ServiceProvider.
     'capabilities' => [
         'ai.personal_agent.view',
         'ai.personal_agent.execute',

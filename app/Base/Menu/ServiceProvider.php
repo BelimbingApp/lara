@@ -5,14 +5,13 @@
 
 namespace App\Base\Menu;
 
-use App\Base\Authz\Contracts\AuthorizationService;
-use App\Base\Authz\DTO\Actor;
-use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Menu\Contracts\MenuAccessChecker;
 use App\Base\Menu\Services\MenuDiscoveryService;
+use App\Base\Menu\Services\DefaultMenuAccessChecker;
 use Illuminate\Support\Facades\View;
-use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
-class MenuServiceProvider extends ServiceProvider
+class ServiceProvider extends BaseServiceProvider
 {
     /**
      * Register services.
@@ -22,6 +21,7 @@ class MenuServiceProvider extends ServiceProvider
         $this->app->singleton(MenuDiscoveryService::class);
         $this->app->singleton(MenuRegistry::class);
         $this->app->singleton(MenuBuilder::class);
+        $this->app->bindIf(MenuAccessChecker::class, DefaultMenuAccessChecker::class, true);
     }
 
     /**
@@ -47,7 +47,7 @@ class MenuServiceProvider extends ServiceProvider
             $registry = $this->app->make(MenuRegistry::class);
             $discovery = $this->app->make(MenuDiscoveryService::class);
             $builder = $this->app->make(MenuBuilder::class);
-            $authorizationService = $this->app->make(AuthorizationService::class);
+            $menuAccessChecker = $this->app->make(MenuAccessChecker::class);
 
             // Environment-aware caching
             if ($this->app->environment('local')) {
@@ -76,18 +76,9 @@ class MenuServiceProvider extends ServiceProvider
             // Build tree with current route for active marking
             $currentRoute = request()->route()?->getName();
             $user = auth()->user();
-            $actor = new Actor(
-                type: PrincipalType::HUMAN_USER,
-                id: (int) $user->getAuthIdentifier(),
-                companyId: $user->getAttribute('company_id') !== null ? (int) $user->getAttribute('company_id') : null,
-            );
 
-            $filteredItems = $registry->getAll()->filter(function (MenuItem $item) use ($authorizationService, $actor): bool {
-                if ($item->permission === null) {
-                    return true;
-                }
-
-                return $authorizationService->can($actor, $item->permission)->allowed;
+            $filteredItems = $registry->getAll()->filter(function (MenuItem $item) use ($menuAccessChecker, $user): bool {
+                return $menuAccessChecker->canView($item, $user);
             });
 
             $menuTree = $builder->build($filteredItems, $currentRoute);

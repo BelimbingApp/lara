@@ -4,6 +4,10 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 return [
+    // Fallback policy when menu items define permission but no authorization adapter is installed.
+    // Menu visibility is UI-only; route/middleware authorization remains authoritative.
+    'permissioned_items_without_authorizer' => 'allow',
+
     'items' => [
         [
             'id' => 'admin',
