@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
@@ -7,6 +8,7 @@ use Livewire\Volt\Component;
 
 new class extends Component
 {
+    use HasAddressGeoLookups;
     public ?string $label = null;
 
     public ?string $phone = null;
@@ -25,6 +27,8 @@ new class extends Component
 
     public ?string $admin1_code = null;
 
+    public array $admin1Options = [];
+
     public ?string $raw_input = null;
 
     public ?string $source = 'manual';
@@ -37,12 +41,46 @@ new class extends Component
 
     public string $verification_status = 'unverified';
 
+    public function updatedCountryIso($value): void
+    {
+        $this->admin1_code = null;
+        $this->admin1Options = [];
+
+        if ($value) {
+            $this->ensurePostcodesImported(strtoupper($value));
+            $this->admin1Options = $this->loadAdmin1ForCountry($value);
+        }
+    }
+
+    public function updatedPostcode($value): void
+    {
+        if (! $this->country_iso || ! $value) {
+            return;
+        }
+
+        $result = $this->lookupPostcode($this->country_iso, $value);
+
+        if ($result) {
+            $this->locality = $result['locality'];
+
+            if (! $this->admin1_code && $result['admin1_code']) {
+                $this->admin1_code = $result['admin1_code'];
+
+                if (empty($this->admin1Options)) {
+                    $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
+                }
+            }
+        }
+    }
+
     public function with(): array
     {
         return [
-            'countries' => Country::query()
+            'countryOptions' => Country::query()
                 ->orderBy('country')
-                ->get(['iso', 'country']),
+                ->get(['iso', 'country'])
+                ->map(fn ($c) => ['value' => $c->iso, 'label' => $c->country])
+                ->all(),
         ];
     }
 
@@ -146,7 +184,34 @@ new class extends Component
                     />
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.combobox
+                        wire:model.live="country_iso"
+                        label="{{ __('Country') }}"
+                        placeholder="{{ __('Search country...') }}"
+                        :options="$countryOptions"
+                        :error="$errors->first('country_iso')"
+                    />
+
+                    <x-ui.combobox
+                        wire:model.live="admin1_code"
+                        wire:key="create-admin1-{{ $country_iso ?? 'none' }}"
+                        label="{{ __('State / Province') }}"
+                        placeholder="{{ __('Search state...') }}"
+                        :options="$admin1Options"
+                        :error="$errors->first('admin1_code')"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input
+                        wire:model.blur="postcode"
+                        label="{{ __('Postcode') }}"
+                        type="text"
+                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        :error="$errors->first('postcode')"
+                    />
+
                     <x-ui.input
                         wire:model="locality"
                         label="{{ __('Locality') }}"
@@ -154,21 +219,6 @@ new class extends Component
                         placeholder="{{ __('City / town') }}"
                         :error="$errors->first('locality')"
                     />
-
-                    <x-ui.input
-                        wire:model="postcode"
-                        label="{{ __('Postcode') }}"
-                        type="text"
-                        placeholder="{{ __('Postal code') }}"
-                        :error="$errors->first('postcode')"
-                    />
-
-                    <x-ui.select wire:model="country_iso" label="{{ __('Country') }}" :error="$errors->first('country_iso')">
-                        <option value="">{{ __('Select country') }}</option>
-                        @foreach($countries as $country)
-                            <option value="{{ $country->iso }}">{{ $country->iso }} - {{ $country->country }}</option>
-                        @endforeach
-                    </x-ui.select>
                 </div>
 
                 <div class="border-t border-border-input pt-6">

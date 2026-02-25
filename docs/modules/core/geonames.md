@@ -68,11 +68,14 @@ Three pages under `/admin/geonames/`:
 
 ## 5. Postcode Import Flow
 
-1.  User selects countries → Livewire dispatches `ImportPostcodes` queued job.
-2.  Job runs `PostcodeSeeder` which downloads, parses, and imports per country.
-3.  Each step broadcasts `PostcodeImportProgress` event via Reverb.
-4.  Frontend listens via Echo/Alpine.js, shows progress bar.
-5.  On completion, UI auto-refreshes the table.
+1.  User selects countries → Livewire dispatches `ImportPostcodes` job to the queue (`dispatch()`).
+2.  Livewire starts a one-off queue worker in the background (`queue:work --once`) so the job is processed without requiring a long-running worker.
+3.  The worker runs the job when it reaches the front of the queue; the job runs `PostcodeSeeder`, which downloads, parses, and imports per country.
+4.  Each step broadcasts `PostcodeImportProgress` event via Reverb.
+5.  Frontend listens via Echo/Alpine.js, shows progress bar.
+6.  On completion, UI auto-refreshes the table.
+
+**Queue worker:** The UI starts a one-off worker in the background after each dispatch (`queue:work --once`), so the job runs without a long-running worker. Jobs stay in the queue only if that background process cannot run (e.g. disabled or failed).
 
 ---
 

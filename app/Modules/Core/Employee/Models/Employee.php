@@ -6,6 +6,7 @@
 namespace App\Modules\Core\Employee\Models;
 
 use App\Modules\Core\Address\Models\Address;
+use App\Modules\Core\Address\Models\Addressable;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Employee\Database\Factories\EmployeeFactory;
@@ -120,6 +121,7 @@ class Employee extends Model
     public function addresses(): MorphToMany
     {
         return $this->morphToMany(Address::class, 'addressable', 'addressables')
+            ->using(Addressable::class)
             ->withPivot('kind', 'is_primary', 'priority', 'valid_from', 'valid_to')
             ->withTimestamps();
     }

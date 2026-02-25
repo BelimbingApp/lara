@@ -1,17 +1,33 @@
 <?php
 
+use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
 use App\Modules\Core\Address\Models\Address;
+use App\Modules\Core\Geonames\Models\Admin1;
 use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
+    use HasAddressGeoLookups;
+
     public Address $address;
+
+    public ?string $country_iso = null;
+
+    public ?string $admin1_code = null;
+
+    public array $admin1Options = [];
 
     public function mount(Address $address): void
     {
-        $this->address = $address->load(['country']);
+        $this->address = $address->load(['country', 'admin1']);
+        $this->country_iso = $address->country_iso;
+        $this->admin1_code = $address->admin1_code;
+
+        if ($this->country_iso) {
+            $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
+        }
     }
 
     public function saveField(string $field, mixed $value): void
@@ -37,6 +53,21 @@ new class extends Component
 
         $this->address->$field = $validated[$field];
         $this->address->save();
+
+        if ($field === 'postcode' && $this->address->country_iso && $validated[$field]) {
+            $result = $this->lookupPostcode($this->address->country_iso, $validated[$field]);
+
+            if ($result) {
+                $this->address->locality = $result['locality'];
+
+                if (! $this->address->admin1_code && $result['admin1_code']) {
+                    $this->address->admin1_code = $result['admin1_code'];
+                    $this->admin1_code = $result['admin1_code'];
+                }
+
+                $this->address->save();
+            }
+        }
     }
 
     public function saveCountry(string $iso): void
@@ -54,6 +85,27 @@ new class extends Component
 
         $this->address->save();
         $this->address->load(['country']);
+    }
+
+    public function updatedCountryIso($value): void
+    {
+        $this->saveCountry($value ?? '');
+        $this->admin1_code = null;
+
+        if ($value) {
+            $this->ensurePostcodesImported(strtoupper($value));
+        }
+
+        $this->admin1Options = $value ? $this->loadAdmin1ForCountry($value) : [];
+
+        $this->address->admin1_code = null;
+        $this->address->save();
+    }
+
+    public function updatedAdmin1Code($value): void
+    {
+        $this->address->admin1_code = $value;
+        $this->address->save();
     }
 
     public function saveVerificationStatus(string $status): void
@@ -78,7 +130,7 @@ new class extends Component
             return (object) [
                 'model' => $model,
                 'type' => class_basename($row->addressable_type),
-                'kind' => $row->kind,
+                'kind' => json_decode($row->kind, true) ?? [],
                 'is_primary' => $row->is_primary,
                 'priority' => $row->priority,
                 'valid_from' => $row->valid_from,
@@ -88,9 +140,11 @@ new class extends Component
 
         return [
             'linkedEntities' => $entities,
-            'countries' => Country::query()
+            'countryOptions' => Country::query()
                 ->orderBy('country')
-                ->get(['iso', 'country']),
+                ->get(['iso', 'country'])
+                ->map(fn ($c) => ['value' => $c->iso, 'label' => $c->country])
+                ->all(),
         ];
     }
 }; ?>
@@ -207,24 +261,22 @@ new class extends Component
                         />
                     </dd>
                 </div>
-                <div x-data="{ editing: false, val: '{{ addslashes($address->locality ?? '') }}' }">
-                    <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Locality') }}</dt>
-                    <dd class="text-sm text-ink">
-                        <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                            <span x-text="val || '-'"></span>
-                            <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <input
-                            x-show="editing"
-                            x-ref="input"
-                            x-model="val"
-                            @keydown.enter="editing = false; $wire.saveField('locality', val)"
-                            @keydown.escape="editing = false; val = '{{ addslashes($address->locality ?? '') }}'"
-                            @blur="editing = false; $wire.saveField('locality', val)"
-                            type="text"
-                            class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                    </dd>
+                <div>
+                    <x-ui.combobox
+                        wire:model.live="country_iso"
+                        label="{{ __('Country') }}"
+                        placeholder="{{ __('Search country...') }}"
+                        :options="$countryOptions"
+                    />
+                </div>
+                <div>
+                    <x-ui.combobox
+                        wire:model.live="admin1_code"
+                        wire:key="show-admin1-{{ $country_iso ?? 'none' }}"
+                        label="{{ __('State / Province') }}"
+                        placeholder="{{ __('Search state...') }}"
+                        :options="$admin1Options"
+                    />
                 </div>
                 <div x-data="{ editing: false, val: '{{ addslashes($address->postcode ?? '') }}' }">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Postcode') }}</dt>
@@ -245,35 +297,23 @@ new class extends Component
                         />
                     </dd>
                 </div>
-                <div x-data="{ editing: false, val: '{{ $address->country_iso ?? '' }}' }">
-                    <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Country') }}</dt>
+                <div x-data="{ editing: false, val: '{{ addslashes($address->locality ?? '') }}' }">
+                    <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Locality') }}</dt>
                     <dd class="text-sm text-ink">
-                        <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                            <span>
-                                @if($address->country_iso)
-                                    {{ $address->country_iso }}
-                                    @if($address->country?->country)
-                                        &mdash; {{ $address->country->country }}
-                                    @endif
-                                @else
-                                    -
-                                @endif
-                            </span>
+                        <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                            <span x-text="val || '-'"></span>
                             <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
-                        <select
+                        <input
                             x-show="editing"
+                            x-ref="input"
                             x-model="val"
-                            @change="editing = false; $wire.saveCountry(val)"
-                            @keydown.escape="editing = false; val = '{{ $address->country_iso ?? '' }}'"
-                            @blur="editing = false"
-                            class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                        >
-                            <option value="">{{ __('Select country') }}</option>
-                            @foreach($countries as $country)
-                                <option value="{{ $country->iso }}">{{ $country->iso }} - {{ $country->country }}</option>
-                            @endforeach
-                        </select>
+                            @keydown.enter="editing = false; $wire.saveField('locality', val)"
+                            @keydown.escape="editing = false; val = '{{ addslashes($address->locality ?? '') }}'"
+                            @blur="editing = false; $wire.saveField('locality', val)"
+                            type="text"
+                            class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                        />
                     </dd>
                 </div>
                 <div x-data="{ editing: false, val: '{{ $address->verification_status }}' }">
@@ -392,11 +432,23 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     @if($entity->type === 'Company')
                                         <a href="{{ route('admin.companies.show', $entity->model) }}" wire:navigate class="text-link hover:underline">{{ $entity->model->name }}</a>
+                                    @elseif($entity->type === 'Employee')
+                                        <a href="{{ route('admin.employees.show', $entity->model) }}" wire:navigate class="text-link hover:underline">{{ $entity->model->full_name ?? $entity->model->id }}</a>
                                     @else
                                         {{ $entity->model->name ?? $entity->model->id }}
                                     @endif
                                 </td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $entity->kind ?: '-' }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
+                                    @if(is_array($entity->kind) && count($entity->kind) > 0)
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach($entity->kind as $k)
+                                                <x-ui.badge variant="default">{{ ucfirst($k) }}</x-ui.badge>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        -
+                                    @endif
+                                </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $entity->is_primary ? __('Yes') : __('No') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $entity->priority ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $entity->valid_from ?? '-' }}</td>

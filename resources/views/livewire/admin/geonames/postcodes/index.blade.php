@@ -69,12 +69,14 @@ new class extends Component
 
         $count = count($this->selectedCountries);
 
-        ImportPostcodes::dispatchSync($this->selectedCountries);
+        ImportPostcodes::dispatch($this->selectedCountries)
+            ->onQueue(ImportPostcodes::QUEUE);
+        ImportPostcodes::runWorkerOnce();
 
         $this->selectedCountries = [];
         $this->showCountryPicker = false;
 
-        Session::flash('success', __(':count country(s) imported successfully.', ['count' => $count]));
+        Session::flash('success', __('Import queued for :count country(s). Progress will appear below.', ['count' => $count]));
     }
 
     public function update(): void
@@ -88,9 +90,11 @@ new class extends Component
             return;
         }
 
-        ImportPostcodes::dispatchSync($importedIsos);
+        ImportPostcodes::dispatch($importedIsos)
+            ->onQueue(ImportPostcodes::QUEUE);
+        ImportPostcodes::runWorkerOnce();
 
-        Session::flash('success', __(':count country(s) updated successfully.', ['count' => count($importedIsos)]));
+        Session::flash('success', __('Update queued for :count country(s). Progress will appear below.', ['count' => count($importedIsos)]));
     }
 
     public function toggleCountryPicker(): void

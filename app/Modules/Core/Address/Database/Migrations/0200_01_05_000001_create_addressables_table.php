@@ -25,7 +25,7 @@ return new class extends Migration
             $table->morphs('addressable');
 
             // Relationship metadata (role + ordering + lifecycle)
-            $table->string('kind')->index(); // office, factory, billing, shipping, home, current, mailbox
+            $table->json('kind')->default('[]');
             $table->boolean('is_primary')->default(false)->index();
             $table->unsignedSmallInteger('priority')->default(0);
             $table->date('valid_from')->nullable();
@@ -34,10 +34,6 @@ return new class extends Migration
             $table->timestamps();
 
             // morphs('addressable') already indexes (addressable_type, addressable_id)
-            $table->unique(
-                ['addressable_type', 'addressable_id', 'kind', 'priority'],
-                'addressables_owner_kind_priority_unique'
-            );
         });
     }
 

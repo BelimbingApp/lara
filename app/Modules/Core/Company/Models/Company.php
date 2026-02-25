@@ -6,6 +6,7 @@
 namespace App\Modules\Core\Company\Models;
 
 use App\Modules\Core\Address\Models\Address;
+use App\Modules\Core\Address\Models\Addressable;
 use App\Modules\Core\Company\Database\Factories\CompanyFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -241,6 +242,7 @@ class Company extends Model
     public function addresses(): MorphToMany
     {
         return $this->morphToMany(Address::class, 'addressable', 'addressables')
+            ->using(Addressable::class)
             ->withPivot('kind', 'is_primary', 'priority', 'valid_from', 'valid_to')
             ->withTimestamps();
     }

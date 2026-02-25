@@ -54,7 +54,7 @@ class Admin1 extends Model
      */
     public function scopeForCountry(Builder $query, string $iso): Builder
     {
-        return $query->where('code', 'like', $iso.'.%');
+        return $query->whereRaw('UPPER(code) LIKE ?', [strtoupper($iso).'.%']);
     }
 
     /**

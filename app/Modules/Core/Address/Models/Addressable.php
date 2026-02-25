@@ -41,6 +41,7 @@ class Addressable extends MorphPivot
     protected function casts(): array
     {
         return [
+            'kind' => 'array',
             'is_primary' => 'boolean',
             'priority' => 'integer',
             'valid_from' => 'date',

@@ -3,6 +3,7 @@
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Employee\Models\Employee;
+use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
 use Livewire\Volt\Component;
@@ -35,6 +36,8 @@ new class extends Component
 
     public ?string $employment_end = null;
 
+    public ?int $user_id = null;
+
     public string $metadata_json = '';
 
     public function with(): array
@@ -50,6 +53,9 @@ new class extends Component
             'supervisors' => Employee::query()
                 ->orderBy('full_name')
                 ->get(['id', 'full_name', 'company_id']),
+            'users' => User::query()
+                ->orderBy('name')
+                ->get(['id', 'name']),
         ];
     }
 
@@ -226,6 +232,13 @@ new class extends Component
                         <option value="">{{ __('None') }}</option>
                         @foreach($supervisors as $supervisor)
                             <option value="{{ $supervisor->id }}">{{ $supervisor->full_name }}</option>
+                        @endforeach
+                    </x-ui.select>
+
+                    <x-ui.select wire:model="user_id" label="{{ __('User Account') }}" :error="$errors->first('user_id')">
+                        <option value="">{{ __('None') }}</option>
+                        @foreach($users as $u)
+                            <option value="{{ $u->id }}">{{ $u->name }}</option>
                         @endforeach
                     </x-ui.select>
                 </div>

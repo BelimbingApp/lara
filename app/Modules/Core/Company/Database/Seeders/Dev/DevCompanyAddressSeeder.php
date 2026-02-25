@@ -274,20 +274,20 @@ class DevCompanyAddressSeeder extends DevSeeder
     protected function linkAddressesToCompanies(array $companies, array $addresses): void
     {
         $links = [
-            [0, 0, 'headquarters', true, 0, '2019-06-01', null],
-            [0, 1, 'branch', false, 1, '2020-01-15', null],
-            [0, 4, 'billing', false, 2, '2019-06-01', null],
-            [0, 7, 'shipping', false, 3, '2023-03-01', null],
-            [1, 2, 'headquarters', true, 0, '2022-04-01', null],
-            [1, 4, 'billing', false, 1, '2022-04-01', null],
-            [2, 3, 'headquarters', true, 0, '2018-09-01', null],
-            [2, 7, 'shipping', false, 1, '2021-06-15', null],
-            [3, 0, 'headquarters', true, 0, '2005-03-01', '2024-12-31'],
-            [3, 6, 'branch', false, 1, '2010-07-01', '2024-12-31'],
-            [4, 1, 'headquarters', true, 0, '2021-08-01', null],
-            [5, 0, 'headquarters', true, 0, '2022-05-01', null],
-            [5, 6, 'branch', false, 1, '2023-01-15', null],
-            [6, 5, 'headquarters', true, 0, '2022-11-01', null],
+            [0, 0, ['headquarters'], true, 0, '2019-06-01', null],
+            [0, 1, ['branch'], false, 1, '2020-01-15', null],
+            [0, 4, ['billing'], false, 2, '2019-06-01', null],
+            [0, 7, ['shipping'], false, 3, '2023-03-01', null],
+            [1, 2, ['headquarters'], true, 0, '2022-04-01', null],
+            [1, 4, ['billing'], false, 1, '2022-04-01', null],
+            [2, 3, ['headquarters'], true, 0, '2018-09-01', null],
+            [2, 7, ['shipping'], false, 1, '2021-06-15', null],
+            [3, 0, ['headquarters'], true, 0, '2005-03-01', '2024-12-31'],
+            [3, 6, ['branch'], false, 1, '2010-07-01', '2024-12-31'],
+            [4, 1, ['headquarters'], true, 0, '2021-08-01', null],
+            [5, 0, ['headquarters'], true, 0, '2022-05-01', null],
+            [5, 6, ['branch'], false, 1, '2023-01-15', null],
+            [6, 5, ['headquarters'], true, 0, '2022-11-01', null],
         ];
 
         foreach ($links as [$companyIdx, $addressIdx, $kind, $isPrimary, $priority, $validFrom, $validTo]) {
@@ -300,7 +300,6 @@ class DevCompanyAddressSeeder extends DevSeeder
 
             $exists = $company->addresses()
                 ->where('address_id', $address->id)
-                ->wherePivot('kind', $kind)
                 ->exists();
 
             if (! $exists) {

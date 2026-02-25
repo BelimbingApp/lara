@@ -3,23 +3,79 @@
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\LegalEntityType;
+use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
+use App\Modules\Core\Geonames\Models\Admin1 as GeonamesAdmin1;
 use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
 
 new class extends Component
 {
+    use HasAddressGeoLookups;
+
     public Company $company;
 
     public int $attach_address_id = 0;
 
-    public string $attach_kind = 'billing';
+    public array $attach_kind = [];
 
     public bool $attach_is_primary = false;
 
     public int $attach_priority = 0;
 
     public bool $showAttachModal = false;
+
+    public bool $showCreateAddressModal = false;
+
+    public string $new_address_label = '';
+
+    public ?string $new_address_phone = null;
+
+    public ?string $new_address_line1 = null;
+
+    public ?string $new_address_line2 = null;
+
+    public ?string $new_address_line3 = null;
+
+    public ?string $new_address_locality = null;
+
+    public ?string $new_address_postcode = null;
+
+    public ?string $new_address_country_iso = null;
+
+    public array $new_address_kind = [];
+
+    public bool $new_address_is_primary = false;
+
+    public int $new_address_priority = 0;
+
+    public ?string $new_address_admin1_code = null;
+
+    public array $new_address_admin1_options = [];
+
+    public bool $showEditAddressModal = false;
+
+    public ?int $edit_address_id = null;
+
+    public string $edit_address_label = '';
+
+    public ?string $edit_address_phone = null;
+
+    public ?string $edit_address_line1 = null;
+
+    public ?string $edit_address_line2 = null;
+
+    public ?string $edit_address_line3 = null;
+
+    public ?string $edit_address_locality = null;
+
+    public ?string $edit_address_postcode = null;
+
+    public ?string $edit_address_country_iso = null;
+
+    public ?string $edit_address_admin1_code = null;
+
+    public array $edit_address_admin1_options = [];
 
     public function mount(Company $company): void
     {
@@ -33,6 +89,7 @@ new class extends Component
             'relationships.relatedCompany',
             'inverseRelationships.type',
             'inverseRelationships.company',
+            'externalAccesses.user',
         ]);
     }
 
@@ -121,7 +178,7 @@ new class extends Component
 
     public function updateAddressPivot(int $addressId, string $field, mixed $value): void
     {
-        $allowed = ['kind', 'is_primary', 'priority'];
+        $allowed = ['is_primary', 'priority'];
         if (! in_array($field, $allowed)) {
             return;
         }
@@ -133,6 +190,15 @@ new class extends Component
         }
 
         $this->company->addresses()->updateExistingPivot($addressId, [$field => $value]);
+        $this->company->load('addresses');
+    }
+
+    public function saveAddressKinds(int $addressId, array $kinds): void
+    {
+        $valid = ['headquarters', 'billing', 'shipping', 'branch', 'other'];
+        $kinds = array_values(array_intersect($kinds, $valid));
+
+        $this->company->addresses()->updateExistingPivot($addressId, ['kind' => $kinds]);
         $this->company->load('addresses');
     }
 
@@ -160,6 +226,180 @@ new class extends Component
         $this->showAttachModal = false;
         $this->reset(['attach_address_id', 'attach_kind', 'attach_is_primary', 'attach_priority']);
         Session::flash('success', __('Address attached.'));
+    }
+
+    public function updatedNewAddressCountryIso($value): void
+    {
+        $this->new_address_admin1_code = null;
+        $this->new_address_admin1_options = [];
+
+        if ($value) {
+            $this->ensurePostcodesImported(strtoupper($value));
+            $this->new_address_admin1_options = $this->loadAdmin1ForCountry($value);
+        }
+    }
+
+    public function updatedNewAddressPostcode($value): void
+    {
+        if (! $this->new_address_country_iso || ! $value) {
+            return;
+        }
+
+        $result = $this->lookupPostcode($this->new_address_country_iso, $value);
+
+        if ($result) {
+            $this->new_address_locality = $result['locality'];
+
+            if (! $this->new_address_admin1_code && $result['admin1_code']) {
+                $this->new_address_admin1_code = $result['admin1_code'];
+
+                if (empty($this->new_address_admin1_options)) {
+                    $this->new_address_admin1_options = $this->loadAdmin1ForCountry($this->new_address_country_iso);
+                }
+            }
+        }
+    }
+
+    public function createAndAttachAddress(): void
+    {
+        $validated = $this->validate([
+            'new_address_label' => ['nullable', 'string', 'max:255'],
+            'new_address_phone' => ['nullable', 'string', 'max:255'],
+            'new_address_line1' => ['nullable', 'string'],
+            'new_address_line2' => ['nullable', 'string'],
+            'new_address_line3' => ['nullable', 'string'],
+            'new_address_locality' => ['nullable', 'string', 'max:255'],
+            'new_address_postcode' => ['nullable', 'string', 'max:255'],
+            'new_address_country_iso' => ['nullable', 'string', 'size:2'],
+            'new_address_admin1_code' => ['nullable', 'string', 'max:20'],
+            'new_address_kind' => ['required', 'array', 'min:1'],
+            'new_address_kind.*' => ['string', 'in:headquarters,billing,shipping,branch,other'],
+            'new_address_is_primary' => ['boolean'],
+            'new_address_priority' => ['integer'],
+        ]);
+
+        $address = Address::query()->create([
+            'label' => $validated['new_address_label'],
+            'phone' => $validated['new_address_phone'],
+            'line1' => $validated['new_address_line1'],
+            'line2' => $validated['new_address_line2'],
+            'line3' => $validated['new_address_line3'],
+            'locality' => $validated['new_address_locality'],
+            'postcode' => $validated['new_address_postcode'],
+            'country_iso' => $validated['new_address_country_iso'] ? strtoupper($validated['new_address_country_iso']) : null,
+            'admin1_code' => $validated['new_address_admin1_code'],
+            'source' => 'manual',
+            'verification_status' => 'unverified',
+        ]);
+
+        $this->company->addresses()->attach($address->id, [
+            'kind' => $validated['new_address_kind'],
+            'is_primary' => $validated['new_address_is_primary'],
+            'priority' => $validated['new_address_priority'],
+            'valid_from' => now()->toDateString(),
+        ]);
+
+        $this->company->load('addresses');
+        $this->showCreateAddressModal = false;
+        $this->reset([
+            'new_address_label', 'new_address_phone', 'new_address_line1',
+            'new_address_line2', 'new_address_line3', 'new_address_locality',
+            'new_address_postcode', 'new_address_country_iso', 'new_address_kind',
+            'new_address_is_primary', 'new_address_priority',
+            'new_address_admin1_code', 'new_address_admin1_options',
+        ]);
+        Session::flash('success', __('Address created and attached.'));
+    }
+
+    public function editAddress(int $addressId): void
+    {
+        $address = Address::query()->findOrFail($addressId);
+
+        $this->edit_address_id = $address->id;
+        $this->edit_address_label = $address->label ?? '';
+        $this->edit_address_phone = $address->phone;
+        $this->edit_address_line1 = $address->line1;
+        $this->edit_address_line2 = $address->line2;
+        $this->edit_address_line3 = $address->line3;
+        $this->edit_address_locality = $address->locality;
+        $this->edit_address_postcode = $address->postcode;
+        $this->edit_address_country_iso = $address->country_iso;
+        $this->edit_address_admin1_code = $address->admin1_code;
+        $this->edit_address_admin1_options = $address->country_iso
+            ? $this->loadAdmin1ForCountry($address->country_iso)
+            : [];
+
+        $this->showEditAddressModal = true;
+    }
+
+    public function updatedEditAddressCountryIso($value): void
+    {
+        $this->edit_address_admin1_code = null;
+        $this->edit_address_admin1_options = [];
+
+        if ($value) {
+            $this->ensurePostcodesImported(strtoupper($value));
+            $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($value);
+        }
+    }
+
+    public function updatedEditAddressPostcode($value): void
+    {
+        if (! $this->edit_address_country_iso || ! $value) {
+            return;
+        }
+
+        $result = $this->lookupPostcode($this->edit_address_country_iso, $value);
+
+        if ($result) {
+            $this->edit_address_locality = $result['locality'];
+
+            if (! $this->edit_address_admin1_code && $result['admin1_code']) {
+                $this->edit_address_admin1_code = $result['admin1_code'];
+
+                if (empty($this->edit_address_admin1_options)) {
+                    $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($this->edit_address_country_iso);
+                }
+            }
+        }
+    }
+
+    public function updateAddress(): void
+    {
+        $validated = $this->validate([
+            'edit_address_label' => ['nullable', 'string', 'max:255'],
+            'edit_address_phone' => ['nullable', 'string', 'max:255'],
+            'edit_address_line1' => ['nullable', 'string'],
+            'edit_address_line2' => ['nullable', 'string'],
+            'edit_address_line3' => ['nullable', 'string'],
+            'edit_address_locality' => ['nullable', 'string', 'max:255'],
+            'edit_address_postcode' => ['nullable', 'string', 'max:255'],
+            'edit_address_country_iso' => ['nullable', 'string', 'size:2'],
+            'edit_address_admin1_code' => ['nullable', 'string', 'max:20'],
+        ]);
+
+        $address = Address::query()->findOrFail($this->edit_address_id);
+        $address->update([
+            'label' => $validated['edit_address_label'],
+            'phone' => $validated['edit_address_phone'],
+            'line1' => $validated['edit_address_line1'],
+            'line2' => $validated['edit_address_line2'],
+            'line3' => $validated['edit_address_line3'],
+            'locality' => $validated['edit_address_locality'],
+            'postcode' => $validated['edit_address_postcode'],
+            'country_iso' => $validated['edit_address_country_iso'] ? strtoupper($validated['edit_address_country_iso']) : null,
+            'admin1_code' => $validated['edit_address_admin1_code'],
+        ]);
+
+        $this->company->load('addresses');
+        $this->showEditAddressModal = false;
+        $this->reset([
+            'edit_address_id', 'edit_address_label', 'edit_address_phone',
+            'edit_address_line1', 'edit_address_line2', 'edit_address_line3',
+            'edit_address_locality', 'edit_address_postcode', 'edit_address_country_iso',
+            'edit_address_admin1_code', 'edit_address_admin1_options',
+        ]);
+        Session::flash('success', __('Address updated.'));
     }
 
     public function with(): array
@@ -534,10 +774,16 @@ new class extends Component
                     {{ __('Addresses') }}
                     <x-ui.badge>{{ $company->addresses->count() }}</x-ui.badge>
                 </h3>
-                <x-ui.button variant="primary" size="sm" wire:click="$set('showAttachModal', true)">
-                    <x-icon name="heroicon-o-plus" class="w-4 h-4" />
-                    {{ __('Attach Address') }}
-                </x-ui.button>
+                <div class="flex items-center gap-2">
+                    <x-ui.button variant="primary" size="sm" wire:click="$set('showCreateAddressModal', true)">
+                        <x-icon name="heroicon-o-plus" class="w-4 h-4" />
+                        {{ __('Create & Attach') }}
+                    </x-ui.button>
+                    <x-ui.button variant="ghost" size="sm" wire:click="$set('showAttachModal', true)">
+                        <x-icon name="heroicon-o-link" class="w-4 h-4" />
+                        {{ __('Attach Existing') }}
+                    </x-ui.button>
+                </div>
             </div>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">
@@ -558,30 +804,33 @@ new class extends Component
                         @forelse($company->addresses as $address)
                             <tr wire:key="address-{{ $address->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <a href="{{ route('admin.addresses.show', $address) }}" wire:navigate class="text-link hover:underline">{{ $address->label ?? '-' }}</a>
+                                    <button wire:click="editAddress({{ $address->id }})" class="text-link hover:underline cursor-pointer">{{ $address->label ?? '-' }}</button>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ collect([$address->line1, $address->locality, $address->country_iso])->filter()->implode(', ') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted"
-                                    x-data="{ editing: false, val: '{{ $address->pivot->kind }}' }"
+                                    x-data="{ editing: false, selected: @js($address->pivot->kind ?? []) }"
                                 >
                                     <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                                        <span x-text="val.charAt(0).toUpperCase() + val.slice(1)"></span>
-                                        <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div class="flex flex-wrap gap-1">
+                                            <template x-for="k in selected" :key="k">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-surface-subtle text-ink border border-border-default" x-text="k.charAt(0).toUpperCase() + k.slice(1)"></span>
+                                            </template>
+                                            <span x-show="selected.length === 0" class="text-muted">-</span>
+                                        </div>
+                                        <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />
                                     </div>
-                                    <select
-                                        x-show="editing"
-                                        x-model="val"
-                                        @change="editing = false; $wire.updateAddressPivot({{ $address->id }}, 'kind', val)"
-                                        @keydown.escape="editing = false; val = '{{ $address->pivot->kind }}'"
-                                        @blur="editing = false"
-                                        class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                                    >
-                                        <option value="headquarters">{{ __('Headquarters') }}</option>
-                                        <option value="billing">{{ __('Billing') }}</option>
-                                        <option value="shipping">{{ __('Shipping') }}</option>
-                                        <option value="branch">{{ __('Branch') }}</option>
-                                        <option value="other">{{ __('Other') }}</option>
-                                    </select>
+                                    <div x-show="editing" class="space-y-1">
+                                        @foreach(['headquarters', 'billing', 'shipping', 'branch', 'other'] as $kindOption)
+                                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                                <input type="checkbox" value="{{ $kindOption }}" x-model="selected" class="rounded border-border-input text-accent focus:ring-accent" />
+                                                {{ __(ucfirst($kindOption)) }}
+                                            </label>
+                                        @endforeach
+                                        <div class="flex items-center gap-2 mt-1">
+                                            <button @click="$wire.saveAddressKinds({{ $address->id }}, selected); editing = false" class="px-2 py-0.5 text-xs font-medium rounded bg-accent text-accent-on hover:bg-accent-hover transition-colors">{{ __('Save') }}</button>
+                                            <button @click="editing = false; selected = @js($address->pivot->kind ?? [])" class="px-2 py-0.5 text-xs font-medium rounded hover:bg-surface-subtle text-muted transition-colors">{{ __('Cancel') }}</button>
+                                        </div>
+                                    </div>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     <button
@@ -618,14 +867,24 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->pivot->valid_from ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->pivot->valid_to ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
-                                    <button
-                                        wire:click="unlinkAddress({{ $address->id }})"
-                                        wire:confirm="{{ __('Are you sure you want to unlink this address?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
-                                    >
-                                        <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
-                                        {{ __('Unlink') }}
-                                    </button>
+                                    <div class="inline-flex flex-col items-end gap-1">
+                                        <a
+                                            href="{{ route('admin.addresses.show', $address) }}"
+                                            wire:navigate
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors"
+                                        >
+                                            <x-icon name="heroicon-o-arrow-top-right-on-square" class="w-4 h-4" />
+                                            {{ __('Open') }}
+                                        </a>
+                                        <button
+                                            wire:click="unlinkAddress({{ $address->id }})"
+                                            wire:confirm="{{ __('Are you sure you want to unlink this address?') }}"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
+                                        >
+                                            <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
+                                            {{ __('Unlink') }}
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         @empty
@@ -654,22 +913,164 @@ new class extends Component
 
                 <div class="space-y-1">
                     <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Kind') }}</label>
-                    <x-ui.select wire:model="attach_kind">
-                        <option value="headquarters">{{ __('Headquarters') }}</option>
-                        <option value="billing">{{ __('Billing') }}</option>
-                        <option value="shipping">{{ __('Shipping') }}</option>
-                        <option value="branch">{{ __('Branch') }}</option>
-                        <option value="other">{{ __('Other') }}</option>
-                    </x-ui.select>
+                    <div class="flex flex-wrap gap-x-4 gap-y-1">
+                        @foreach(['headquarters', 'billing', 'shipping', 'branch', 'other'] as $kindOption)
+                            <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                <input type="checkbox" value="{{ $kindOption }}" wire:model="attach_kind" class="rounded border-border-input text-accent focus:ring-accent" />
+                                {{ __(ucfirst($kindOption)) }}
+                            </label>
+                        @endforeach
+                    </div>
                 </div>
 
                 <x-ui.checkbox wire:model="attach_is_primary" label="{{ __('Primary Address') }}" />
 
-                <x-ui.input wire:model="attach_priority" label="{{ __('Priority') }}" type="number" />
+                <div>
+                    <x-ui.input wire:model="attach_priority" label="{{ __('Priority') }}" type="number" />
+                    <p class="text-xs text-muted mt-1">{{ __('Lower number = higher priority. Used to order addresses of the same kind (0 = top).') }}</p>
+                </div>
 
                 <div class="flex items-center gap-4 pt-2">
                     <x-ui.button variant="primary" wire:click="attachAddress">{{ __('Attach') }}</x-ui.button>
                     <x-ui.button type="button" variant="ghost" wire:click="$set('showAttachModal', false)">{{ __('Cancel') }}</x-ui.button>
+                </div>
+            </div>
+        </x-ui.modal>
+
+        <x-ui.modal wire:model="showCreateAddressModal" class="max-w-lg">
+            <div class="p-6 space-y-4">
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Create & Attach Address') }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input wire:model="new_address_label" label="{{ __('Label') }}" type="text" placeholder="{{ __('HQ, Warehouse, etc.') }}" :error="$errors->first('new_address_label')" />
+                    <x-ui.input wire:model="new_address_phone" label="{{ __('Phone') }}" type="text" placeholder="{{ __('Contact number') }}" :error="$errors->first('new_address_phone')" />
+                </div>
+
+                <x-ui.input wire:model="new_address_line1" label="{{ __('Address Line 1') }}" type="text" placeholder="{{ __('Street and number') }}" :error="$errors->first('new_address_line1')" />
+                <x-ui.input wire:model="new_address_line2" label="{{ __('Address Line 2') }}" type="text" placeholder="{{ __('Building, suite (optional)') }}" :error="$errors->first('new_address_line2')" />
+                <x-ui.input wire:model="new_address_line3" label="{{ __('Address Line 3') }}" type="text" placeholder="{{ __('Additional detail (optional)') }}" :error="$errors->first('new_address_line3')" />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.combobox
+                        wire:model.live="new_address_country_iso"
+                        label="{{ __('Country') }}"
+                        placeholder="{{ __('Search country...') }}"
+                        :options="$countries->map(fn($c) => ['value' => $c->iso, 'label' => $c->country])->all()"
+                        :error="$errors->first('new_address_country_iso')"
+                    />
+
+                    <x-ui.combobox
+                        wire:model.live="new_address_admin1_code"
+                        wire:key="modal-admin1-{{ $new_address_country_iso ?? 'none' }}"
+                        label="{{ __('State / Province') }}"
+                        placeholder="{{ __('Search state...') }}"
+                        :options="$new_address_admin1_options"
+                        :error="$errors->first('new_address_admin1_code')"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input
+                        wire:model.blur="new_address_postcode"
+                        label="{{ __('Postcode') }}"
+                        type="text"
+                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        :error="$errors->first('new_address_postcode')"
+                    />
+
+                    <x-ui.input
+                        wire:model="new_address_locality"
+                        label="{{ __('Locality') }}"
+                        type="text"
+                        placeholder="{{ __('City / town') }}"
+                        :error="$errors->first('new_address_locality')"
+                    />
+                </div>
+
+                <div class="border-t border-border-default pt-4">
+                    <h4 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-3">{{ __('Link Settings') }}</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Kind') }}</label>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1">
+                                @foreach(['headquarters', 'billing', 'shipping', 'branch', 'other'] as $kindOption)
+                                    <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                        <input type="checkbox" value="{{ $kindOption }}" wire:model="new_address_kind" class="rounded border-border-input text-accent focus:ring-accent" />
+                                        {{ __(ucfirst($kindOption)) }}
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                        <div>
+                            <x-ui.input wire:model="new_address_priority" label="{{ __('Priority') }}" type="number" />
+                            <p class="text-xs text-muted mt-1">{{ __('Lower number = higher priority. Used to order addresses of the same kind (0 = top).') }}</p>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <x-ui.checkbox wire:model="new_address_is_primary" label="{{ __('Primary Address') }}" />
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4 pt-2">
+                    <x-ui.button variant="primary" wire:click="createAndAttachAddress">{{ __('Create & Attach') }}</x-ui.button>
+                    <x-ui.button type="button" variant="ghost" wire:click="$set('showCreateAddressModal', false)">{{ __('Cancel') }}</x-ui.button>
+                </div>
+            </div>
+        </x-ui.modal>
+
+        <x-ui.modal wire:model="showEditAddressModal" class="max-w-lg">
+            <div class="p-6 space-y-4">
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Edit Address') }}</h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input wire:model="edit_address_label" label="{{ __('Label') }}" type="text" placeholder="{{ __('HQ, Warehouse, etc.') }}" :error="$errors->first('edit_address_label')" />
+                    <x-ui.input wire:model="edit_address_phone" label="{{ __('Phone') }}" type="text" placeholder="{{ __('Contact number') }}" :error="$errors->first('edit_address_phone')" />
+                </div>
+
+                <x-ui.input wire:model="edit_address_line1" label="{{ __('Address Line 1') }}" type="text" placeholder="{{ __('Street and number') }}" :error="$errors->first('edit_address_line1')" />
+                <x-ui.input wire:model="edit_address_line2" label="{{ __('Address Line 2') }}" type="text" placeholder="{{ __('Building, suite (optional)') }}" :error="$errors->first('edit_address_line2')" />
+                <x-ui.input wire:model="edit_address_line3" label="{{ __('Address Line 3') }}" type="text" placeholder="{{ __('Additional detail (optional)') }}" :error="$errors->first('edit_address_line3')" />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.combobox
+                        wire:model.live="edit_address_country_iso"
+                        label="{{ __('Country') }}"
+                        placeholder="{{ __('Search country...') }}"
+                        :options="$countries->map(fn($c) => ['value' => $c->iso, 'label' => $c->country])->all()"
+                        :error="$errors->first('edit_address_country_iso')"
+                    />
+
+                    <x-ui.combobox
+                        wire:model.live="edit_address_admin1_code"
+                        wire:key="edit-admin1-{{ $edit_address_country_iso ?? 'none' }}"
+                        label="{{ __('State / Province') }}"
+                        placeholder="{{ __('Search state...') }}"
+                        :options="$edit_address_admin1_options"
+                        :error="$errors->first('edit_address_admin1_code')"
+                    />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input
+                        wire:model.blur="edit_address_postcode"
+                        label="{{ __('Postcode') }}"
+                        type="text"
+                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        :error="$errors->first('edit_address_postcode')"
+                    />
+
+                    <x-ui.input
+                        wire:model="edit_address_locality"
+                        label="{{ __('Locality') }}"
+                        type="text"
+                        placeholder="{{ __('City / town') }}"
+                        :error="$errors->first('edit_address_locality')"
+                    />
+                </div>
+
+                <div class="flex items-center gap-4 pt-2">
+                    <x-ui.button variant="primary" wire:click="updateAddress">{{ __('Save') }}</x-ui.button>
+                    <x-ui.button type="button" variant="ghost" wire:click="$set('showEditAddressModal', false)">{{ __('Cancel') }}</x-ui.button>
                 </div>
             </div>
         </x-ui.modal>
@@ -823,6 +1224,69 @@ new class extends Component
                         @empty
                             <tr>
                                 <td colspan="6" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No relationships.') }}</td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </x-ui.card>
+
+        <x-ui.card>
+            <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                {{ __('External Accesses') }}
+                <x-ui.badge>{{ $company->externalAccesses->count() }}</x-ui.badge>
+            </h3>
+            <p class="text-xs text-muted mt-0.5 mb-4">{{ __('Portal access granted by this company to external users. Allows customers or suppliers to view shared data.') }}</p>
+
+            <div class="overflow-x-auto -mx-card-inner px-card-inner">
+                <table class="min-w-full divide-y divide-border-default text-sm">
+                    <thead class="bg-surface-subtle/80">
+                        <tr>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('User') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Permissions') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Status') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Granted At') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Expires At') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-surface-card divide-y divide-border-default">
+                        @forelse($company->externalAccesses as $access)
+                            <tr wire:key="access-{{ $access->id }}" class="hover:bg-surface-subtle/50 transition-colors">
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
+                                    @if($access->user)
+                                        <a href="{{ route('admin.users.show', $access->user) }}" wire:navigate class="text-link hover:underline">{{ $access->user->name }}</a>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
+                                    @if($access->permissions)
+                                        <div class="flex flex-wrap gap-1">
+                                            @foreach($access->permissions as $permission)
+                                                <x-ui.badge variant="default">{{ $permission }}</x-ui.badge>
+                                            @endforeach
+                                        </div>
+                                    @else
+                                        —
+                                    @endif
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
+                                    @if($access->isValid())
+                                        <x-ui.badge variant="success">{{ __('Valid') }}</x-ui.badge>
+                                    @elseif($access->hasExpired())
+                                        <x-ui.badge variant="danger">{{ __('Expired') }}</x-ui.badge>
+                                    @elseif($access->isPending())
+                                        <x-ui.badge variant="warning">{{ __('Pending') }}</x-ui.badge>
+                                    @else
+                                        <x-ui.badge variant="default">{{ __('Inactive') }}</x-ui.badge>
+                                    @endif
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $access->access_granted_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $access->access_expires_at?->format('Y-m-d H:i') ?? '—' }}</td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No external accesses.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -9,6 +9,7 @@ use App\Base\Authz\Models\PrincipalRole;
 use App\Base\Authz\Models\Role;
 use App\Base\Authz\Services\EffectivePermissions;
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Employee\Models\Employee;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
@@ -28,6 +29,20 @@ new class extends Component
 
     public array $selectedCapabilityKeys = [];
 
+    public ?int $link_employee_id = null;
+
+    public bool $showAddEmployeeModal = false;
+
+    public ?int $new_emp_company_id = null;
+
+    public string $new_emp_employee_number = '';
+
+    public string $new_emp_full_name = '';
+
+    public ?string $new_emp_designation = null;
+
+    public ?string $new_emp_employment_start = null;
+
     public function mount(User $user): void
     {
         $this->user = $user->load([
@@ -36,6 +51,7 @@ new class extends Component
             'employees.company',
             'employees.department',
         ]);
+        $this->new_emp_company_id = $user->company_id;
     }
 
     /**
@@ -211,6 +227,85 @@ new class extends Component
     }
 
     /**
+     * Link an employee record to this user.
+     */
+    public function linkEmployee(int $employeeId): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        $employee = Employee::query()->find($employeeId);
+        if (! $employee || $employee->user_id !== null) {
+            return;
+        }
+
+        $employee->user_id = $this->user->id;
+        $employee->save();
+        $this->user->load('employees.company', 'employees.department');
+        $this->link_employee_id = null;
+    }
+
+    /**
+     * Unlink an employee record from this user.
+     */
+    public function unlinkEmployee(int $employeeId): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        $employee = Employee::query()
+            ->where('id', $employeeId)
+            ->where('user_id', $this->user->id)
+            ->first();
+
+        if (! $employee) {
+            return;
+        }
+
+        $employee->user_id = null;
+        $employee->save();
+        $this->user->load('employees.company', 'employees.department');
+    }
+
+    /**
+     * Create a new employee record linked to this user.
+     */
+    public function addEmployee(): void
+    {
+        if (! $this->checkCapability('core.user.update')) {
+            return;
+        }
+
+        $validated = $this->validate([
+            'new_emp_company_id' => ['required', 'integer', 'exists:companies,id'],
+            'new_emp_employee_number' => ['required', 'string', 'max:255'],
+            'new_emp_full_name' => ['required', 'string', 'max:255'],
+            'new_emp_designation' => ['nullable', 'string', 'max:255'],
+            'new_emp_employment_start' => ['nullable', 'date'],
+        ]);
+
+        Employee::query()->create([
+            'company_id' => $validated['new_emp_company_id'],
+            'user_id' => $this->user->id,
+            'employee_number' => $validated['new_emp_employee_number'],
+            'full_name' => $validated['new_emp_full_name'],
+            'designation' => $validated['new_emp_designation'],
+            'employment_start' => $validated['new_emp_employment_start'],
+            'status' => 'active',
+        ]);
+
+        $this->user->load('employees.company', 'employees.department');
+        $this->showAddEmployeeModal = false;
+        $this->reset([
+            'new_emp_company_id', 'new_emp_employee_number', 'new_emp_full_name',
+            'new_emp_designation', 'new_emp_employment_start',
+        ]);
+        Session::flash('success', __('Employee record created.'));
+    }
+
+    /**
      * Check if the current user has the given capability.
      *
      * Flashes a friendly error if denied.
@@ -335,6 +430,10 @@ new class extends Component
             'deniedPermissions' => $deniedPermissions,
             'availableCapabilities' => $availableCapabilities,
             'effectivePermissions' => $effectivePermissions,
+            'unlinkableEmployees' => Employee::query()
+                ->whereNull('user_id')
+                ->orderBy('full_name')
+                ->get(['id', 'full_name', 'employee_number', 'company_id']),
         ];
     }
 }; ?>
@@ -723,10 +822,18 @@ new class extends Component
         </x-ui.card>
 
         <x-ui.card>
-            <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
-                {{ __('Employee Records') }}
-                <x-ui.badge>{{ $user->employees->count() }}</x-ui.badge>
-            </h3>
+            <div class="flex items-center justify-between mb-1">
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                    {{ __('Employee Records') }}
+                    <x-ui.badge>{{ $user->employees->count() }}</x-ui.badge>
+                </h3>
+                @if($canManageRoles)
+                    <x-ui.button variant="primary" size="sm" wire:click="$set('showAddEmployeeModal', true)">
+                        <x-icon name="heroicon-o-plus" class="w-4 h-4" />
+                        {{ __('Add Employee') }}
+                    </x-ui.button>
+                @endif
+            </div>
             <p class="text-xs text-muted mt-0.5 mb-4">{{ __('Employment records linking this user to companies. A user can have multiple records across different companies (e.g. contractors). Not all employees require a user account.') }}</p>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">
@@ -739,12 +846,15 @@ new class extends Component
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Designation') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Status') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Employment Start') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Actions') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-surface-card divide-y divide-border-default">
                         @forelse($user->employees as $employee)
                             <tr wire:key="employee-{{ $employee->id }}" class="hover:bg-surface-subtle/50 transition-colors">
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">{{ $employee->employee_number ?? '—' }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
+                                    <a href="{{ route('admin.employees.show', $employee) }}" wire:navigate class="text-link hover:underline">{{ $employee->employee_number ?? '—' }}</a>
+                                </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     @if ($employee->company)
                                         <a href="{{ route('admin.companies.show', $employee->company) }}" wire:navigate class="text-link hover:underline">{{ $employee->company->name }}</a>
@@ -764,16 +874,79 @@ new class extends Component
                                     }">{{ ucfirst($employee->status) }}</x-ui.badge>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $employee->employment_start?->format('Y-m-d') ?? '—' }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
+                                    <button
+                                        wire:click="unlinkEmployee({{ $employee->id }})"
+                                        wire:confirm="{{ __('Unlink this employee record from the user?') }}"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
+                                    >
+                                        <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
+                                        {{ __('Unlink') }}
+                                    </button>
+                                </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No employee records.') }}</td>
+                                <td colspan="7" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No employee records.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>
                 </table>
             </div>
+
+            @if($canManageRoles && $unlinkableEmployees->isNotEmpty())
+                <div x-data="{ linking: false }" class="mt-4 pt-4 border-t border-border-default">
+                    <x-ui.button x-show="!linking" variant="ghost" size="sm" @click="linking = true">
+                        <x-icon name="heroicon-o-plus" class="w-4 h-4" />
+                        {{ __('Link Employee') }}
+                    </x-ui.button>
+                    <div x-show="linking" class="flex items-end gap-2">
+                        <x-ui.combobox
+                            wire:model="link_employee_id"
+                            placeholder="{{ __('Search employee...') }}"
+                            :options="$unlinkableEmployees->map(fn($e) => ['value' => $e->id, 'label' => $e->full_name . ' (' . $e->employee_number . ')'])->all()"
+                            class="w-64"
+                        />
+                        <x-ui.button variant="primary" size="sm" @click="if ($wire.link_employee_id) { $wire.linkEmployee($wire.link_employee_id); linking = false; }">
+                            {{ __('Link') }}
+                        </x-ui.button>
+                        <x-ui.button variant="ghost" size="sm" @click="linking = false; $wire.set('link_employee_id', null)">
+                            {{ __('Cancel') }}
+                        </x-ui.button>
+                    </div>
+                </div>
+            @endif
         </x-ui.card>
+
+        <x-ui.modal wire:model="showAddEmployeeModal" class="max-w-lg">
+            <div class="p-6 space-y-4">
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Add Employee Record') }}</h3>
+
+                <x-ui.combobox
+                    wire:model="new_emp_company_id"
+                    label="{{ __('Company') }}"
+                    placeholder="{{ __('Search company...') }}"
+                    :options="$companies->map(fn($c) => ['value' => $c->id, 'label' => $c->name])->all()"
+                    required
+                    :error="$errors->first('new_emp_company_id')"
+                />
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input wire:model="new_emp_employee_number" label="{{ __('Employee Number') }}" type="text" required :error="$errors->first('new_emp_employee_number')" />
+                    <x-ui.input wire:model="new_emp_full_name" label="{{ __('Full Name') }}" type="text" required :error="$errors->first('new_emp_full_name')" />
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <x-ui.input wire:model="new_emp_designation" label="{{ __('Designation') }}" type="text" placeholder="{{ __('Job title') }}" :error="$errors->first('new_emp_designation')" />
+                    <x-ui.input wire:model="new_emp_employment_start" label="{{ __('Employment Start') }}" type="date" :error="$errors->first('new_emp_employment_start')" />
+                </div>
+
+                <div class="flex items-center gap-4 pt-2">
+                    <x-ui.button variant="primary" wire:click="addEmployee">{{ __('Create') }}</x-ui.button>
+                    <x-ui.button type="button" variant="ghost" wire:click="$set('showAddEmployeeModal', false)">{{ __('Cancel') }}</x-ui.button>
+                </div>
+            </div>
+        </x-ui.modal>
 
         <x-ui.card>
             <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
