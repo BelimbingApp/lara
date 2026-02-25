@@ -102,7 +102,7 @@ $this->app->extend('command.migrate', fn ($command, $app) =>
 
 ### Seeding Behavior
 
-Seeder registration is done in migrations via `registerSeeder()`. Seeders under `app/Modules/*/*/Database/Seeders/` are also discovered when you pass `--seed`: any not yet in the registry are added then, so they run even if the migration did not call `registerSeeder()`. Plain `migrate` (no `--seed`) never runs seeders. If a migration does not register its seeder, pass `--seed` (e.g. below).
+Seeder registration is done in migrations via `registerSeeder()`. Seeders under `app/Base/*/Database/Seeders/` and `app/Modules/*/*/Database/Seeders/` are also discovered when you pass `--seed`: any not yet in the registry are added then, so they run even if the migration did not call `registerSeeder()`. Plain `migrate` (no `--seed`) never runs seeders. If a migration does not register its seeder, pass `--seed` (e.g. below).
 
 ```bash
 # Run all pending seeders (after migrations)
@@ -131,6 +131,15 @@ php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\R
 # Run a dev seeder explicitly (note the Dev/ subdirectory in the path)
 php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 ```
+
+### Test baseline (automated tests)
+
+The test suite seeds reference data via `Tests\TestingBaselineSeeder`, which runs production seeders only for **modules that opt in**. Config key for each module is resolved from `App\Base\Foundation\ModuleConfigRegistry` (not from naming convention). Modules must register in their ServiceProvider: `ModuleConfigRegistry::register('ModuleName', 'config_key')`, where `config_key` matches the key used in `mergeConfigFrom()`. In that config file, set:
+
+- `'seed_for_testing' => true` — this module's production seeders run in test baseline (deterministic, no network).
+- Omit or set `false` — this module's seeders are not run in tests (e.g. network-bound or heavy seeders).
+
+If a module does not register with `ModuleConfigRegistry`, it is excluded from the test baseline. No central denylist; each module registers its config key and declares whether it is test-safe.
 
 ## Database Portability
 

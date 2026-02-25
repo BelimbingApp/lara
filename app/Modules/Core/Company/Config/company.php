@@ -4,6 +4,8 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 return [
+    // When true, this module's production seeders run in test baseline (deterministic, no network).
+    'seed_for_testing' => true,
 
     /*
     |--------------------------------------------------------------------------

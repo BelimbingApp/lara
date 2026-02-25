@@ -1,6 +1,9 @@
 <?php
 
 return [
+    // When true, this module's production seeders run in test baseline (deterministic, no network).
+    'seed_for_testing' => true,
+
     'domains' => [
         'core' => 'Core platform modules',
         'workflow' => 'Workflow and state transitions',

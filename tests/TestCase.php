@@ -2,7 +2,7 @@
 
 namespace Tests;
 
-use Database\Seeders\TestingSeeder;
+use Tests\TestingBaselineSeeder;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 
 abstract class TestCase extends BaseTestCase
@@ -17,9 +17,9 @@ abstract class TestCase extends BaseTestCase
     protected bool $seed = true;
 
     /**
-     * Use deterministic test seeding instead of the default DatabaseSeeder.
+     * Use deterministic test seeding (registry seeders for modules that opt in via config).
      *
      * @var class-string
      */
-    protected string $seeder = TestingSeeder::class;
+    protected string $seeder = TestingBaselineSeeder::class;
 }

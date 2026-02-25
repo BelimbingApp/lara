@@ -5,6 +5,7 @@
 
 namespace App\Modules\Core\Company;
 
+use App\Base\Foundation\ModuleConfigRegistry;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceProvider extends BaseServiceProvider
@@ -18,5 +19,6 @@ class ServiceProvider extends BaseServiceProvider
             __DIR__.'/Config/company.php',
             'company'
         );
+        ModuleConfigRegistry::register('Company', 'company');
     }
 }

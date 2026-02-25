@@ -185,29 +185,50 @@ class SeederRegistry extends Model
     }
 
     /**
-     * Ensure all BLB seeders under app/Modules/ * / * /Database/Seeders are in the registry.
+     * Ensure BLB seeders under app/Base/<module>/Database/Seeders and
+     * app/Modules/<layer>/<module>/Database/Seeders are in the registry.
+     * Mirrors the layer pattern used by InteractsWithModuleMigrations.
      * Only inserts when seeder_class is missing; does not overwrite migration-registered rows.
      */
     public static function ensureDiscoveredRegistered(): void
     {
-        $pattern = app_path('Modules').'/*/*/Database/Seeders/*.php';
-        $files = glob($pattern) ?: [];
+        $layers = [
+            app_path('Base') => '/*/Database/Seeders/*.php',
+            app_path('Modules') => '/*/*/Database/Seeders/*.php',
+        ];
 
-        foreach ($files as $file) {
-            $rel = str_replace([base_path().DIRECTORY_SEPARATOR, '\\'], ['', '/'], $file);
-            if (! str_starts_with($rel, 'app/Modules/') || ! str_ends_with($rel, '.php')) {
-                continue;
-            }
-            $fqcn = 'App\\'.str_replace(['/', '.php'], ['\\', ''], substr($rel, 4));
-            if (self::query()->where('seeder_class', $fqcn)->exists()) {
-                continue;
-            }
-            $beforeSeeders = '/Database/Seeders/';
-            $pos = strpos($rel, $beforeSeeders);
-            $modulePath = $pos !== false ? substr($rel, 0, $pos) : null;
-            $moduleName = $modulePath ? basename($modulePath) : null;
-            self::register($fqcn, $moduleName, $modulePath, null);
+        $files = [];
+        foreach ($layers as $appPath => $pattern) {
+            $files = array_merge($files, glob($appPath.$pattern) ?: []);
         }
+        foreach ($files as $file) {
+            self::registerDiscoveredFile($file);
+        }
+    }
+
+    /**
+     * Register a single discovered seeder file if not already in the registry.
+     *
+     * @param string $file Absolute path to the seeder PHP file
+     */
+    private static function registerDiscoveredFile(string $file): void
+    {
+        $rel = str_replace([base_path().DIRECTORY_SEPARATOR, '\\'], ['', '/'], $file);
+        if (! str_ends_with($rel, '.php')) {
+            return;
+        }
+        if (! str_starts_with($rel, 'app/Base/') && ! str_starts_with($rel, 'app/Modules/')) {
+            return;
+        }
+        $fqcn = 'App\\'.str_replace(['/', '.php'], ['\\', ''], substr($rel, 4));
+        if (self::query()->where('seeder_class', $fqcn)->exists()) {
+            return;
+        }
+        $beforeSeeders = '/Database/Seeders/';
+        $pos = strpos($rel, $beforeSeeders);
+        $modulePath = $pos !== false ? substr($rel, 0, $pos) : null;
+        $moduleName = $modulePath ? basename($modulePath) : null;
+        self::register($fqcn, $moduleName, $modulePath, null);
     }
 
     /**
