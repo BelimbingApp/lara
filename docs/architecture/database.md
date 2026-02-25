@@ -13,35 +13,15 @@ To manage this complexity, the framework enforces:
 2.  **Auto-Discovery**: To load migrations dynamically without manual registration.
 3.  **Registry-Based Seeding**: To orchestrate seeding across modules without a monolithic `DatabaseSeeder`.
 
+**Operational detail** (commands, `--module`, `--seed`, `--seeder`, dev workflow, RegistersSeeders trait, discovery paths): **[app/Base/Database/AGENTS.md](../../app/Base/Database/AGENTS.md)** is the single source. This document keeps only the high-level design, naming spec, registry table, and directory layout.
+
 ---
 
 ## 1. Migration Architecture
 
-### Auto-Discovery & Loading
+Migrations are **auto-discovered** from Base and Module directories when migration commands run. Module-specific migration and rollback use the `--module` option (case-sensitive). Laravel core tables in `database/migrations/` are always included.
 
-Migrations are **auto-discovered** from module directories when migration commands execute. The `App\Base\Database\ServiceProvider` uses the `InteractsWithModuleMigrations` trait to scan:
--   `app/Base/*/Database/Migrations/`
--   `app/Modules/*/*/Database/Migrations/`
-
-### Module-Specific Migrations
-
-BLB extends the native `migrate` command with a `--module` option:
-
-```bash
-# Default: Load all modules (equivalent to --module=*)
-php artisan migrate
-
-# Single module (case-sensitive, matches directory name)
-php artisan migrate --module=Geonames
-
-# Multiple modules
-php artisan migrate --module=Geonames,Users
-```
-
-**Behavior:**
--   **Case-Sensitive:** Module names must match the directory name exactly.
--   **Dependencies:** The command does *not* automatically resolve dependencies. You must migrate dependencies first or use `--module=*`.
--   **Core Tables:** Laravel core tables (in `database/migrations`) are always included.
+For discovery paths, command list, and `--module` usage examples, see [app/Base/Database/AGENTS.md](../../app/Base/Database/AGENTS.md) (Key Components, Module Auto-Discovery Paths).
 
 ---
 
@@ -93,91 +73,9 @@ Table names must prevent conflicts between modules and vendors.
 
 ## 3. Seeding Architecture
 
-BLB replaces the standard `DatabaseSeeder` with a **Seeder Registry** pattern. This allows modules to define their own seeding requirements self-sufficiently.
+BLB uses a **Seeder Registry** (`base_database_seeders` table). Migrations register seeders via `registerSeeder()` in `up()` and unregister in `down()`. Seeders can also be discovered from module `Database/Seeders/` when `--seed` is used. States: `pending` → `running` → `completed` | `failed` | `skipped`. Completed seeders are skipped on later runs.
 
-### The Registry (`base_database_seeders`)
-
-A dedicated table tracks which seeders have run for which module.
--   **Registration:** Migrations register seeders via `registerSeeder()`. Seeders under `app/Modules/*/*/Database/Seeders/` are also **discovered** when you pass `--seed`; any not yet in the registry are added then, so they run even if the migration did not call `registerSeeder()`.
--   **State tracking:** Seeders have states: `pending` → `running` → `completed` (or `failed`).
-
-### How to Implement
-
-In your migration file:
-
-```php
-public function up(): void
-{
-    Schema::create('my_table', ...);
-
-    // Register the seeder that populates this table
-    $this->registerSeeder(\App\Modules\Core\MyModule\Database\Seeders\MySeeder::class);
-}
-
-public function down(): void
-{
-    // Unregister on rollback
-    $this->unregisterSeeder(\App\Modules\Core\MyModule\Database\Seeders\MySeeder::class);
-
-    Schema::dropIfExists('my_table');
-}
-```
-
-### Execution (`migrate --seed`)
-
-When you run `php artisan migrate --seed`:
-1.  **Migrations Run:** New migrations execute `up()`, registering their seeders as `pending`.
-2.  **Registry check:** The command checks `base_database_seeders` for any `pending` or `failed` seeders for the target module(s).
-3.  **Execution:** It runs them in the order of their associated migration files.
-4.  **Idempotency:** Seeders marked `completed` are **skipped**. This allows you to safely run `--seed` on every deployment.
-
-### Manual Overrides
-
-**Force run a specific seeder** (bypasses registry):
-```bash
-# Short form (no quoting needed)
-php artisan migrate --seed --seeder=Geonames/CountrySeeder
-# Or FQCN with single quotes so backslashes are preserved
-php artisan migrate --seed --seeder='App\Modules\Core\Geonames\Database\Seeders\CountrySeeder'
-```
-
-**Retry failed seeders:**
-Just run `migrate --seed` again. The registry knows it failed and will retry.
-
-**Re-seed a module:**
-Rollback and re-migrate. The rollback removes the `completed` record; the migrate adds a new `pending` record.
-```bash
-php artisan migrate:rollback --module=Geonames
-php artisan migrate --module=Geonames --seed
-```
-
----
-
-### Development vs. Production Seeders
-
-Seeders fall into two categories with distinct naming and placement conventions:
-
-| Category | Purpose | Location | Naming |
-| :--- | :--- | :--- | :--- |
-| **Production** | Reference/config data needed in all environments | `Database/Seeders/` | `{Entity}Seeder` |
-| **Development** | Fake/test data for local development only | `Database/Seeders/Dev/` | `Dev{Description}Seeder` |
-
-**Production seeders** populate structural data derived from config (e.g., `DepartmentTypeSeeder`, `RelationshipTypeSeeder`). They are registered via `RegistersSeeders` in migrations and run automatically on `migrate --seed` in all environments.
-
-**Development seeders** create realistic fake data for UI development and manual testing. They live in a `Dev/` subdirectory and use a `Dev` class name prefix so they are immediately recognizable in CLI output, logs, and seeder registry. They should **never** be registered via `RegistersSeeders` in migrations — run them explicitly:
-
-```bash
-# Run a specific dev seeder (note the Dev/ subdirectory in the path)
-php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
-
-# All dev seeders in a module are discovered with --seed if pending
-php artisan migrate --seed --module=Company
-```
-
-**Conventions:**
--   Dev seeders use `firstOrCreate` patterns for idempotency.
--   Dev seeders may depend on production seeders having run first (e.g., dev data references `RelationshipType` records).
--   Never add dev seeders to production deployment scripts.
+For the RegistersSeeders trait, code examples, execution flow, dev vs production seeders, and CLI (`migrate --seed`, `--seeder`), see [app/Base/Database/AGENTS.md](../../app/Base/Database/AGENTS.md) (SeederRegistry, RegistersSeeders, Seeding Behavior, Development vs. Production Seeders, Development Workflow).
 
 ---
 
@@ -309,5 +207,5 @@ Business Layer (0300+)
 
 ## 7. Related Documentation
 
--   `app/Base/Database/AGENTS.md`: Migrate/seeding CLI (e.g. `migrate --seed`, `--module`, `--seeder`).
--   `docs/architecture/file-structure.md`: Full project directory layout.
+-   **[app/Base/Database/AGENTS.md](../../app/Base/Database/AGENTS.md)** — Single source for migrate/seeding CLI (`migrate`, `--seed`, `--module`, `--seeder`), RegistersSeeders trait, discovery paths, dev vs production seeders, development workflow, and database portability.
+-   **docs/architecture/file-structure.md** — Full project directory layout.
