@@ -3,14 +3,12 @@
 namespace Tests;
 
 use App\Base\Database\Models\SeederRegistry;
-use App\Base\Foundation\ModuleConfigRegistry;
 use Illuminate\Database\Seeder;
 
 /**
  * Baseline seed data for automated tests.
  *
- * Runs production seeders only for modules that opt in via config:
- * config key is resolved from ModuleConfigRegistry; then <config_key>.seed_for_testing must be true.
+ * Runs production seeders only for modules listed in tests/Support/testing-seed-modules.php.
  * Registry is populated by migrations before this seeder runs.
  */
 class TestingBaselineSeeder extends Seeder
@@ -20,7 +18,7 @@ class TestingBaselineSeeder extends Seeder
      */
     public function run(): void
     {
-        $modules = $this->moduleNamesForTesting();
+        $modules = $this->testingSeedModules();
 
         if ($modules === []) {
             return;
@@ -46,27 +44,20 @@ class TestingBaselineSeeder extends Seeder
     }
 
     /**
-     * Module names that opted in via config (ModuleConfigRegistry config key + seed_for_testing = true).
+     * Load module names from tests/Support/testing-seed-modules.php.
      *
      * @return array<int, string>
      */
-    private function moduleNamesForTesting(): array
+    private function testingSeedModules(): array
     {
-        $names = SeederRegistry::query()
-            ->distinct()
-            ->pluck('module_name')
-            ->filter()
-            ->sort()
-            ->values()
-            ->toArray();
+        $path = base_path('tests/Support/testing-seed-modules.php');
 
-        return array_values(array_filter($names, function (string $moduleName): bool {
-            $configKey = ModuleConfigRegistry::getConfigKey($moduleName);
-            if ($configKey === null) {
-                return false;
-            }
+        if (! file_exists($path)) {
+            return [];
+        }
 
-            return (bool) config($configKey.'.seed_for_testing', false);
-        }));
+        $modules = require $path;
+
+        return is_array($modules) ? array_values($modules) : [];
     }
 }

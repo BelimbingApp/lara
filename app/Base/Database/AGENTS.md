@@ -132,15 +132,6 @@ php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\R
 php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 ```
 
-### Test baseline (automated tests)
-
-The test suite seeds reference data via `Tests\TestingBaselineSeeder`, which runs production seeders only for **modules that opt in**. Config key for each module is resolved from `App\Base\Foundation\ModuleConfigRegistry` (not from naming convention). Modules must register in their ServiceProvider: `ModuleConfigRegistry::register('ModuleName', 'config_key')`, where `config_key` matches the key used in `mergeConfigFrom()`. In that config file, set:
-
-- `'seed_for_testing' => true` — this module's production seeders run in test baseline (deterministic, no network).
-- Omit or set `false` — this module's seeders are not run in tests (e.g. network-bound or heavy seeders).
-
-If a module does not register with `ModuleConfigRegistry`, it is excluded from the test baseline. No central denylist; each module registers its config key and declares whether it is test-safe.
-
 ## Database Portability
 
 **All database operations must be DB-agnostic.** Never use raw SQL that targets a specific database engine (MySQL, PostgreSQL, SQLite). Use Laravel's Schema Builder and Query Builder abstractions instead.
@@ -203,7 +194,9 @@ php artisan migrate --seed --seeder=Company/Dev/DevDepartmentSeeder
 php artisan migrate --seed --seeder='App\Base\Authz\Database\Seeders\Dev\DevAuthzCompanyAssignmentSeeder'
 ```
 
-**⚠️ Agent rule:** After running `migrate:fresh`, `migrate:reset`, or any operation that truncates tables, **always add `--dev`** (or run the manual steps above) to restore working test data. An empty database is not usable for local testing.
+**⚠️ Agent rule:** After running `migrate:fresh`, `migrate:reset`, or any operation that truncates tables on the local dev database, **always add `--dev`** (or run the manual steps above) to restore working dev data. An empty database is not usable for local testing.
+
+If automated tests run on in-memory SQLite (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`), this rule does not apply because those test refreshes do not modify the local dev database.
 
 ### Rollback by Batch (Preserve Data)
 

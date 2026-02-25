@@ -17,7 +17,7 @@ abstract class TestCase extends BaseTestCase
     protected bool $seed = true;
 
     /**
-     * Use deterministic test seeding (registry seeders for modules that opt in via config).
+     * Use deterministic test seeding (registry seeders for modules listed in tests manifest).
      *
      * @var class-string
      */

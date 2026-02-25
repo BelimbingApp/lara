@@ -1,9 +1,5 @@
 # Foundation Agent Guidelines
 
-## ModuleConfigRegistry
-
-`App\Base\Foundation\ModuleConfigRegistry` maps module names to Laravel config keys. Modules register in their ServiceProvider (`ModuleConfigRegistry::register('ModuleName', 'config_key')`). Used by test baseline seeding and any feature that needs config-by-module. See `app/Base/Database/AGENTS.md` (Test baseline) for usage.
-
 ## Service Provider Independence
 
 `App\Base\Foundation\Providers\ProviderRegistry` auto-discovers providers under `app/Base/*/ServiceProvider.php` and `app/Modules/*/*/ServiceProvider.php`.

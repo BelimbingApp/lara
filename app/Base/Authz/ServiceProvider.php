@@ -9,7 +9,6 @@ use App\Base\Authz\Capability\CapabilityCatalog;
 use App\Base\Authz\Capability\CapabilityRegistry;
 use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\Contracts\DecisionLogger;
-use App\Base\Foundation\ModuleConfigRegistry;
 use App\Base\Authz\Policies\ActorContextPolicy;
 use App\Base\Authz\Policies\CompanyScopePolicy;
 use App\Base\Authz\Policies\GrantPolicy;
@@ -33,7 +32,6 @@ class ServiceProvider extends BaseServiceProvider
     public function register(): void
     {
         $this->mergeConfigFrom(__DIR__.'/Config/authz.php', 'authz');
-        ModuleConfigRegistry::register('Authz', 'authz');
         $this->discoverModuleAuthzConfigs();
 
         $this->app->singleton(CapabilityCatalog::class, function (): CapabilityCatalog {
