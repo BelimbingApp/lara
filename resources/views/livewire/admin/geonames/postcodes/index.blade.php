@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Core\Geonames\Jobs\ImportPostcodes;
+use App\Modules\Core\Geonames\Database\Seeders\PostcodeSeeder;
 use App\Modules\Core\Geonames\Models\Country;
 use App\Modules\Core\Geonames\Models\Postcode;
 use Illuminate\Support\Facades\DB;
@@ -67,16 +67,18 @@ new class extends Component
             return;
         }
 
-        $count = count($this->selectedCountries);
-
-        ImportPostcodes::dispatch($this->selectedCountries)
-            ->onQueue(ImportPostcodes::QUEUE);
-        ImportPostcodes::runWorkerOnce();
+        $countryCodes = array_values(array_unique(array_map('strtoupper', $this->selectedCountries)));
+        sort($countryCodes);
 
         $this->selectedCountries = [];
         $this->showCountryPicker = false;
 
-        Session::flash('success', __('Import queued for :count country(s). Progress will appear below.', ['count' => $count]));
+        try {
+            app(PostcodeSeeder::class)->run($countryCodes);
+            Session::flash('success', __('Import completed for :count country(s).', ['count' => count($countryCodes)]));
+        } catch (\Throwable $e) {
+            Session::flash('error', __('Import failed: :message', ['message' => $e->getMessage()]));
+        }
     }
 
     public function update(): void
@@ -90,11 +92,12 @@ new class extends Component
             return;
         }
 
-        ImportPostcodes::dispatch($importedIsos)
-            ->onQueue(ImportPostcodes::QUEUE);
-        ImportPostcodes::runWorkerOnce();
-
-        Session::flash('success', __('Update queued for :count country(s). Progress will appear below.', ['count' => count($importedIsos)]));
+        try {
+            app(PostcodeSeeder::class)->run($importedIsos);
+            Session::flash('success', __('Update completed for :count country(s).', ['count' => count($importedIsos)]));
+        } catch (\Throwable $e) {
+            Session::flash('error', __('Update failed: :message', ['message' => $e->getMessage()]));
+        }
     }
 
     public function toggleCountryPicker(): void
@@ -117,7 +120,7 @@ new class extends Component
                     <x-icon name="heroicon-o-arrow-down-tray" class="w-5 h-5 shrink-0" />
                     @if ($showCountryPicker && count($selectedCountries) > 0)
                         <span wire:loading.remove wire:target="import">{{ __('Import') }} ({{ count($selectedCountries) }})</span>
-                        <span wire:loading wire:target="import">{{ __('Dispatching...') }}</span>
+                        <span wire:loading wire:target="import">{{ __('Importing...') }}</span>
                     @else
                         {{ __('Import') }}
                     @endif
@@ -131,6 +134,14 @@ new class extends Component
                 @endif
             </x-slot>
         </x-ui.page-header>
+
+        @if (session('success'))
+            <x-ui.alert variant="success">{{ session('success') }}</x-ui.alert>
+        @endif
+
+        @if (session('error'))
+            <x-ui.alert variant="error">{{ session('error') }}</x-ui.alert>
+        @endif
 
         {{-- Country Picker --}}
         @if ($showCountryPicker)
@@ -216,14 +227,6 @@ new class extends Component
                 </div>
             </template>
         </div>
-
-        @if (session('success'))
-            <x-ui.alert variant="success">{{ session('success') }}</x-ui.alert>
-        @endif
-
-        @if (session('error'))
-            <x-ui.alert variant="error">{{ session('error') }}</x-ui.alert>
-        @endif
 
         <x-ui.card>
             <div class="mb-2">
