@@ -2,14 +2,14 @@
 
 **Document Type:** Architecture Specification
 **Status:** Implemented
-**Last Updated:** 2026-02-23
-**Related:** `docs/architecture/user-employee-company.md`, `docs/architecture/ai-personal-agent.md`, `docs/architecture/database.md`
+**Last Updated:** 2026-02-25
+**Related:** `docs/architecture/user-employee-company.md`, `docs/architecture/ai-autonomous-employee.md`, `docs/architecture/database.md`
 
 ---
 
 ## 1. Problem Essence
 
-BLB needs one authorization system that consistently decides what both humans and their Personal Agents are allowed to do across UI, APIs, tools, and workflows.
+BLB needs one authorization system that consistently decides what both humans and AEs are allowed to do across UI, APIs, tools, and workflows.
 
 ---
 
@@ -26,14 +26,14 @@ Decision:
 
 Rationale:
 1. BLB rules are cross-cutting (company scope, role, workflow state, delegation).
-2. PA approvals and tool execution need policy evaluation, not menu-only checks.
+2. AE approvals and tool execution need policy evaluation, not menu-only checks.
 3. ACL-first would couple implementation to resource lists too early and create rework.
 
 ---
 
 ## 3. Public Interface
 
-All callers (web, API, PA runtime, jobs, menu rendering) use one decision contract.
+All callers (web, API, AE runtime, jobs, menu rendering) use one decision contract.
 
 ```php
 interface AuthorizationService
@@ -66,9 +66,9 @@ final readonly class Actor
 `$type` is a backed enum (`App\Base\Authz\Enums\PrincipalType`), not a raw string. The Actor carries a `validate()` method that encapsulates context validation rules (ID > 0, company required, agent delegation).
 
 Rules:
-1. A PA is a delegated actor for exactly one user.
-2. PA cannot exceed delegated user permissions.
-3. Same capability vocabulary applies to human and PA actors.
+1. A AE is a delegated actor for exactly one user.
+2. AE cannot exceed delegated user permissions.
+3. Same capability vocabulary applies to human and AE actors.
 4. Every decision carries actor type for audit.
 
 ### 3.2 Resource Context
@@ -99,10 +99,10 @@ final readonly class AuthorizationDecision
 
 Reason codes (`App\Base\Authz\Enums\AuthorizationReasonCode`):
 - `ALLOWED`
-- `DENIED_UNKNOWN_CAPABILITY`
+- `DENIED_UNKNOWN_CAAEBILITY`
 - `DENIED_INVALID_ACTOR_CONTEXT`
-- `DENIED_COMPANY_SCOPE`
-- `DENIED_MISSING_CAPABILITY`
+- `DENIED_COMAENY_SCOPE`
+- `DENIED_MISSING_CAAEBILITY`
 - `DENIED_EXPLICITLY`
 - `DENIED_POLICY_ENGINE_ERROR`
 
@@ -252,7 +252,7 @@ The base `Config/authz.php` holds only:
 - System role definitions that aggregate capabilities across modules
 - Decision log retention config
 
-**Adding capabilities for a new module:** Create `Config/authz.php` in the module directory. No service provider changes needed — the file is auto-discovered.
+**Adding capabilities for a new module:** Create `Config/authz.php` in the module directory. No service provider changes needed — the file is auto-discovered. For **Autonomous Employee (AE)** administration capabilities (e.g. `employee.ae.create`, `employee.ae.update`), the vocabulary is defined in [docs/architecture/ai-autonomous-employee.md](ai-autonomous-employee.md) §5.3; AuthZ owns registration and enforcement.
 
 ### 5.3 Catalog and Registry
 
@@ -401,15 +401,28 @@ Implemented as a composable policy pipeline (not hardcoded):
 
 Future policies (resource ownership, workflow state, delegation constraints) can be inserted into the pipeline without modifying existing code.
 
-### 9.2 Delegation Rules for PA
+### 9.2 Delegation Rules for AE
 
 1. `personal_agent` actor must include `actingForUserId`.
 2. Effective permissions = intersection of:
    - delegated user effective permissions
-   - PA safety policy (tool/channel limits)
+   - AE safety policy (tool/channel limits)
 3. High-risk actions may still require human approval even if allowed.
 
-### 9.3 Menu Integration Rule
+### 9.3 Autonomous Employees (AE)
+
+Autonomous employees (AE) are first-class employees under the same org and AuthZ model as humans. **Full specification:** [docs/architecture/ai-autonomous-employee.md](ai-autonomous-employee.md).
+
+**AuthZ contract for AE:**
+
+1. **Delegation constraint:** AE effective permissions must be a strict subset of the supervisor’s effective permissions. Delegation cannot create new privileges. A policy (or pipeline stage) enforces this when the actor or resource is an AE.
+2. **Explicit deny wins:** Same as AE and human; explicit deny always overrides role or delegated allow.
+3. **Capability gates for AE administration:** The AE spec defines capability keys for managing AEs (e.g. `employee.ae.create`, `employee.ae.update`, `employee.ae.assign_role`, `employee.ae.assign_permission`, `employee.ae.disable`). The final vocabulary is owned by the AuthZ module and declared in `Config/authz.php` (or module configs) when implemented.
+4. **Supervision chain:** Every AE must have a supervision chain that resolves to a human accountable owner; the supervision graph must be acyclic. AuthZ may need to evaluate “can this supervisor delegate to this subordinate?” using the same engine.
+
+For delegation invariants, supervisor model, and UI/audit rules, see [docs/architecture/ai-autonomous-employee.md](ai-autonomous-employee.md) §5–§7.
+
+### 9.4 Menu Integration Rule
 
 `menu.php` is a consumer, not source of truth.
 
@@ -422,7 +435,7 @@ Pattern:
 
 ## 10. Module-Level Error Policy
 
-1. Unknown capability → deny + `DENIED_UNKNOWN_CAPABILITY` + warning log.
+1. Unknown capability → deny + `DENIED_UNKNOWN_CAAEBILITY` + warning log.
 2. Missing actor context → deny + `DENIED_INVALID_ACTOR_CONTEXT`.
 3. Policy evaluation exception → deny + `DENIED_POLICY_ENGINE_ERROR` + error log.
 4. Audit logging failure → decision result stands, but emit high-severity operational alert.
@@ -433,7 +446,7 @@ Pattern:
 
 1. **Web Controller/Volt Action**
    - `authorize(actor, capability, resource)` before service call.
-2. **PA Tool Execution**
+2. **AE Tool Execution**
    - Evaluate as `personal_agent` actor with delegation context.
 3. **Menu Rendering**
    - `can(...)` checks only for visibility hints.
@@ -546,7 +559,7 @@ app/Modules/Core/Company/Config/authz.php    # core.company.*
 ## 14. Complexity Hotspots
 
 1. Multi-company users and company context switching.
-2. Manager-subordinate conditional policies.
+2. Manager-subordinate conditional policies and **AE delegation** (AE permissions ≤ supervisor; see [ai-autonomous-employee.md](ai-autonomous-employee.md)).
 3. Workflow-state-dependent permissions.
 4. Consistency between synchronous UI checks and async job execution.
 5. Future ACL overrides without policy ambiguity.
@@ -558,7 +571,7 @@ app/Modules/Core/Company/Config/authz.php    # core.company.*
 
 1. Full visual policy builder UI.
 2. Arbitrary ABAC DSL exposed to adopters.
-3. Cross-company delegation for PA.
+3. Cross-company delegation for AE.
 4. External federated identity policy mapping.
 5. Resource-level (row-level) ACL entries.
 
@@ -567,9 +580,9 @@ app/Modules/Core/Company/Config/authz.php    # core.company.*
 ## 16. Acceptance Conditions
 
 1. ✅ One API for all authorization decisions (`can/authorize/filterAllowed`).
-2. ✅ Same capability key can be evaluated for both human and PA actors.
+2. ✅ Same capability key can be evaluated for both human and AE actors.
 3. ✅ Deny-by-default proven through tests.
-4. ✅ UI, API, and PA tool path all call the same policy engine.
+4. ✅ UI, API, and AE tool path all call the same policy engine.
 5. ✅ Decision logs include actor type and reason code.
 6. ✅ Policy pipeline is composable — new policies added without modifying engine.
 7. ✅ Capabilities are module-owned and auto-discovered.

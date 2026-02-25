@@ -1,8 +1,8 @@
-# Stage 0 - PA Playground (Implementation Checklist)
+# Stage 0 - AE Playground (Implementation Checklist)
 
-**Parent Plan:** `docs/todo/ai-personal-agent/00-staged-delivery-plan.md`
-**Scope:** Web-only PA chat loop with persistent sessions/messages and visible runtime metadata
-**Target Outcome:** A user can open PA Playground, chat, switch sessions, refresh, and keep full history.
+**Parent Plan:** `docs/todo/ai-autonomous-employee/00-staged-delivery-plan.md`
+**Scope:** Web-only AE chat loop with persistent sessions/messages and visible runtime metadata
+**Target Outcome:** A user can open AE Playground, chat, switch sessions, refresh, and keep full history.
 **Prerequisite:** `docs/architecture/authorization.md` and `docs/todo/authorization/00-prd.md` Stage B + Stage D
 
 ## 1. Stage 0 Contract
@@ -10,18 +10,18 @@
 ### In Scope
 1. Authenticated web UI for chat and session switching
 2. Persisted session/message history
-3. Basic PA response runtime (no business write tools)
+3. Basic AE response runtime (no business write tools)
 4. Debug metadata visible in UI (run id, model, latency)
 
 ### Out of Scope
 1. Approval workflow
 2. External channels (WhatsApp/Telegram/Slack)
-3. Cross-user / PA-to-PA orchestration
+3. Cross-user / AE-to-AE orchestration
 4. High-risk tool execution
 
 ## 2. UI Deliverables
 
-1. `PA Playground` page route
+1. `AE Playground` page route
 2. Left column: session list + “new session” action
 3. Main column: chat transcript + composer
 4. Right column: debug panel with latest run metadata
@@ -30,36 +30,36 @@
 
 Create migrations for:
 
-1. `personal_agents`
-2. `pa_sessions`
-3. `pa_messages`
+1. `autonomous_employees`
+2. `ae_sessions`
+3. `ae_messages`
 
 Minimum fields:
 
-1. `personal_agents`: `id`, `user_id`, `company_id`, `status`, `context`, timestamps
-2. `pa_sessions`: `id`, `personal_agent_id`, `channel_type` (`web`), `title`, `last_activity_at`, timestamps
-3. `pa_messages`: `id`, `pa_session_id`, `role` (`user|assistant|system`), `content` (JSON/text), `run_id`, `meta` (JSON), timestamps
+1. `autonomous_employees`: `id`, `user_id`, `company_id`, `status`, `context`, timestamps
+2. `ae_sessions`: `id`, `autonomous_employee_id`, `channel_type` (`web`), `title`, `last_activity_at`, timestamps
+3. `ae_messages`: `id`, `ae_session_id`, `role` (`user|assistant|system`), `content` (JSON/text), `run_id`, `meta` (JSON), timestamps
 
 Constraints/indexes:
 
 1. FK integrity across all three tables
-2. Index on `pa_sessions.personal_agent_id`
-3. Index on `pa_messages.pa_session_id`
-4. Index on `pa_messages.run_id`
+2. Index on `ae_sessions.autonomous_employee_id`
+3. Index on `ae_messages.ae_session_id`
+4. Index on `ae_messages.run_id`
 
 ## 4. Backend Deliverables
 
 1. `PlaygroundSessionService`
-   - create/list/switch sessions for current user PA
+   - create/list/switch sessions for current user AE
 2. `PlaygroundMessageService`
    - append user message
    - append assistant message
    - fetch ordered timeline
-3. `PersonalAgentRuntime` (Stage 0 adapter)
+3. `AutonomousEmployeeRuntime` (Stage 0 adapter)
    - takes latest conversation context
    - returns plain assistant text + metadata (`run_id`, `model`, `latency_ms`)
 4. Authorization policy
-   - user can only access own PA/sessions/messages
+   - user can only access own AE/sessions/messages
 
 ## 5. Frontend Deliverables (Volt/Livewire)
 
