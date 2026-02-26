@@ -114,7 +114,7 @@ upgrade_php() {
 
                 # Install PHP using version from versions.sh
                 echo -e "${CYAN}Installing PHP ${required_php_version}...${NC}"
-                sudo apt-get install -y -qq "php${required_php_version}" "php${required_php_version}-cli" "php${required_php_version}-common" "php${required_php_version}-mbstring" "php${required_php_version}-xml" "php${required_php_version}-curl" "php${required_php_version}-zip" "php${required_php_version}-pgsql" "php${required_php_version}-bcmath" || {
+                sudo apt-get install -y -qq "php${required_php_version}" "php${required_php_version}-cli" "php${required_php_version}-common" "php${required_php_version}-mbstring" "php${required_php_version}-xml" "php${required_php_version}-curl" "php${required_php_version}-zip" "php${required_php_version}-pgsql" "php${required_php_version}-bcmath" "php${required_php_version}-intl" || {
                     echo -e "${RED}✗${NC} Failed to install PHP ${required_php_version}" >&2
                     return 1
                 }
@@ -131,7 +131,7 @@ upgrade_php() {
                 local php_repo="remi-php${required_php_version//./}"
                 sudo yum install -y https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm || true
                 sudo yum-config-manager --enable "$php_repo" || true
-                sudo yum update -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath || {
+                sudo yum update -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath php-intl || {
                     echo -e "${RED}✗${NC} Failed to upgrade PHP" >&2
                     return 1
                 }
@@ -141,7 +141,7 @@ upgrade_php() {
                 local php_repo="remi-php${required_php_version//./}"
                 sudo dnf install -y https://rpms.remirepo.net/fedora/remi-release-$(rpm -E %{fedora}).rpm || true
                 sudo dnf config-manager --set-enabled "$php_repo" || true
-                sudo dnf update -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath || {
+                sudo dnf update -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath php-intl || {
                     echo -e "${RED}✗${NC} Failed to upgrade PHP" >&2
                     return 1
                 }
@@ -205,7 +205,7 @@ install_php() {
                 sudo add-apt-repository -y ppa:ondrej/php 2>/dev/null || true
                 sudo apt-get update -qq
                 echo -e "${CYAN}Installing PHP ${required_php_version}...${NC}"
-                sudo apt-get install -y -qq "php${required_php_version}" "php${required_php_version}-cli" "php${required_php_version}-common" "php${required_php_version}-mbstring" "php${required_php_version}-xml" "php${required_php_version}-curl" "php${required_php_version}-zip" "php${required_php_version}-pgsql" "php${required_php_version}-bcmath" || {
+                sudo apt-get install -y -qq "php${required_php_version}" "php${required_php_version}-cli" "php${required_php_version}-common" "php${required_php_version}-mbstring" "php${required_php_version}-xml" "php${required_php_version}-curl" "php${required_php_version}-zip" "php${required_php_version}-pgsql" "php${required_php_version}-bcmath" "php${required_php_version}-intl" || {
                     echo -e "${RED}✗${NC} Failed to install PHP" >&2
                     return 1
                 }
@@ -217,7 +217,7 @@ install_php() {
                 local php_repo="remi-php${required_php_version//./}"
                 sudo yum install -y https://rpms.remirepo.net/enterprise/remi-release-$(rpm -E %{rhel}).rpm || true
                 sudo yum-config-manager --enable "$php_repo" || true
-                sudo yum install -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath || {
+                sudo yum install -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath php-intl || {
                     echo -e "${RED}✗${NC} Failed to install PHP" >&2
                     return 1
                 }
@@ -227,7 +227,7 @@ install_php() {
                 local php_repo="remi-php${required_php_version//./}"
                 sudo dnf install -y https://rpms.remirepo.net/fedora/remi-release-$(rpm -E %{fedora}).rpm || true
                 sudo dnf config-manager --set-enabled "$php_repo" || true
-                sudo dnf install -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath || {
+                sudo dnf install -y php php-cli php-common php-mbstring php-xml php-curl php-zip php-pgsql php-bcmath php-intl || {
                     echo -e "${RED}✗${NC} Failed to install PHP" >&2
                     return 1
                 }
@@ -256,6 +256,67 @@ install_php() {
     echo ""
     echo -e "${RED}✗${NC} PHP installation verification failed" >&2
     return 1
+}
+
+# Ensure required PHP extensions are installed
+ensure_php_extensions_installed() {
+    local required_php_version="$1"
+    local required_extensions=(intl mbstring xml curl zip pgsql bcmath)
+    local missing_extensions=()
+    for ext in "${required_extensions[@]}"; do
+        if ! php -m | grep -q "^$ext$"; then
+            missing_extensions+=("$ext")
+        fi
+    done
+
+    if [ ${#missing_extensions[@]} -gt 0 ]; then
+        echo -e "${YELLOW}⚠${NC} Missing PHP extensions: ${missing_extensions[*]}"
+        local os_type
+        os_type=$(detect_os)
+        case "$os_type" in
+            linux|wsl2)
+                if command_exists apt-get; then
+                    for ext in "${missing_extensions[@]}"; do
+                        sudo apt-get install -y -qq "php${required_php_version}-$ext"
+                    done
+                elif command_exists yum; then
+                    for ext in "${missing_extensions[@]}"; do
+                        sudo yum install -y "php-$ext"
+                    done
+                elif command_exists dnf; then
+                    for ext in "${missing_extensions[@]}"; do
+                        sudo dnf install -y "php-$ext"
+                    done
+                else
+                    echo -e "${RED}✗${NC} Package manager not supported for extension install" >&2
+                fi
+                ;;
+            macos)
+                if command_exists brew; then
+                    echo -e "${YELLOW}Note:${NC} For macOS, extensions are bundled or require pecl. Please install missing extensions manually if needed."
+                else
+                    echo -e "${RED}✗${NC} Homebrew required for extension install on macOS" >&2
+                fi
+                ;;
+            *)
+                echo -e "${RED}✗${NC} OS not supported for extension install" >&2
+                ;;
+        esac
+        # Re-check extensions
+        local still_missing=()
+        for ext in "${missing_extensions[@]}"; do
+            if ! php -m | grep -q "^$ext$"; then
+                still_missing+=("$ext")
+            fi
+        done
+        if [ ${#still_missing[@]} -eq 0 ]; then
+            echo -e "${GREEN}✓${NC} All required PHP extensions installed"
+        else
+            echo -e "${RED}✗${NC} Still missing extensions: ${still_missing[*]}"
+        fi
+    else
+        echo -e "${GREEN}✓${NC} All required PHP extensions present"
+    fi
 }
 
 # Install Composer
@@ -331,6 +392,8 @@ main() {
         local php_version
         php_version=$(php -r "echo PHP_VERSION;")
         echo -e "${GREEN}✓${NC} PHP already installed: $php_version (meets requirement: ${required_php_version}+)"
+
+        ensure_php_extensions_installed "$required_php_version"
     else
         if command_exists php; then
             local php_version
