@@ -1,0 +1,33 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+return [
+    'items' => [
+        [
+            'id' => 'system.jobs',
+            'label' => 'Jobs',
+            'icon' => 'heroicon-o-queue-list',
+            'route' => 'admin.system.jobs.index',
+            'parent' => 'system',
+            'position' => 30,
+        ],
+        [
+            'id' => 'system.failed-jobs',
+            'label' => 'Failed Jobs',
+            'icon' => 'heroicon-o-exclamation-triangle',
+            'route' => 'admin.system.failed-jobs.index',
+            'parent' => 'system',
+            'position' => 40,
+        ],
+        [
+            'id' => 'system.job-batches',
+            'label' => 'Job Batches',
+            'icon' => 'heroicon-o-squares-plus',
+            'route' => 'admin.system.job-batches.index',
+            'parent' => 'system',
+            'position' => 50,
+        ],
+    ],
+];

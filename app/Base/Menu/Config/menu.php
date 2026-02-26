@@ -16,6 +16,13 @@ return [
             'position' => 0,
         ],
         [
+            'id' => 'system',
+            'label' => 'System',
+            'icon' => 'heroicon-o-server-stack',
+            'parent' => 'admin',
+            'position' => 900,
+        ],
+        [
             'id' => 'business',
             'label' => 'Business Operations',
             'icon' => 'heroicon-o-building-office',
