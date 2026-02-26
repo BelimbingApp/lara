@@ -3,6 +3,7 @@
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Employee\Models\Employee;
+use App\Modules\Core\Employee\Models\EmployeeType;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
@@ -35,6 +36,7 @@ new class extends Component
             'full_name' => ['required', 'string', 'max:255'],
             'short_name' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
+            'job_description' => ['nullable', 'string', 'max:65535'],
             'email' => ['nullable', 'email', 'max:255'],
             'mobile_number' => ['nullable', 'string', 'max:255'],
             'employee_number' => ['required', 'string', 'max:255'],
@@ -62,11 +64,15 @@ new class extends Component
 
     public function saveEmployeeType(string $type): void
     {
-        if (! in_array($type, ['full_time', 'part_time', 'contractor', 'intern'])) {
+        $exists = EmployeeType::query()->where('code', $type)->exists();
+        if (! $exists) {
             return;
         }
 
         $this->employee->employee_type = $type;
+        if ($type === 'digital_worker') {
+            $this->employee->user_id = null;
+        }
         $this->employee->save();
     }
 
@@ -183,6 +189,7 @@ new class extends Component
                 ->where('id', '!=', $this->employee->id)
                 ->orderBy('full_name')
                 ->get(['id', 'full_name']),
+            'employeeTypes' => EmployeeType::query()->global()->orderBy('code')->get(['id', 'code', 'label']),
             'users' => User::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -207,7 +214,7 @@ new class extends Component
     <x-slot name="title">{{ $employee->displayName() }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="$employee->displayName()" :subtitle="$employee->designation">
+        <x-ui.page-header :title="$employee->displayName()" :subtitle="$employee->designation ?? $employee->job_description">
             <x-slot name="actions">
                 <a href="{{ route('admin.employees.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
@@ -281,6 +288,25 @@ new class extends Component
                             />
                         </dd>
                     </div>
+                    @if($employee->isDigitalWorker())
+                    <div x-data="{ editing: false, val: '{{ addslashes($employee->job_description ?? '') }}' }">
+                        <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Job Description') }}</dt>
+                        <dd class="text-sm text-ink">
+                            <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input?.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
+                                <span x-text="val || '-'"></span>
+                                <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                            <textarea
+                                x-show="editing"
+                                x-ref="input"
+                                x-model="val"
+                                @blur="editing = false; $wire.saveField('job_description', val)"
+                                rows="2"
+                                class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
+                            ></textarea>
+                        </dd>
+                    </div>
+                    @endif
                     <div x-data="{ editing: false, val: '{{ addslashes($employee->designation ?? '') }}' }">
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Designation') }}</dt>
                         <dd class="text-sm text-ink">
@@ -409,7 +435,11 @@ new class extends Component
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Employee Type') }}</dt>
                         <dd class="mt-0.5">
                             <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                                <span class="text-sm text-ink">{{ $employee->employee_type ? ucwords(str_replace('_', ' ', $employee->employee_type)) : '-' }}</span>
+                                @if($employee->isDigitalWorker())
+                                    <x-ui.badge variant="info">{{ __('Digital Worker') }}</x-ui.badge>
+                                @else
+                                    <span class="text-sm text-ink">{{ $employee->employee_type ? ucwords(str_replace('_', ' ', $employee->employee_type)) : '-' }}</span>
+                                @endif
                                 <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                             </div>
                             <select
@@ -420,10 +450,16 @@ new class extends Component
                                 @blur="editing = false"
                                 class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
                             >
-                                <option value="full_time">{{ __('Full Time') }}</option>
-                                <option value="part_time">{{ __('Part Time') }}</option>
-                                <option value="contractor">{{ __('Contractor') }}</option>
-                                <option value="intern">{{ __('Intern') }}</option>
+                                <optgroup label="{{ __('Human') }}">
+                                    @foreach($employeeTypes->where('code', '!=', 'digital_worker') as $type)
+                                        <option value="{{ $type->code }}">{{ $type->label }}</option>
+                                    @endforeach
+                                </optgroup>
+                                <optgroup label="{{ __('Digital Worker') }}">
+                                    @foreach($employeeTypes->where('code', 'digital_worker') as $type)
+                                        <option value="{{ $type->code }}">{{ $type->label }}</option>
+                                    @endforeach
+                                </optgroup>
                             </select>
                         </dd>
                     </div>
@@ -455,6 +491,7 @@ new class extends Component
                             </select>
                         </dd>
                     </div>
+                    @if(!$employee->isDigitalWorker())
                     <div x-data="{ editing: false, val: '{{ $employee->user_id ?? '' }}' }">
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('User') }}</dt>
                         <dd class="text-sm text-ink">
@@ -483,6 +520,7 @@ new class extends Component
                             </select>
                         </dd>
                     </div>
+                    @endif
                     <div>
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Employment Start') }}</dt>
                         <dd class="text-sm text-ink px-1 -mx-1 py-0.5 tabular-nums">{{ $employee->employment_start?->format('Y-m-d') ?? '-' }}</dd>

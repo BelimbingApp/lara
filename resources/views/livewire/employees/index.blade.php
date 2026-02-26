@@ -11,7 +11,14 @@ new class extends Component
 
     public string $search = '';
 
+    public string $type_filter = 'all'; // all | human | digital_worker
+
     public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedTypeFilter(): void
     {
         $this->resetPage();
     }
@@ -20,15 +27,18 @@ new class extends Component
     {
         return [
             'employees' => Employee::query()
-                ->with('company', 'department.type')
+                ->with('company', 'department.type', 'employeeType')
                 ->when($this->search, function ($query, $search): void {
                     $query
                         ->where('full_name', 'like', '%'.$search.'%')
                         ->orWhere('short_name', 'like', '%'.$search.'%')
                         ->orWhere('employee_number', 'like', '%'.$search.'%')
                         ->orWhere('email', 'like', '%'.$search.'%')
-                        ->orWhere('designation', 'like', '%'.$search.'%');
+                        ->orWhere('designation', 'like', '%'.$search.'%')
+                        ->orWhere('job_description', 'like', '%'.$search.'%');
                 })
+                ->when($this->type_filter === 'human', fn ($q) => $q->human())
+                ->when($this->type_filter === 'digital_worker', fn ($q) => $q->digitalWorker())
                 ->latest()
                 ->paginate(15),
         ];
@@ -45,9 +55,9 @@ new class extends Component
         };
     }
 
-    public function employeeTypeLabel(string $type): string
+    public function employeeTypeLabel(Employee $employee): string
     {
-        return ucfirst(str_replace('_', ' ', $type));
+        return $employee->employeeType?->label ?? ucfirst(str_replace('_', ' ', $employee->employee_type));
     }
 
     public function delete(int $employeeId): void
@@ -87,11 +97,24 @@ new class extends Component
         @endif
 
         <x-ui.card>
-            <div class="mb-2">
-                <x-ui.search-input
-                    wire:model.live.debounce.300ms="search"
-                    placeholder="{{ __('Search by name, employee number, email, or designation...') }}"
-                />
+            <div class="mb-4 flex flex-col sm:flex-row gap-4">
+                <div class="flex-1">
+                    <x-ui.search-input
+                        wire:model.live.debounce.300ms="search"
+                        placeholder="{{ __('Search by name, employee number, email, designation, or job description...') }}"
+                    />
+                </div>
+                <div class="flex items-center gap-2">
+                    <label class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Filter') }}</label>
+                    <select
+                        wire:model.live="type_filter"
+                        class="px-input-x py-input-y text-sm border border-border-input rounded-lg bg-surface-card text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-0"
+                    >
+                        <option value="all">{{ __('All') }}</option>
+                        <option value="human">{{ __('Human only') }}</option>
+                        <option value="digital_worker">{{ __('Digital Worker only') }}</option>
+                    </select>
+                </div>
             </div>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">
@@ -124,7 +147,11 @@ new class extends Component
                                     {{ $employee->designation ?? '-' }}
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <x-ui.badge variant="default">{{ $this->employeeTypeLabel($employee->employee_type) }}</x-ui.badge>
+                                    @if($employee->isDigitalWorker())
+                                        <x-ui.badge variant="info">{{ $this->employeeTypeLabel($employee) }}</x-ui.badge>
+                                    @else
+                                        <x-ui.badge variant="default">{{ $this->employeeTypeLabel($employee) }}</x-ui.badge>
+                                    @endif
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
                                     <x-ui.badge :variant="$this->statusVariant($employee->status)">{{ ucfirst($employee->status) }}</x-ui.badge>

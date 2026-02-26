@@ -1,8 +1,10 @@
 # Authorization (AuthZ) Implementation Plan
 
-**Status:** Planned
+**Status:** Partially Implemented
 **Last Updated:** 2026-02-26
 **Prerequisites:** `docs/architecture/authorization.md`, `docs/todo/authorization/00-prd.md`
+
+**Implementation status:** See [00-prd.md](00-prd.md) §0. Stages A–D mostly done; E partial (assignment validation + cascade revocation remaining); F partial (no decision log query tooling). Digital Worker model: same RBAC, assignment-only, cascade revocation — see [00-prd.md](00-prd.md) §3.1.
 
 ---
 
@@ -17,17 +19,18 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 4. Digital Worker uses same AuthZ engine via delegated actor model
 5. Naming is canonical: `Digital Worker`, principal values `human_user | digital_worker`, and AI capability prefix `ai.digital_worker.*`
 6. Delegation context uses `actingForUserId` in current DTO (extendable to richer supervision metadata later)
+7. **Digital Worker permission model:** Same RBAC as human (`principal_id = employee_id`). Assignment-only: validate at assign time that supervisor can only assign what they have. Cascade revocation: when supervisor loses role/capability, cascade to all subordinates (Employee.supervisor_id). No runtime policy that loads supervisor effective permissions.
 
 ## 3. Stage Plan
 
-## Stage A - Capability Spine
+## Stage A - Capability Spine ✅
 
 ### Tasks
-1. Finalize allowed domain list and owner mapping
-2. Finalize action verb list (`view`, `list`, `create`, `update`, `delete`, `submit`, `approve`, `reject`, `execute`)
-3. Implement capability registry (code-first)
-4. Add capability lookup helper for app consumption
-5. Add CI/test validator for unknown capability usage
+- [x] 1. Finalize allowed domain list and owner mapping
+- [x] 2. Finalize action verb list (`view`, `list`, `create`, `update`, `delete`, `submit`, `approve`, `reject`, `execute`)
+- [x] 3. Implement capability registry (code-first)
+- [x] 4. Add capability lookup helper for app consumption
+- [x] 5. Add CI/test validator for unknown capability usage
 
 ### Target Files (proposed)
 1. `app/Base/Authz/Capability/CapabilityKey.php`
@@ -42,15 +45,15 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ---
 
-## Stage B - AuthZ Schema and Persistence
+## Stage B - AuthZ Schema and Persistence ✅
 
 ### Tasks
-1. Create migrations for RBAC and direct grants
-2. Add indexes/constraints for company-scoped lookups
-3. Implement Eloquent models and relationships
-4. Seed baseline roles/capabilities for existing modules only
-5. Reserve and use Base module migration prefix `0100_01_11_*` for AuthZ
-6. Register production seeders inside AuthZ migrations (`up()` register, `down()` unregister)
+- [x] 1. Create migrations for RBAC and direct grants
+- [x] 2. Add indexes/constraints for company-scoped lookups
+- [x] 3. Implement Eloquent models and relationships
+- [x] 4. Seed baseline roles/capabilities for existing modules only
+- [x] 5. Reserve and use Base module migration prefix `0100_01_11_*` for AuthZ
+- [x] 6. Register production seeders inside AuthZ migrations (`up()` register, `down()` unregister)
 
 ### Target Files (proposed)
 1. `app/Base/Authz/Database/Migrations/0100_01_11_000000_create_base_authz_roles_table.php`
@@ -69,18 +72,18 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ---
 
-## Stage C - Authorization Service and Policy Engine
+## Stage C - Authorization Service and Policy Engine ✅
 
 ### Tasks
-1. Implement decision DTO (Data Transfer Object) and reason code enum
-2. Implement `AuthorizationService` (`can`, `authorize`, `filterAllowed`)
-3. Implement policy pipeline order:
+- [x] 1. Implement decision DTO (Data Transfer Object) and reason code enum
+- [x] 2. Implement `AuthorizationService` (`can`, `authorize`, `filterAllowed`)
+- [x] 3. Implement policy pipeline order:
    - actor validity
    - company scope
    - capability grant
    - resource conditions
    - final decision
-4. Enforce fail-closed behavior on exceptions
+- [x] 4. Enforce fail-closed behavior on exceptions
 
 ### Target Files (proposed)
 1. `app/Base/Authz/Contracts/AuthorizationService.php`
@@ -88,9 +91,9 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 3. `app/Base/Authz/DTO/ResourceContext.php`
 4. `app/Base/Authz/DTO/AuthorizationDecision.php`
 5. `app/Base/Authz/Enums/AuthorizationReasonCode.php`
-6. `app/Base/Authz/Services/AuthorizationServiceImpl.php`
+6. `app/Base/Authz/Services/AuthorizationEngine.php` + `AuditingAuthorizationService`
 7. `app/Base/Authz/Policies/*`
-8. `tests/Unit/Base/Authz/AuthorizationServiceTest.php`
+8. `tests/Feature/Authz/AuthorizationServiceTest.php`
 
 ### Done Criteria
 1. Deny-by-default proven by unit tests
@@ -99,13 +102,13 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ---
 
-## Stage D - First Module Integration (Web/API/Menu)
+## Stage D - First Module Integration (Web/API/Menu) ✅
 
 ### Tasks
-1. Pick one existing module as reference integration
-2. Add explicit `authorize(...)` calls at action boundaries
-3. Integrate menu visibility checks via capability keys
-4. Add API/web tests for allow/deny/cross-company behavior
+- [x] 1. Pick one existing module as reference integration (Role UI, Impersonation)
+- [x] 2. Add explicit `authorize(...)` calls at action boundaries (middleware `authz:capability`)
+- [x] 3. Integrate menu visibility checks via capability keys (`AuthzMenuAccessChecker`)
+- [x] 4. Add API/web tests for allow/deny/cross-company behavior
 
 ### Target Files (proposed)
 1. `<chosen-module>/Controllers/*`
@@ -120,33 +123,36 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ---
 
-## Stage E - Digital Worker Delegation
+## Stage E - Digital Worker Delegation (Partial)
 
 ### Tasks
-1. Implement Digital Worker actor adapter (principal type Digital Worker, chained to human supervisor)
-2. Add delegated-user / supervision context (`acting_for_user_id` or equivalent)
-3. Enforce Digital Worker ≤ supervisor effective permissions
-4. Add Digital Worker-specific safety constraints as intersecting policy
+- [x] 1. Implement Digital Worker actor model (`Actor` with `PrincipalType::DIGITAL_WORKER`, `actingForUserId`)
+- [x] 2. Add delegated-user / supervision context (`actingForUserId` in Actor DTO)
+- [ ] 3. Assignment-time validation: block assigning role/capability to subordinate unless assigner has it
+- [ ] 4. Cascade revocation: on role/capability removal from principal, cascade to all subordinates (recursive via Employee.supervisor_id)
 
 ### Target Files (proposed)
-1. `app/Base/Authz/Actor/DigitalWorkerActorFactory.php`
-2. `app/Base/AI/*` (integration points)
-3. `tests/Feature/Authz/DigitalWorkerDelegationTest.php`
+1. ~~`app/Base/Authz/Actor/DigitalWorkerActorFactory.php`~~ — Actor DTO used directly; no separate factory
+2. Role/capability assignment service(s) — add validation + cascade hooks
+3. `app/Base/AI/*` (integration points)
+4. `tests/Feature/Authz/AuthorizationServiceTest.php` (Digital Worker scenarios covered)
+5. `tests/Feature/Authz/CascadeRevocationTest.php` (or similar)
 
 ### Done Criteria
-1. Digital Worker can perform only actions permitted to supervisor
-2. Decision logs distinguish `human_user` vs `digital_worker`
-3. Delegation checks covered by feature tests for web, API, and Digital Worker runtime paths
+- [ ] 1. Assignment validation: cannot assign role/capability to subordinate without assigner having it
+- [x] 2. Decision logs distinguish `human_user` vs `digital_worker`
+- [x] 3. Delegation context validation covered (Digital Worker without `actingForUserId` denied)
+- [ ] 4. Cascade revocation: when supervisor loses role/capability, subordinates lose it too
 
 ---
 
-## Stage F - Audit, Observability, Hardening
+## Stage F - Audit, Observability, Hardening (Partial)
 
 ### Tasks
-1. Persist decision logs with correlation metadata
-2. Provide query/inspection command or endpoint
-3. Add regression tests for revocation and unknown capability paths
-4. Add performance assertion for policy evaluation hot paths
+- [x] 1. Persist decision logs with correlation metadata (`DatabaseDecisionLogger`, `AuditingAuthorizationService`)
+- [ ] 2. Provide query/inspection command or endpoint
+- [x] 3. Add regression tests for revocation and unknown capability paths
+- [ ] 4. Add performance assertion for policy evaluation hot paths
 
 ### Target Files (proposed)
 1. `app/Base/Authz/Audit/*`
@@ -155,9 +161,9 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 4. `tests/Performance/Authz/*` (if performance suite exists)
 
 ### Done Criteria
-1. Security review can reconstruct key allow/deny decisions
-2. Revoked permissions take effect immediately
-3. Policy engine meets latency target for common checks
+- [x] 1. Security review can reconstruct key allow/deny decisions (decision logs persisted)
+- [x] 2. Revoked permissions take effect immediately
+- [ ] 3. Policy engine meets latency target for common checks
 
 ## 4. Cross-Cutting Rules
 
@@ -231,10 +237,9 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 3. Same-company allowed path (with role grant)
 4. Cross-company denied path
 5. Direct capability revocation effect
-6. Digital Worker denied when supervisor denied
-7. Digital Worker denied when Digital Worker safety policy denies
-8. Digital Worker can be allowed only when supervisor allows and Digital Worker safety policy allows
-9. Web/API/Digital Worker runtime produce consistent allow/deny outcomes for equivalent delegation scenarios
+6. Digital Worker denied when supervisor denied (via cascade revocation before next check)
+7. Assignment validation: cannot assign capability to subordinate that assigner does not have
+8. Cascade revocation: removing role/capability from supervisor removes it from all subordinates
 
 ## 7. Dependencies and Sequencing
 
@@ -245,4 +250,4 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ## 8. Immediate Next Execution Step
 
-Start Stage A by finalizing domain owners and implementing `CapabilityRegistry` with unknown-capability test enforcement.
+Implement assignment-time validation and cascade revocation. See [00-prd.md](00-prd.md) §3.1 and §5 Remaining. Hook into role/capability assignment flows to validate assigner has the capability; hook into role/capability removal to cascade to subordinates via Employee.supervisor_id.

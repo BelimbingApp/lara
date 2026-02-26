@@ -14,5 +14,14 @@ return [
             'parent' => 'admin',
             'position' => 230,
         ],
+        [
+            'id' => 'admin.employee-types',
+            'label' => 'Employee Types',
+            'icon' => 'heroicon-o-tag',
+            'route' => 'admin.employee-types.index',
+            'permission' => 'core.employee_type.list',
+            'parent' => 'admin.employees',
+            'position' => 10,
+        ],
     ],
 ];

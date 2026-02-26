@@ -3,6 +3,7 @@
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\Department;
 use App\Modules\Core\Employee\Models\Employee;
+use App\Modules\Core\Employee\Models\EmployeeType;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
@@ -36,6 +37,8 @@ new class extends Component
 
     public ?string $employment_end = null;
 
+    public ?string $job_description = null;
+
     public ?int $user_id = null;
 
     public string $metadata_json = '';
@@ -53,6 +56,7 @@ new class extends Component
             'supervisors' => Employee::query()
                 ->orderBy('full_name')
                 ->get(['id', 'full_name', 'company_id']),
+            'employeeTypes' => EmployeeType::query()->global()->orderBy('code')->get(['id', 'code', 'label', 'is_system']),
             'users' => User::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
@@ -63,9 +67,14 @@ new class extends Component
     {
         $validated = $this->validate($this->rules());
 
-        $validated['metadata'] = $this->decodeJsonField($validated['metadata_json']);
+        $validated['metadata'] = $this->decodeJsonField($validated['metadata_json'] ?? null);
+        $validated['job_description'] = $validated['job_description'] ?? null;
 
         unset($validated['metadata_json']);
+
+        if (($validated['employee_type'] ?? '') === 'digital_worker') {
+            $validated['user_id'] = null;
+        }
 
         Employee::query()->create($validated);
 
@@ -76,16 +85,21 @@ new class extends Component
 
     protected function rules(): array
     {
-        return [
+        $rules = [
             'company_id' => ['required', 'integer', Rule::exists(Company::class, 'id')],
             'department_id' => ['nullable', 'integer', 'exists:company_departments,id'],
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'supervisor_id' => ['nullable', 'integer', Rule::exists(Employee::class, 'id')],
+            'supervisor_id' => [
+                $this->employee_type === 'digital_worker' ? 'required' : 'nullable',
+                'integer',
+                Rule::exists(Employee::class, 'id'),
+            ],
             'employee_number' => ['required', 'string', 'max:255', Rule::unique('employees')->where('company_id', $this->company_id)],
             'full_name' => ['required', 'string', 'max:255'],
             'short_name' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
-            'employee_type' => ['required', 'in:full_time,part_time,contractor,intern'],
+            'employee_type' => ['required', Rule::exists(EmployeeType::class, 'code')],
+            'job_description' => ['nullable', 'string', 'max:65535'],
             'email' => ['nullable', 'email', 'max:255'],
             'mobile_number' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:pending,probation,active,inactive,terminated'],
@@ -93,6 +107,8 @@ new class extends Component
             'employment_end' => ['nullable', 'date'],
             'metadata_json' => ['nullable', 'json'],
         ];
+
+        return $rules;
     }
 
     protected function decodeJsonField(?string $value): ?array
@@ -177,11 +193,17 @@ new class extends Component
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.select wire:model="employee_type" label="{{ __('Employee Type') }}" :error="$errors->first('employee_type')">
-                        <option value="full_time">{{ __('Full Time') }}</option>
-                        <option value="part_time">{{ __('Part Time') }}</option>
-                        <option value="contractor">{{ __('Contractor') }}</option>
-                        <option value="intern">{{ __('Intern') }}</option>
+                    <x-ui.select wire:model.live="employee_type" label="{{ __('Employee Type') }}" :error="$errors->first('employee_type')">
+                        <optgroup label="{{ __('Human') }}">
+                            @foreach($employeeTypes->where('code', '!=', 'digital_worker') as $type)
+                                <option value="{{ $type->code }}">{{ $type->label }}</option>
+                            @endforeach
+                        </optgroup>
+                        <optgroup label="{{ __('Digital Worker') }}">
+                            @foreach($employeeTypes->where('code', 'digital_worker') as $type)
+                                <option value="{{ $type->code }}">{{ $type->label }}</option>
+                            @endforeach
+                        </optgroup>
                     </x-ui.select>
 
                     <x-ui.select wire:model="status" label="{{ __('Status') }}" :error="$errors->first('status')">
@@ -227,20 +249,32 @@ new class extends Component
                     />
                 </div>
 
+                @if($employee_type === 'digital_worker')
+                <x-ui.textarea
+                    wire:model="job_description"
+                    label="{{ __('Job Description') }}"
+                    rows="3"
+                    placeholder="{{ __('Short role label, e.g. Customer support Digital Worker') }}"
+                    :error="$errors->first('job_description')"
+                />
+                @endif
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.select wire:model="supervisor_id" label="{{ __('Supervisor') }}" :error="$errors->first('supervisor_id')">
-                        <option value="">{{ __('None') }}</option>
+                        <option value="">{{ $employee_type === 'digital_worker' ? __('Select supervisor (required)') : __('None') }}</option>
                         @foreach($supervisors as $supervisor)
                             <option value="{{ $supervisor->id }}">{{ $supervisor->full_name }}</option>
                         @endforeach
                     </x-ui.select>
 
+                    @if($employee_type !== 'digital_worker')
                     <x-ui.select wire:model="user_id" label="{{ __('User Account') }}" :error="$errors->first('user_id')">
                         <option value="">{{ __('None') }}</option>
                         @foreach($users as $u)
                             <option value="{{ $u->id }}">{{ $u->name }}</option>
                         @endforeach
                     </x-ui.select>
+                    @endif
                 </div>
 
                 <x-ui.textarea

@@ -51,6 +51,7 @@ class Employee extends Model
         'short_name',
         'designation',
         'employee_type',
+        'job_description',
         'email',
         'mobile_number',
         'status',
@@ -73,6 +74,14 @@ class Employee extends Model
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Get the employee type (by code).
+     */
+    public function employeeType(): BelongsTo
+    {
+        return $this->belongsTo(EmployeeType::class, 'employee_type', 'code');
     }
 
     /**
@@ -140,5 +149,29 @@ class Employee extends Model
     public function scopeActive($query): void
     {
         $query->where('status', 'active');
+    }
+
+    /**
+     * Whether this employee is a Digital Worker.
+     */
+    public function isDigitalWorker(): bool
+    {
+        return $this->employee_type === 'digital_worker';
+    }
+
+    /**
+     * Scope a query to only include Digital Worker employees.
+     */
+    public function scopeDigitalWorker($query): void
+    {
+        $query->where('employee_type', 'digital_worker');
+    }
+
+    /**
+     * Scope a query to only include human employees (non-Digital Worker).
+     */
+    public function scopeHuman($query): void
+    {
+        $query->where('employee_type', '!=', 'digital_worker');
     }
 }

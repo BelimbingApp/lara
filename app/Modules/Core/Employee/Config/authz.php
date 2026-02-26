@@ -10,5 +10,9 @@ return [
         'core.employee.create',
         'core.employee.update',
         'core.employee.delete',
+        'core.employee_type.list',
+        'core.employee_type.create',
+        'core.employee_type.update',
+        'core.employee_type.delete',
     ],
 ];
