@@ -6,13 +6,44 @@
 return [
     'items' => [
         [
-            'id' => 'admin.roles',
+            'id' => 'authz',
+            'label' => 'Authorization',
+            'icon' => 'heroicon-o-shield-check',
+            'parent' => 'admin',
+            'position' => 210,
+        ],
+        [
+            'id' => 'authz.roles',
             'label' => 'Roles',
             'icon' => 'heroicon-o-shield-check',
             'route' => 'admin.roles.index',
             'permission' => 'admin.role.list',
-            'parent' => 'admin',
-            'position' => 210,
+            'parent' => 'authz',
+            'position' => 10,
+        ],
+        [
+            'id' => 'authz.principal-roles',
+            'label' => 'Principal Roles',
+            'icon' => 'heroicon-o-user-circle',
+            'route' => 'admin.authz.principal-roles.index',
+            'parent' => 'authz',
+            'position' => 20,
+        ],
+        [
+            'id' => 'authz.principal-capabilities',
+            'label' => 'Principal Capabilities',
+            'icon' => 'heroicon-o-key',
+            'route' => 'admin.authz.principal-capabilities.index',
+            'parent' => 'authz',
+            'position' => 30,
+        ],
+        [
+            'id' => 'authz.decision-logs',
+            'label' => 'Decision Logs',
+            'icon' => 'heroicon-o-clipboard-document-list',
+            'route' => 'admin.authz.decision-logs.index',
+            'parent' => 'authz',
+            'position' => 40,
         ],
     ],
 ];
