@@ -1,18 +1,18 @@
-# AI Autonomous Employee - Staged Delivery Plan
+# AI Digital Worker - Staged Delivery Plan
 
 **Status:** Planning
-**Source Context:** `docs/architecture/ai-autonomous-employee.md`
-**Last Updated:** 2026-02-22
+**Source Context:** `docs/architecture/ai-digital-worker.md`
+**Last Updated:** 2026-02-25
 **Prerequisite:** `docs/architecture/authorization.md`, `docs/todo/authorization/00-prd.md`
 
 ## 1. Problem Essence
-Deliver BLB Autonomous Employee incrementally so every phase ships a UI that users can see, interact with, and test before deeper backend complexity is added.
+Deliver BLB Digital Worker incrementally so every phase ships a UI that users can see, interact with, and test before deeper backend complexity is added.
 
 ## 2. Public Interface First
 At every stage, the user-facing interface must expose these stable operations:
 
-1. Send a message to AE
-2. View AE response and action status
+1. Send a message to Digital Worker
+2. View Digital Worker response and action status
 3. Approve or reject sensitive actions (when required)
 4. View conversation and action history
 
@@ -20,14 +20,14 @@ Non-goals for early stages:
 
 1. Full multi-channel rollout (WhatsApp/Telegram/Slack all at once)
 2. Autonomous execution without visibility/audit
-3. Cross-company AE collaboration
+3. Cross-company Digital Worker collaboration
 
 ## 3. Stage Plan
 
 ## Stage -1 - Authorization Foundation (Prerequisite)
 
 **Goal**
-Ship shared AuthZ (human user + AE delegated actor) before sensitive AE operations.
+Ship shared AuthZ (human user + Digital Worker delegated actor) before sensitive Digital Worker operations.
 
 **UI You Can Use**
 1. Basic role/capability assignment screen (or admin console workflow)
@@ -36,24 +36,24 @@ Ship shared AuthZ (human user + AE delegated actor) before sensitive AE operatio
 
 **Exit Criteria**
 1. Deny-by-default enforced across web/API
-2. AE delegation evaluation available in the same policy engine
+2. Digital Worker delegation evaluation available in the same policy engine
 3. Decision logs available for allow/deny traces
 
 ---
 
-## Stage 0 - AE Playground (Web Only, No Business Actions)
+## Stage 0 - Digital Worker Playground (Web Only, No Business Actions)
 
 **Goal**
-Establish a safe, testable end-to-end loop: web chat UI -> AE runtime -> response UI.
+Establish a safe, testable end-to-end loop: web chat UI -> Digital Worker runtime -> response UI.
 
 **UI You Can Use**
-1. `AE Playground` page (per authenticated user)
+1. `Digital Worker Playground` page (per authenticated user)
 2. Chat panel with message input + streaming/final response rendering
 3. Session sidebar (create/switch session)
 4. Debug panel (latency, token usage, model, run id)
 
 **What Is Implemented**
-1. AE entity bootstrap (`autonomous_employees` + `ae_sessions` + `ae_messages`)
+1. Digital Worker as employee: `employees` with `employee_type` and `job_description`; `digital_worker_sessions` + `digital_worker_messages` keyed by employee (Digital Worker)
 2. Basic runtime orchestration with no high-risk tools
 3. Persistence for all user/assistant messages
 
@@ -64,9 +64,8 @@ Establish a safe, testable end-to-end loop: web chat UI -> AE runtime -> respons
 4. Open a second session and verify isolation
 
 **Exit Criteria**
-1. Median response time under agreed target (example: < 4s for short responses)
-2. No message loss after refresh/session switch
-3. Session-level isolation verified
+1. No message loss after refresh/session switch
+2. Session-level isolation verified
 
 ---
 
@@ -90,7 +89,7 @@ Move from “chat only” to “chat + useful operations” with explicit UI fee
 3. Policy layer v1 (allow/deny by role/company)
 
 **Manual Test Script**
-1. Ask AE for employee/customer lookup
+1. Ask Digital Worker for employee/customer lookup
 2. Confirm card displays tool name + params + result
 3. Trigger dry-run and verify no write occurs
 4. Force tool failure (invalid input) and verify error shown in UI
@@ -119,7 +118,7 @@ Add safe write operations with explicit approval UX.
 3. Audit log entries for every decision
 
 **Manual Test Script**
-1. Employee asks AE to submit leave/expense
+1. Employee asks Digital Worker to submit leave/expense
 2. System routes request to manager inbox
 3. Manager approves request
 4. Employee chat receives execution confirmation
@@ -160,28 +159,28 @@ Prove channel abstraction with a production-relevant messaging channel.
 
 ---
 
-## Stage 4 - AE-to-AE Workflow UI (Cross-Role Collaboration)
+## Stage 4 - Digital Worker-to-Digital Worker Workflow UI (Cross-Role Collaboration)
 
 **Goal**
-Enable visible orchestration between autonomous employees (employee/manager/finance/etc.).
+Enable visible orchestration between digital workers (employee/manager/finance/etc.).
 
 **UI You Can Use**
-1. `Workflow Trace` page showing multi-AE hops as a timeline/graph
-2. Node-level detail: sender AE, recipient AE, payload summary, status
+1. `Workflow Trace` page showing multi-Digital Worker hops as a timeline/graph
+2. Node-level detail: sender Digital Worker, recipient Digital Worker, payload summary, status
 3. Replay view for debugging failed orchestrations
 
 **What Is Implemented**
-1. AE-to-AE messaging contract
+1. Digital Worker-to-Digital Worker messaging contract
 2. Queue-based orchestration for multi-step workflows
 3. Correlation IDs across all agent/tool/approval events
 
 **Manual Test Script**
 1. Start a multi-department scenario (example: month-end close task)
-2. Verify trace captures every AE hop
+2. Verify trace captures every Digital Worker hop
 3. Inject one failed hop and verify retry/error handling in trace
 
 **Exit Criteria**
-1. Full observability for cross-AE workflows
+1. Full observability for cross-Digital Worker workflows
 2. No silent failures in orchestration path
 3. Deterministic traceability with correlation IDs
 
@@ -193,7 +192,7 @@ Enable visible orchestration between autonomous employees (employee/manager/fina
 Convert interaction data into operational insight and measurable business value.
 
 **UI You Can Use**
-1. `AE Analytics` dashboard:
+1. `Digital Worker Analytics` dashboard:
    - tasks completed
    - average response time
    - approval turnaround
@@ -207,7 +206,7 @@ Convert interaction data into operational insight and measurable business value.
 3. Data retention and redaction rules
 
 **Manual Test Script**
-1. Run normal AE usage for several days (or seed test data)
+1. Run normal Digital Worker usage for several days (or seed test data)
 2. Generate period-based report
 3. Validate report values against raw event logs
 
@@ -218,7 +217,7 @@ Convert interaction data into operational insight and measurable business value.
 
 ## 4. Component Responsibilities (Top-Level)
 
-1. **AE Runtime Module**
+1. **Digital Worker Runtime Module**
    - Contract: accept message + context, produce response + optional actions
    - Invariants: session isolation, deterministic logging, policy checks before execution
 
@@ -247,7 +246,7 @@ Convert interaction data into operational insight and measurable business value.
 2. Approval race conditions (double approval/replay)
 3. Tool idempotency for retries
 4. Data model choice for message/action logs (DB-only vs hybrid with files)
-5. Access controls for multi-company and supervisor/subordinate AE interactions
+5. Access controls for multi-company and supervisor/subordinate Digital Worker interactions
 
 ## 7. Suggested Delivery Rhythm
 
@@ -260,4 +259,4 @@ Convert interaction data into operational insight and measurable business value.
 
 ## 8. Immediate Next Step
 
-Start Stage 0 by building the AE Playground web UI and minimal message/session persistence, then run the Stage 0 manual test script as the first acceptance gate.
+Start Stage 0 by building the Digital Worker Playground web UI and minimal message/session persistence, then run the Stage 0 manual test script as the first acceptance gate. See [01-stage-0-digital-worker-playground.md](01-stage-0-digital-worker-playground.md) for the implementation checklist.

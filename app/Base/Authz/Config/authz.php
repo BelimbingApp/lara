@@ -4,7 +4,7 @@ return [
     'domains' => [
         'core' => 'Core platform modules',
         'workflow' => 'Workflow and state transitions',
-        'ai' => 'AI and personal agent capabilities',
+        'ai' => 'AI and Digital Worker capabilities',
         'admin' => 'Administrative operations',
     ],
 
@@ -25,8 +25,8 @@ return [
     // Module-owned capabilities live in each module's Config/authz.php
     // and are auto-discovered by App\Base\Authz\ServiceProvider.
     'capabilities' => [
-        'ai.personal_agent.view',
-        'ai.personal_agent.execute',
+        'ai.digital_worker.view',
+        'ai.digital_worker.execute',
         'admin.user.impersonate',
         'admin.role.list',
         'admin.role.view',
@@ -42,7 +42,7 @@ return [
     'roles' => [
         'core_admin' => [
             'name' => 'Core Administrator',
-            'description' => 'System role with full core and personal agent baseline capabilities.',
+            'description' => 'System role with full core and Digital Worker baseline capabilities.',
             'capabilities' => [
                 'core.company.view',
                 'core.company.list',
@@ -66,8 +66,8 @@ return [
                 'core.address.delete',
                 'core.geonames.view',
                 'core.geonames.list',
-                'ai.personal_agent.view',
-                'ai.personal_agent.execute',
+                'ai.digital_worker.view',
+                'ai.digital_worker.execute',
                 'admin.user.impersonate',
                 'admin.role.list',
                 'admin.role.view',

@@ -43,11 +43,11 @@ it('denies when actor context is invalid', function (): void {
     expect($decision->reasonCode)->toBe(AuthorizationReasonCode::DENIED_INVALID_ACTOR_CONTEXT);
 });
 
-it('denies when personal agent has no acting_for_user_id', function (): void {
+it('denies when Digital Worker has no acting_for_user_id', function (): void {
     $service = app(AuthorizationService::class);
 
     $decision = $service->can(
-        new Actor(PrincipalType::PERSONAL_AGENT, 1, 10),
+        new Actor(PrincipalType::DIGITAL_WORKER, 1, 10),
         'core.user.view'
     );
 
@@ -189,20 +189,20 @@ it('filters allowed resources correctly', function (): void {
     expect($allowed[1]->id)->toBe(3);
 });
 
-it('allows personal agent with valid acting_for_user_id', function (): void {
+it('allows Digital Worker with valid acting_for_user_id', function (): void {
     PrincipalCapability::query()->create([
         'company_id' => 10,
-        'principal_type' => PrincipalType::PERSONAL_AGENT->value,
+        'principal_type' => PrincipalType::DIGITAL_WORKER->value,
         'principal_id' => 100,
-        'capability_key' => 'ai.personal_agent.execute',
+        'capability_key' => 'ai.digital_worker.execute',
         'is_allowed' => true,
     ]);
 
     $service = app(AuthorizationService::class);
 
     $decision = $service->can(
-        new Actor(PrincipalType::PERSONAL_AGENT, 100, 10, actingForUserId: 42),
-        'ai.personal_agent.execute'
+        new Actor(PrincipalType::DIGITAL_WORKER, 100, 10, actingForUserId: 42),
+        'ai.digital_worker.execute'
     );
 
     expect($decision->allowed)->toBeTrue();

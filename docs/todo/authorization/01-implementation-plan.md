@@ -1,20 +1,22 @@
 # Authorization (AuthZ) Implementation Plan
 
 **Status:** Planned
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-26
 **Prerequisites:** `docs/architecture/authorization.md`, `docs/todo/authorization/00-prd.md`
 
 ---
 
 ## 1. Objective
-Implement a company-scoped, deny-by-default AuthZ foundation used consistently by web, API, menu visibility, and Personal Agent delegation.
+Implement a company-scoped, deny-by-default AuthZ foundation used consistently by web, API, menu visibility, and Digital Worker delegation.
 
 ## 2. Scope Decisions Locked
 
 1. Capability key format: `<domain>.<resource>.<action>`
 2. Scope model now: `company_id` only (`group_id`, as in Group of Companies as an entity, is intentionally deferred)
 3. `menu.php` is consumer-only of AuthZ decisions
-4. PA uses same AuthZ engine via delegated actor model
+4. Digital Worker uses same AuthZ engine via delegated actor model
+5. Naming is canonical: `Digital Worker`, principal values `human_user | digital_worker`, and AI capability prefix `ai.digital_worker.*`
+6. Delegation context uses `actingForUserId` in current DTO (extendable to richer supervision metadata later)
 
 ## 3. Stage Plan
 
@@ -118,23 +120,23 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 
 ---
 
-## Stage E - Personal Agent Delegation
+## Stage E - Digital Worker Delegation
 
 ### Tasks
-1. Implement `personal_agent` actor adapter
-2. Add delegated-user context (`acting_for_user_id`)
-3. Enforce PA <= delegated user effective permissions
-4. Add PA-specific safety constraints as intersecting policy
+1. Implement Digital Worker actor adapter (principal type Digital Worker, chained to human supervisor)
+2. Add delegated-user / supervision context (`acting_for_user_id` or equivalent)
+3. Enforce Digital Worker ≤ supervisor effective permissions
+4. Add Digital Worker-specific safety constraints as intersecting policy
 
 ### Target Files (proposed)
-1. `app/Base/Authz/Actor/PersonalAgentActorFactory.php`
+1. `app/Base/Authz/Actor/DigitalWorkerActorFactory.php`
 2. `app/Base/AI/*` (integration points)
-3. `tests/Feature/Authz/PersonalAgentDelegationTest.php`
+3. `tests/Feature/Authz/DigitalWorkerDelegationTest.php`
 
 ### Done Criteria
-1. PA can perform only actions permitted to delegated user
-2. Decision logs distinguish `human_user` vs `personal_agent`
-3. Delegation checks covered by feature tests
+1. Digital Worker can perform only actions permitted to supervisor
+2. Decision logs distinguish `human_user` vs `digital_worker`
+3. Delegation checks covered by feature tests for web, API, and Digital Worker runtime paths
 
 ---
 
@@ -229,15 +231,17 @@ Implement a company-scoped, deny-by-default AuthZ foundation used consistently b
 3. Same-company allowed path (with role grant)
 4. Cross-company denied path
 5. Direct capability revocation effect
-6. PA denied when delegated user denied
-7. PA denied when PA safety policy denies
+6. Digital Worker denied when supervisor denied
+7. Digital Worker denied when Digital Worker safety policy denies
+8. Digital Worker can be allowed only when supervisor allows and Digital Worker safety policy allows
+9. Web/API/Digital Worker runtime produce consistent allow/deny outcomes for equivalent delegation scenarios
 
 ## 7. Dependencies and Sequencing
 
 1. Stage A before Stage B/C
 2. Stage C before Stage D/E
 3. Stage D and E before Stage F
-4. PA approval inbox work blocked until Stage B + C + E complete
+4. Digital Worker approval inbox work blocked until Stage B + C + E complete
 
 ## 8. Immediate Next Execution Step
 

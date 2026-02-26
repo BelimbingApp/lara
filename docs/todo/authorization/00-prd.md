@@ -2,20 +2,20 @@
 
 **Document Type:** PRD + Implementation Todo
 **Status:** Draft
-**Last Updated:** 2026-02-23
+**Last Updated:** 2026-02-26
 **Architecture Source:** `docs/architecture/authorization.md`
 
 ---
 
 ## 1. Product Goal
-Ship a production-usable AuthZ foundation that enforces identical rules for users and their Personal Agents before PA approval workflows are built.
+Ship a production-usable AuthZ foundation that enforces identical rules for users and their Digital Workers before Digital Worker approval workflows are built.
 
 ## 2. Success Criteria
 
 1. Every protected action can be traced to a capability key.
-2. Policy decisions are consistent across web, API, and PA runtime.
+2. Policy decisions are consistent across web, API, and Digital Worker runtime.
 3. Deny-by-default is enforced system-wide.
-4. PA cannot perform any action its delegated user cannot perform.
+4. Digital Worker cannot perform any action its supervisor cannot perform.
 
 ## 3. Scope
 
@@ -25,12 +25,18 @@ Ship a production-usable AuthZ foundation that enforces identical rules for user
 3. Unified authorization service (`can`, `authorize`, `filterAllowed`)
 4. Decision logging with reason codes
 5. Menu integration as consumer
-6. PA delegated actor evaluation
+6. Digital Worker delegated actor evaluation
 
 ### Out of Scope
 1. Complex policy builder UI
 2. Full ACL override engine
 3. External IdP policy synchronization
+
+### Naming Contract (Locked)
+1. Term: `Digital Worker` (not `PA`)
+2. Principal type values: `human_user` and `digital_worker`
+3. Framework AI capability prefix: `ai.digital_worker.*`
+4. Delegation context field in current actor DTO: `actingForUserId` (may later be complemented by richer supervision context)
 
 ## 4. Staged Delivery
 
@@ -68,17 +74,17 @@ Acceptance:
 1. Menu visibility matches policy decisions
 2. Backend endpoints remain enforced even if menu hidden
 
-## Stage D - PA Delegation Integration
+## Stage D - Digital Worker Delegation Integration
 
 Deliverables:
-1. `personal_agent` actor mapping to delegated user
+1. Digital Worker actor mapping to supervisor (delegation chain to human)
 2. Delegation constraints in policy engine
-3. Decision logs include actor type (`human_user`/`personal_agent`)
+3. Decision logs include actor type (`human_user` / `digital_worker`)
 
 Acceptance:
-1. PA allow/deny outcomes mirror delegated user baseline
-2. PA-specific safety constraints can reduce permissions further
-3. Audit records can differentiate PA vs user decisions
+1. Digital Worker allow/deny outcomes mirror supervisor baseline
+2. Digital Worker-specific safety constraints can reduce permissions further
+3. Audit records can differentiate Digital Worker vs user decisions
 
 ## Stage E - Audit, DX, and Hardening
 
@@ -99,7 +105,7 @@ Acceptance:
 3. Implement models/repositories for roles/capabilities/assignments
 4. Implement `AuthorizationService` and policy pipeline
 5. Add policy integration examples in one module end-to-end
-6. Add PA delegated actor adapter
+6. Add Digital Worker delegated actor adapter
 7. Add decision logging and reason code enums
 8. Add Pest unit + feature coverage
 9. Document module integration recipe for adopters
@@ -110,19 +116,21 @@ Acceptance:
 1. Capability resolution
 2. Role/capability evaluation
 3. Company scope guard
-4. Delegation intersection (PA <= user)
+4. Delegation intersection (Digital Worker <= supervisor)
 
 ### Feature
 1. Protected endpoint allow path
 2. Protected endpoint deny path
 3. Cross-company denial
 4. Menu item visibility by capability
-5. PA tool authorization parity with delegated user
+5. Digital Worker tool authorization parity with supervisor
+6. Digital Worker delegation invariant parity across web, API, and Digital Worker runtime for the same capability checks
 
 ### Security/Regression
 1. Fail-closed on service exceptions
 2. Unknown capability denial
 3. Revocation takes effect immediately
+4. Digital Worker cannot exceed supervisor invariant is explicitly asserted in web/API/runtime integration suites
 
 ## 7. Risks
 
@@ -135,13 +143,13 @@ Acceptance:
 
 1. Capability owner required per bounded context
 2. Lint/static check for direct bypass patterns
-3. Shared integration test harness for web/API/PA paths
+3. Shared integration test harness for web/API/Digital Worker paths
 4. Keep early schema simple and evolvable (destructive changes acceptable now)
 
-## 9. Exit Gate for PA Stage 2 (Approve/Reject)
+## 9. Exit Gate for Digital Worker Stage 2 (Approve/Reject)
 
-Do not implement PA approval inbox until all are true:
+Do not implement Digital Worker approval inbox until all are true:
 1. Stage B complete (engine + RBAC)
-2. Stage D complete (PA delegation)
+2. Stage D complete (Digital Worker delegation)
 3. Decision logging operational
 4. At least one sensitive workflow validated end-to-end with AuthZ enforcement

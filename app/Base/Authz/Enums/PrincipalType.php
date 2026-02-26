@@ -8,5 +8,5 @@ namespace App\Base\Authz\Enums;
 enum PrincipalType: string
 {
     case HUMAN_USER = 'human_user';
-    case PERSONAL_AGENT = 'personal_agent';
+    case DIGITAL_WORKER = 'digital_worker';
 }

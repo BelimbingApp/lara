@@ -25,7 +25,7 @@
 
 ```
 docs/
-├── architecture/          # System design specs (layers, database, domain model, broadcasting, AI PA)
+├── architecture/          # System design specs (layers, database, domain model, broadcasting, Digital Worker)
 ├── guides/                # Task-oriented how-to guides
 │   └── extensions/        # Extension development guides (migrations, config)
 ├── modules/               # Per-module documentation (overviews, APIs, design decisions)

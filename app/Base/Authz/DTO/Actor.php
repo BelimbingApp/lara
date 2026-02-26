@@ -26,9 +26,9 @@ final readonly class Actor
         return $this->type === PrincipalType::HUMAN_USER;
     }
 
-    public function isPersonalAgent(): bool
+    public function isDigitalWorker(): bool
     {
-        return $this->type === PrincipalType::PERSONAL_AGENT;
+        return $this->type === PrincipalType::DIGITAL_WORKER;
     }
 
     /**
@@ -45,7 +45,7 @@ final readonly class Actor
             );
         }
 
-        if ($this->isPersonalAgent() && $this->actingForUserId === null) {
+        if ($this->isDigitalWorker() && $this->actingForUserId === null) {
             return AuthorizationDecision::deny(
                 AuthorizationReasonCode::DENIED_INVALID_ACTOR_CONTEXT,
                 ['actor_validation']
