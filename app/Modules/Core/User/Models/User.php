@@ -36,7 +36,7 @@ class User extends Authenticatable implements CompanyScoped
      *
      * @var list<string>
      */
-    protected $fillable = ['company_id', 'name', 'email', 'password'];
+    protected $fillable = ['company_id', 'employee_id', 'name', 'email', 'password'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -103,10 +103,10 @@ class User extends Authenticatable implements CompanyScoped
     }
 
     /**
-     * Get employee records linked to this user.
+     * Get the employee linked to this user.
      */
-    public function employees(): HasMany
+    public function employee(): BelongsTo
     {
-        return $this->hasMany(Employee::class, 'user_id');
+        return $this->belongsTo(Employee::class, 'employee_id');
     }
 }

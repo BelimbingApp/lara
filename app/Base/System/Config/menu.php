@@ -10,6 +10,7 @@ return [
             'label' => 'System Info',
             'icon' => 'heroicon-o-information-circle',
             'route' => 'admin.system.info.index',
+            'permission' => 'admin.system_info.view',
             'parent' => 'system',
             'position' => 90,
         ],

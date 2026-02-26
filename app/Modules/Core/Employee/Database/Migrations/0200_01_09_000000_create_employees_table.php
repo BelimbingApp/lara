@@ -20,8 +20,7 @@ return new class extends Migration
             // Company & organizational structure
             $table->foreignId('company_id')->constrained('companies')->cascadeOnDelete();
             $table->foreignId('department_id')->nullable()->constrained('company_departments')->nullOnDelete();
-            $table->unsignedBigInteger('user_id')->nullable()->index();
-            $table->unsignedBigInteger('supervisor_id')->nullable()->index();
+            $table->foreignId('supervisor_id')->nullable()->constrained('employees')->nullOnDelete();
 
             // Identity
             $table->string('employee_number')->index();
@@ -47,10 +46,6 @@ return new class extends Migration
 
             // Unique constraint on employee number per company
             $table->unique(['company_id', 'employee_number']);
-
-            // Self-referencing foreign key (supervisor)
-            $table->foreign('supervisor_id')->references('id')->on('employees')->nullOnDelete();
-            // user_id foreign key is deferred to User module migration (0200_01_20_000003)
         });
     }
 

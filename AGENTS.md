@@ -275,4 +275,5 @@ If the task touches module config, migrations, or seeders, **stop and verify pla
 **Pre-implementation checklist for new module work:**
 
 - **Config:** Module config in module `Config/` (not root `config/`); register with `mergeConfigFrom(__DIR__.'/Config/<name>.php', '<name>')` in the module service provider; keep key stable (`config('<name>...')`). Use root `config/*.php` only for framework-wide defaults.
+- **Authz:** If modifying any `Config/authz.php`, sync database via `php artisan db:seed --class="App\Base\Authz\Database\Seeders\AuthzRoleCapabilitySeeder"`.
 - **Migrations & seeders:** Migration location/prefix and seeder strategy → `app/Base/Database/AGENTS.md` and `docs/architecture/database.md`.

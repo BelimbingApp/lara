@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 
 class Employee extends Model
@@ -44,7 +45,6 @@ class Employee extends Model
     protected $fillable = [
         'company_id',
         'department_id',
-        'user_id',
         'supervisor_id',
         'employee_number',
         'full_name',
@@ -103,9 +103,9 @@ class Employee extends Model
     /**
      * Get the user associated with the employee.
      */
-    public function user(): BelongsTo
+    public function user(): HasOne
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->hasOne(User::class, 'employee_id');
     }
 
     /**

@@ -186,11 +186,10 @@ php artisan migrate:fresh --seed
 php artisan tinker --execute="App\Modules\Core\Company\Models\Company::create(['name' => 'My Company', 'status' => 'active']);"
 
 # Step 3: Run dev seeders in dependency order
-php artisan migrate --seed --seeder=User/Dev/DevAdminUserSeeder
 php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
-php artisan migrate --seed --seeder=User/Dev/DevUserSeeder
-php artisan migrate --seed --seeder=Employee/Dev/DevEmployeeSeeder
 php artisan migrate --seed --seeder=Company/Dev/DevDepartmentSeeder
+php artisan migrate --seed --seeder=Employee/Dev/DevEmployeeSeeder
+php artisan migrate --seed --seeder=User/Dev/DevUserSeeder
 php artisan migrate --seed --seeder='App\Base\Authz\Database\Seeders\Dev\DevAuthzCompanyAssignmentSeeder'
 ```
 

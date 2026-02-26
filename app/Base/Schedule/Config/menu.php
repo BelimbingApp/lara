@@ -10,6 +10,7 @@ return [
             'label' => 'Scheduled Tasks',
             'icon' => 'heroicon-o-clock',
             'route' => 'admin.system.scheduled-tasks.index',
+            'permission' => 'admin.system_scheduled_task.list',
             'parent' => 'system',
             'position' => 85,
         ],

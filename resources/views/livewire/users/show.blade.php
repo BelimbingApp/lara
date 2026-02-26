@@ -48,8 +48,8 @@ new class extends Component
         $this->user = $user->load([
             'company',
             'externalAccesses.company',
-            'employees.company',
-            'employees.department',
+            'employee.company',
+            'employee.department',
         ]);
         $this->new_emp_company_id = $user->company_id;
     }
@@ -236,13 +236,17 @@ new class extends Component
         }
 
         $employee = Employee::query()->find($employeeId);
-        if (! $employee || $employee->user_id !== null) {
+        if (! $employee) {
             return;
         }
 
-        $employee->user_id = $this->user->id;
-        $employee->save();
-        $this->user->load('employees.company', 'employees.department');
+        $alreadyLinked = User::query()->where('employee_id', $employeeId)->exists();
+        if ($alreadyLinked) {
+            return;
+        }
+
+        $this->user->update(['employee_id' => $employeeId]);
+        $this->user->load('employee.company', 'employee.department');
         $this->link_employee_id = null;
     }
 
@@ -255,18 +259,12 @@ new class extends Component
             return;
         }
 
-        $employee = Employee::query()
-            ->where('id', $employeeId)
-            ->where('user_id', $this->user->id)
-            ->first();
-
-        if (! $employee) {
+        if ($this->user->employee_id !== $employeeId) {
             return;
         }
 
-        $employee->user_id = null;
-        $employee->save();
-        $this->user->load('employees.company', 'employees.department');
+        $this->user->update(['employee_id' => null]);
+        $this->user->load('employee.company', 'employee.department');
     }
 
     /**
@@ -286,9 +284,8 @@ new class extends Component
             'new_emp_employment_start' => ['nullable', 'date'],
         ]);
 
-        Employee::query()->create([
+        $employee = Employee::query()->create([
             'company_id' => $validated['new_emp_company_id'],
-            'user_id' => $this->user->id,
             'employee_number' => $validated['new_emp_employee_number'],
             'full_name' => $validated['new_emp_full_name'],
             'designation' => $validated['new_emp_designation'],
@@ -296,7 +293,8 @@ new class extends Component
             'status' => 'active',
         ]);
 
-        $this->user->load('employees.company', 'employees.department');
+        $this->user->update(['employee_id' => $employee->id]);
+        $this->user->load('employee.company', 'employee.department');
         $this->showAddEmployeeModal = false;
         $this->reset([
             'new_emp_company_id', 'new_emp_employee_number', 'new_emp_full_name',
@@ -431,7 +429,7 @@ new class extends Component
             'availableCapabilities' => $availableCapabilities,
             'effectivePermissions' => $effectivePermissions,
             'unlinkableEmployees' => Employee::query()
-                ->whereNull('user_id')
+                ->whereNotIn('id', User::query()->whereNotNull('employee_id')->pluck('employee_id'))
                 ->orderBy('full_name')
                 ->get(['id', 'full_name', 'employee_number', 'company_id']),
         ];
@@ -825,7 +823,7 @@ new class extends Component
             <div class="flex items-center justify-between mb-1">
                 <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
                     {{ __('Employee Records') }}
-                    <x-ui.badge>{{ $user->employees->count() }}</x-ui.badge>
+                    <x-ui.badge>{{ $user->employee ? 1 : 0 }}</x-ui.badge>
                 </h3>
                 @if($canManageRoles)
                     <x-ui.button variant="primary" size="sm" wire:click="$set('showAddEmployeeModal', true)">
@@ -850,7 +848,7 @@ new class extends Component
                         </tr>
                     </thead>
                     <tbody class="bg-surface-card divide-y divide-border-default">
-                        @forelse($user->employees as $employee)
+                        @forelse($user->employee ? [$user->employee] : [] as $employee)
                             <tr wire:key="employee-{{ $employee->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
                                     <a href="{{ route('admin.employees.show', $employee) }}" wire:navigate class="text-link hover:underline">{{ $employee->employee_number ?? '—' }}</a>

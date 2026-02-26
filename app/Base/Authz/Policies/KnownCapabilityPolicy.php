@@ -13,9 +13,12 @@ use App\Base\Authz\DTO\ResourceContext;
 use App\Base\Authz\Enums\AuthorizationReasonCode;
 
 /**
- * Rejects capabilities not registered in the catalog.
+ * Rejects capabilities not registered in the authz configuration.
  *
- * Denies unknown capabilities. Abstains for known ones.
+ * This policy acts as a "schema validator" for authorization checks.
+ * It denies any check for a capability key that is not defined in any
+ * module's Config/authz.php. This ensures we only evaluate grants
+ * for known, well-defined capabilities.
  */
 class KnownCapabilityPolicy implements AuthorizationPolicy
 {

@@ -22,6 +22,11 @@ return new class extends Migration
                 ->after('id')
                 ->constrained('companies')
                 ->nullOnDelete();
+            $table
+                ->foreignId('employee_id')
+                ->nullable()
+                ->constrained('employees')
+                ->nullOnDelete();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();

@@ -30,7 +30,6 @@ class EmployeeFactory extends Factory
     {
         return [
             'company_id' => Company::factory(),
-            'user_id' => null,
             'employee_number' => fake()->unique()->numerify('EMP-#####'),
             'full_name' => fake()->name(),
             'short_name' => fake()->optional()->firstName(),

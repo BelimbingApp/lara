@@ -198,7 +198,7 @@ class MigrateCommand extends IlluminateMigrateCommand
     /**
      * Ensure the licensee company (id=1) exists.
      *
-     * DevAdminUserSeeder and others reference Company::LICENSEE_ID.
+     * DevUserSeeder and others reference Company::LICENSEE_ID.
      * After migrate:fresh the table is empty, so we create it here.
      */
     private function ensureLicenseeCompanyExists(): void
@@ -207,7 +207,7 @@ class MigrateCommand extends IlluminateMigrateCommand
             return;
         }
 
-        $name = env('DEV_LICENSEE_NAME', 'My Company');
+        $name = env('DEV_LICENSEE_COMPANY_NAME', 'My Company');
 
         Company::unguarded(fn () => Company::query()->create([
             'id' => Company::LICENSEE_ID,

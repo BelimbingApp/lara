@@ -14,7 +14,6 @@ use App\Modules\Core\User\Models\User;
 class DevAuthzCompanyAssignmentSeeder extends DevSeeder
 {
     protected array $dependencies = [
-        \App\Modules\Core\User\Database\Seeders\Dev\DevAdminUserSeeder::class,
         \App\Modules\Core\User\Database\Seeders\Dev\DevUserSeeder::class,
     ];
 

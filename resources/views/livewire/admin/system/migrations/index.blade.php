@@ -15,33 +15,6 @@ new class extends Component
         $this->resetPage();
     }
 
-    /**
-     * Parse the layer/module label from a migration filename prefix.
-     *
-     * Convention:
-     *  0001_* = Laravel Core
-     *  0100_* = Base
-     *  0200_* = Core Modules
-     *  0300_* = Business Modules
-     *  Other  = Extensions
-     */
-    public function parseModule(string $migrationName): string
-    {
-        if (preg_match('/^(\d{4})_/', $migrationName, $matches)) {
-            $prefix = (int) $matches[1];
-
-            return match (true) {
-                $prefix < 100  => __('Laravel Core'),
-                $prefix < 200  => __('Base'),
-                $prefix < 300  => __('Core Modules'),
-                $prefix < 400  => __('Business Modules'),
-                default        => __('Extensions'),
-            };
-        }
-
-        return __('Unknown');
-    }
-
     public function with(): array
     {
         $query = DB::table('migrations')
@@ -84,18 +57,16 @@ new class extends Component
                 <table class="min-w-full divide-y divide-border-default text-sm">
                     <thead class="bg-surface-subtle/80">
                         <tr>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('ID') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Migration') }}</th>
-                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Module') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Batch') }}</th>
                         </tr>
                     </thead>
                     <tbody class="bg-surface-card divide-y divide-border-default">
                         @forelse($migrations as $migration)
                             <tr wire:key="migration-{{ $migration->id }}" class="hover:bg-surface-subtle/50 transition-colors">
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $migration->id }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-mono">{{ $migration->migration }}</td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <x-ui.badge>{{ $this->parseModule($migration->migration) }}</x-ui.badge>
-                                </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $migration->batch }}</td>
                             </tr>
                         @empty

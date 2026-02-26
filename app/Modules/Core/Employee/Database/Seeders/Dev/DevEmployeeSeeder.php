@@ -20,10 +20,16 @@ class DevEmployeeSeeder extends DevSeeder
      * Seed the database.
      *
      * Creates realistic employee records for existing companies with
-     * department placements and supervisor hierarchies.
+     * department placements and supervisor hierarchies. Also seeds a
+     * licensee employee from DEV_ADMIN_NAME / DEV_ADMIN_EMAIL.
      */
     protected function seed(): void
     {
+        $licensee = Company::query()->find(Company::LICENSEE_ID);
+        if ($licensee) {
+            $this->seedLicenseeEmployee($licensee);
+        }
+
         $stellar = Company::query()->where('name', 'Stellar Industries Sdn Bhd')->first();
         $nusantara = Company::query()->where('name', 'Nusantara Trading Co')->first();
         $borneo = Company::query()->where('name', 'Borneo Logistics')->first();
@@ -38,6 +44,73 @@ class DevEmployeeSeeder extends DevSeeder
 
         if ($borneo) {
             $this->seedBorneoEmployees($borneo);
+        }
+    }
+
+    /**
+     * Seed licensee company employee and digital workers (tech company building BLB).
+     *
+     * @param  Company  $company  The licensee company (Company::LICENSEE_ID)
+     */
+    protected function seedLicenseeEmployee(Company $company): void
+    {
+        $fullName = env('DEV_ADMIN_NAME', 'Administrator');
+        $email = env('DEV_ADMIN_EMAIL', 'admin@example.com');
+        $shortName = str_contains($fullName, ' ') ? explode(' ', $fullName, 2)[0] : $fullName;
+
+        $deptMap = $this->getDepartmentMap($company);
+        $execDeptId = $deptMap['exec'] ?? null;
+        $itDeptId = $deptMap['it'] ?? null;
+
+        $admin = $this->createEmployee($company, [
+            'employee_number' => 'LIC-001',
+            'full_name' => $fullName,
+            'short_name' => $shortName,
+            'designation' => 'Administrator',
+            'employee_type' => 'full_time',
+            'email' => $email,
+            'status' => 'active',
+            'employment_start' => now()->toDateString(),
+            'department_id' => $execDeptId,
+        ]);
+
+        $digitalWorkers = [
+            [
+                'employee_number' => 'LIC-002',
+                'full_name' => 'Aiman Rahman',
+                'short_name' => 'Aiman',
+                'designation' => 'Lead Developer',
+                'job_description' => 'Leads BLB technical direction, designs core framework architecture, and delivers full-stack features across backend and frontend modules.',
+                'department_id' => $itDeptId,
+            ],
+            [
+                'employee_number' => 'LIC-003',
+                'full_name' => 'Sofia Lim',
+                'short_name' => 'Sofia',
+                'designation' => 'UX/UI Designer',
+                'job_description' => 'Shapes BLB product experience through user flows, design system components, accessible UI patterns, and consistent visual standards across modules.',
+                'department_id' => $itDeptId,
+            ],
+            [
+                'employee_number' => 'LIC-004',
+                'full_name' => 'Daniel Khoo',
+                'short_name' => 'Daniel',
+                'designation' => 'Product Manager',
+                'job_description' => 'Defines BLB roadmap and release priorities, translates framework vision into clear requirements, and aligns delivery scope with adopter needs.',
+                'department_id' => $itDeptId,
+            ],
+        ];
+
+        foreach ($digitalWorkers as $def) {
+            $deptId = $def['department_id'];
+            unset($def['department_id']);
+            $this->createEmployee($company, array_merge($def, [
+                'employee_type' => 'digital_worker',
+                'status' => 'active',
+                'employment_start' => now()->toDateString(),
+                'department_id' => $deptId,
+                'supervisor_id' => $admin?->id,
+            ]));
         }
     }
 
