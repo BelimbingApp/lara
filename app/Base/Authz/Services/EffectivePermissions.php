@@ -5,11 +5,13 @@
 
 namespace App\Base\Authz\Services;
 
+use App\Base\Authz\Capability\CapabilityRegistry;
 use App\Base\Authz\DTO\Actor;
 use App\Base\Authz\DTO\AuthorizationDecision;
 use App\Base\Authz\Enums\AuthorizationReasonCode;
 use App\Base\Authz\Models\PrincipalCapability;
 use App\Base\Authz\Models\PrincipalRole;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Pre-loaded permission set for an actor.
@@ -23,11 +25,13 @@ final class EffectivePermissions
      * @param  array<string, true>  $directDenies  Capability keys explicitly denied
      * @param  array<string, true>  $directAllows  Capability keys explicitly allowed
      * @param  array<string, true>  $roleGrants  Capability keys granted via roles
+     * @param  bool  $grantAll  Whether the actor has a grant_all role
      */
     private function __construct(
         private readonly array $directDenies,
         private readonly array $directAllows,
         private readonly array $roleGrants,
+        private readonly bool $grantAll = false,
     ) {}
 
     /**
@@ -60,29 +64,35 @@ final class EffectivePermissions
             }
         }
 
-        $roleGrantKeys = PrincipalRole::query()
-            ->join(
-                'base_authz_role_capabilities',
-                'base_authz_role_capabilities.role_id',
-                '=',
-                'base_authz_principal_roles.role_id'
-            )
+        $actorRoles = PrincipalRole::query()
+            ->join('base_authz_roles', 'base_authz_roles.id', '=', 'base_authz_principal_roles.role_id')
             ->where('base_authz_principal_roles.principal_type', $actor->type->value)
             ->where('base_authz_principal_roles.principal_id', $actor->id)
             ->where(static function ($query) use ($actor): void {
                 $query->where('base_authz_principal_roles.company_id', $actor->companyId)
                     ->orWhereNull('base_authz_principal_roles.company_id');
             })
-            ->distinct()
-            ->pluck('base_authz_role_capabilities.capability_key');
+            ->select('base_authz_roles.id', 'base_authz_roles.grant_all')
+            ->get();
+
+        $grantAll = $actorRoles->contains('grant_all', true);
 
         $roleGrants = [];
 
-        foreach ($roleGrantKeys as $key) {
-            $roleGrants[$key] = true;
+        if (! $grantAll) {
+            $roleIds = $actorRoles->pluck('id')->all();
+
+            $roleGrantKeys = DB::table('base_authz_role_capabilities')
+                ->whereIn('role_id', $roleIds)
+                ->distinct()
+                ->pluck('capability_key');
+
+            foreach ($roleGrantKeys as $key) {
+                $roleGrants[$key] = true;
+            }
         }
 
-        return new self($directDenies, $directAllows, $roleGrants);
+        return new self($directDenies, $directAllows, $roleGrants, $grantAll);
     }
 
     /**
@@ -94,6 +104,13 @@ final class EffectivePermissions
      */
     public function allowed(): array
     {
+        if ($this->grantAll) {
+            return array_values(array_diff(
+                app(CapabilityRegistry::class)->all(),
+                array_keys($this->directDenies)
+            ));
+        }
+
         $allowed = array_keys($this->directAllows) + array_keys($this->roleGrants);
 
         return array_values(array_unique(array_diff($allowed, array_keys($this->directDenies))));
@@ -110,9 +127,17 @@ final class EffectivePermissions
     }
 
     /**
+     * Whether the actor has a role with grant_all.
+     */
+    public function hasGrantAll(): bool
+    {
+        return $this->grantAll;
+    }
+
+    /**
      * Evaluate whether the actor has the given capability.
      *
-     * Priority: explicit deny > explicit allow > role grant > deny.
+     * Priority: explicit deny > explicit allow > grant_all > role grant > deny.
      */
     public function evaluate(string $capability): AuthorizationDecision
     {
@@ -125,6 +150,10 @@ final class EffectivePermissions
 
         if (isset($this->directAllows[$capability])) {
             return AuthorizationDecision::allow(['direct_capability']);
+        }
+
+        if ($this->grantAll) {
+            return AuthorizationDecision::allow(['grant_all']);
         }
 
         if (isset($this->roleGrants[$capability])) {

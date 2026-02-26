@@ -21,7 +21,7 @@ class AuthzRoleCapabilitySeeder extends Seeder
      */
     public function run(): void
     {
-        /** @var array<string, array{name: string, description: string|null, capabilities: array<int, string>}> $roles */
+        /** @var array<string, array{name: string, description: string|null, grant_all?: bool, capabilities?: array<int, string>}> $roles */
         $roles = config('authz.roles', []);
 
         /** @var CapabilityRegistry $capabilityRegistry */
@@ -37,6 +37,15 @@ class AuthzRoleCapabilitySeeder extends Seeder
                 throw new RuntimeException("Missing role [$roleCode] before seeding role capabilities.");
             }
 
+            // grant_all roles don't need individual capability rows.
+            if ($roleConfig['grant_all'] ?? false) {
+                DB::table('base_authz_role_capabilities')
+                    ->where('role_id', $role->id)
+                    ->delete();
+
+                continue;
+            }
+
             $existingKeys = DB::table('base_authz_role_capabilities')
                 ->where('role_id', $role->id)
                 ->pluck('capability_key')
@@ -44,7 +53,7 @@ class AuthzRoleCapabilitySeeder extends Seeder
 
             $desiredKeys = [];
 
-            foreach ($roleConfig['capabilities'] as $capabilityKey) {
+            foreach ($roleConfig['capabilities'] ?? [] as $capabilityKey) {
                 $capabilityKey = strtolower($capabilityKey);
                 $capabilityRegistry->assertKnown($capabilityKey);
                 $desiredKeys[] = $capabilityKey;

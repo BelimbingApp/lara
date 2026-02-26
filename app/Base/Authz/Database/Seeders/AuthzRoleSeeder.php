@@ -15,7 +15,7 @@ class AuthzRoleSeeder extends Seeder
      */
     public function run(): void
     {
-        /** @var array<string, array{name: string, description: string|null, capabilities: array<int, string>}> $roles */
+        /** @var array<string, array{name: string, description: string|null, grant_all?: bool, capabilities?: array<int, string>}> $roles */
         $roles = config('authz.roles', []);
 
         foreach ($roles as $code => $role) {
@@ -28,6 +28,7 @@ class AuthzRoleSeeder extends Seeder
                     'name' => $role['name'],
                     'description' => $role['description'] ?? null,
                     'is_system' => true,
+                    'grant_all' => $role['grant_all'] ?? false,
                 ]
             );
         }

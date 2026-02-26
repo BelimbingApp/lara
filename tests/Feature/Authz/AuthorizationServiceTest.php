@@ -18,12 +18,12 @@ beforeEach(function (): void {
     foreach ($roles as $code => $roleDef) {
         $role = Role::query()->firstOrCreate(
             ['company_id' => null, 'code' => $code],
-            ['name' => $roleDef['name'], 'description' => $roleDef['description'] ?? null, 'is_system' => true]
+            ['name' => $roleDef['name'], 'description' => $roleDef['description'] ?? null, 'is_system' => true, 'grant_all' => $roleDef['grant_all'] ?? false]
         );
 
         $now = now();
 
-        foreach ($roleDef['capabilities'] as $capKey) {
+        foreach ($roleDef['capabilities'] ?? [] as $capKey) {
             DB::table('base_authz_role_capabilities')->insertOrIgnore([
                 'role_id' => $role->id,
                 'capability_key' => strtolower($capKey),
@@ -99,7 +99,7 @@ it('allows when user has capability via role', function (): void {
 
     expect($decision->allowed)->toBeTrue();
     expect($decision->reasonCode)->toBe(AuthorizationReasonCode::ALLOWED);
-    expect($decision->appliedPolicies)->toContain('role_capability');
+    expect($decision->appliedPolicies)->toContain('grant_all');
 });
 
 it('allows when user has explicit direct capability grant', function (): void {

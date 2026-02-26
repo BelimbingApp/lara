@@ -26,6 +26,7 @@ class Role extends Model
         'code',
         'description',
         'is_system',
+        'grant_all',
     ];
 
     /**
@@ -33,6 +34,7 @@ class Role extends Model
      */
     protected $casts = [
         'is_system' => 'boolean',
+        'grant_all' => 'boolean',
     ];
 
     public function company(): BelongsTo

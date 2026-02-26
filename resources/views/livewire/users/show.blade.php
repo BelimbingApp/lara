@@ -350,7 +350,7 @@ new class extends Component
             ->get();
 
         $assignedRoleIds = $assignedRoles->pluck('role_id')->all();
-        $hasCoreAdmin = $assignedRoles->contains(fn ($pr) => $pr->role->code === 'core_admin');
+        $hasGrantAll = $assignedRoles->contains(fn ($pr) => $pr->role->grant_all);
 
         $availableRoles = Role::query()
             ->with('company')
@@ -424,7 +424,7 @@ new class extends Component
             'assignedRoles' => $assignedRoles,
             'availableRoles' => $availableRoles,
             'canManageRoles' => $canManageRoles,
-            'hasCoreAdmin' => $hasCoreAdmin,
+            'hasGrantAll' => $hasGrantAll,
             'directGrantIds' => $directGrantIds,
             'directDenyIds' => $directDenyIds,
             'deniedPermissions' => $deniedPermissions,
@@ -591,7 +591,7 @@ new class extends Component
             </div>
 
             {{-- Assign Roles --}}
-            @if($canManageRoles && $availableRoles->isNotEmpty() && !$hasCoreAdmin)
+            @if($canManageRoles && $availableRoles->isNotEmpty() && !$hasGrantAll)
                 <div
                     x-data="{ open: false, roleFilter: '', selected: @entangle('selectedRoleIds') }"
                     class="mb-6"

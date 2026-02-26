@@ -39,7 +39,7 @@ class DevAuthzCompanyAssignmentSeeder extends DevSeeder
     }
 
     /**
-     * Grant all system roles to the dev admin user identified by DEV_ADMIN_EMAIL.
+     * Grant core_admin (grant_all) role to the dev admin user identified by DEV_ADMIN_EMAIL.
      *
      * @param  \Illuminate\Database\Eloquent\Collection<int, Role>  $systemRoles
      */
@@ -56,14 +56,18 @@ class DevAuthzCompanyAssignmentSeeder extends DevSeeder
             return;
         }
 
-        foreach ($systemRoles as $role) {
-            PrincipalRole::query()->firstOrCreate([
-                'company_id' => $adminUser->company_id,
-                'principal_type' => PrincipalType::HUMAN_USER->value,
-                'principal_id' => $adminUser->id,
-                'role_id' => $role->id,
-            ]);
+        $coreAdminRole = $systemRoles->firstWhere('code', 'core_admin');
+
+        if ($coreAdminRole === null) {
+            return;
         }
+
+        PrincipalRole::query()->firstOrCreate([
+            'company_id' => $adminUser->company_id,
+            'principal_type' => PrincipalType::HUMAN_USER->value,
+            'principal_id' => $adminUser->id,
+            'role_id' => $coreAdminRole->id,
+        ]);
     }
 
     /**

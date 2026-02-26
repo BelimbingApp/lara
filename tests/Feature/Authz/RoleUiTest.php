@@ -15,12 +15,12 @@ beforeEach(function (): void {
     foreach ($roles as $code => $roleDef) {
         $role = Role::query()->firstOrCreate(
             ['company_id' => null, 'code' => $code],
-            ['name' => $roleDef['name'], 'description' => $roleDef['description'] ?? null, 'is_system' => true]
+            ['name' => $roleDef['name'], 'description' => $roleDef['description'] ?? null, 'is_system' => true, 'grant_all' => $roleDef['grant_all'] ?? false]
         );
 
         $now = now();
 
-        foreach ($roleDef['capabilities'] as $capKey) {
+        foreach ($roleDef['capabilities'] ?? [] as $capKey) {
             DB::table('base_authz_role_capabilities')->insertOrIgnore([
                 'role_id' => $role->id,
                 'capability_key' => strtolower($capKey),
@@ -95,13 +95,13 @@ test('role index displays roles with search', function (): void {
 
 test('role show displays role details and capabilities', function (): void {
     $user = createRoleTestAdmin();
-    $role = Role::query()->where('code', 'core_admin')->firstOrFail();
+    $role = Role::query()->where('code', 'user_viewer')->firstOrFail();
 
     $this->actingAs($user);
 
     Livewire::test('admin.roles.show', ['role' => $role])
-        ->assertSee('Core Administrator')
-        ->assertSee('core_admin')
+        ->assertSee('User Viewer')
+        ->assertSee('user_viewer')
         ->assertSee('core.user.view');
 });
 
@@ -219,7 +219,7 @@ test('same role code in different company scope is allowed', function (): void {
 
 test('system role capabilities cannot be modified via UI', function (): void {
     $user = createRoleTestAdmin();
-    $role = Role::query()->where('code', 'core_admin')->firstOrFail();
+    $role = Role::query()->where('code', 'user_viewer')->firstOrFail();
     $this->actingAs($user);
 
     $initialCount = $role->capabilities()->count();

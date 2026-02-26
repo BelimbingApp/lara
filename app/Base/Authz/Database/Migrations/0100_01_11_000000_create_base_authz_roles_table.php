@@ -25,6 +25,7 @@ return new class extends Migration
             $table->string('code');
             $table->text('description')->nullable();
             $table->boolean('is_system')->default(false);
+            $table->boolean('grant_all')->default(false);
             $table->timestamps();
 
             $table->unique(['company_id', 'code']);
