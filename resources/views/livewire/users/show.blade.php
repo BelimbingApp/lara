@@ -350,6 +350,7 @@ new class extends Component
             ->get();
 
         $assignedRoleIds = $assignedRoles->pluck('role_id')->all();
+        $hasCoreAdmin = $assignedRoles->contains(fn ($pr) => $pr->role->code === 'core_admin');
 
         $availableRoles = Role::query()
             ->with('company')
@@ -423,6 +424,7 @@ new class extends Component
             'assignedRoles' => $assignedRoles,
             'availableRoles' => $availableRoles,
             'canManageRoles' => $canManageRoles,
+            'hasCoreAdmin' => $hasCoreAdmin,
             'directGrantIds' => $directGrantIds,
             'directDenyIds' => $directDenyIds,
             'deniedPermissions' => $deniedPermissions,
@@ -575,7 +577,6 @@ new class extends Component
                                         <button
                                             type="button"
                                             wire:click="removeRole({{ $assignment->id }})"
-                                            wire:confirm="{{ __('Remove :role from this user?', ['role' => $assignment->role->name]) }}"
                                             class="ml-0.5 text-muted hover:text-status-danger transition-colors"
                                             title="{{ __('Remove role') }}"
                                         >
@@ -590,40 +591,50 @@ new class extends Component
             </div>
 
             {{-- Assign Roles --}}
-            @if($canManageRoles && $availableRoles->isNotEmpty())
+            @if($canManageRoles && $availableRoles->isNotEmpty() && !$hasCoreAdmin)
                 <div
-                    x-data="{ roleFilter: '', selected: @entangle('selectedRoleIds') }"
+                    x-data="{ open: false, roleFilter: '', selected: @entangle('selectedRoleIds') }"
                     class="mb-6"
                 >
-                    <div>
-                        <x-ui.search-input
-                            x-model="roleFilter"
-                            placeholder="{{ __('Search roles...') }}"
-                        />
-                    </div>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 mt-2 max-h-48 overflow-y-auto">
-                        @foreach($availableRoles as $role)
-                            <label
-                                x-show="!roleFilter || @js(strtolower($role->name)).includes(roleFilter.toLowerCase()) || @js(strtolower($role->code)).includes(roleFilter.toLowerCase())"
-                                class="flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-surface-subtle cursor-pointer"
-                            >
-                                <input
-                                    type="checkbox"
-                                    value="{{ $role->id }}"
-                                    x-model="selected"
-                                    class="rounded border-border-input text-accent focus:ring-accent"
+                    <x-ui.button x-show="!open" variant="ghost" size="sm" @click="open = true; $nextTick(() => $refs.roleSearch?.focus())">
+                        <x-icon name="heroicon-o-plus" class="w-3.5 h-3.5" />
+                        {{ __('Roles') }}
+                    </x-ui.button>
+                    <div x-show="open" x-cloak>
+                        <div>
+                            <x-ui.search-input
+                                x-ref="roleSearch"
+                                x-model="roleFilter"
+                                placeholder="{{ __('Search roles...') }}"
+                            />
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-1 mt-2 max-h-48 overflow-y-auto">
+                            @foreach($availableRoles as $role)
+                                <label
+                                    x-show="!roleFilter || @js(strtolower($role->name)).includes(roleFilter.toLowerCase()) || @js(strtolower($role->code)).includes(roleFilter.toLowerCase())"
+                                    class="flex items-center gap-2 px-2 py-1 rounded text-sm hover:bg-surface-subtle cursor-pointer"
                                 >
-                                <span class="text-ink truncate" title="{{ $role->description ?? $role->name }}">{{ $role->name }}</span>
-                                @if ($role->company)
-                                    <span class="text-muted text-xs truncate">({{ $role->company->name }})</span>
-                                @endif
-                            </label>
-                        @endforeach
-                    </div>
-                    <div x-show="selected.length > 0" x-cloak class="mt-2">
-                        <x-ui.button variant="primary" size="sm" wire:click="assignRoles">
-                            {{ __('Assign') }} (<span x-text="selected.length"></span>)
-                        </x-ui.button>
+                                    <input
+                                        type="checkbox"
+                                        value="{{ $role->id }}"
+                                        x-model="selected"
+                                        class="rounded border-border-input text-accent focus:ring-accent"
+                                    >
+                                    <span class="text-ink truncate" title="{{ $role->description ?? $role->name }}">{{ $role->name }}</span>
+                                    @if ($role->company)
+                                        <span class="text-muted text-xs truncate">({{ $role->company->name }})</span>
+                                    @endif
+                                </label>
+                            @endforeach
+                        </div>
+                        <div class="flex items-center gap-2 mt-2">
+                            <x-ui.button x-show="selected.length > 0" x-cloak variant="primary" size="sm" wire:click="assignRoles">
+                                {{ __('Assign') }} (<span x-text="selected.length"></span>)
+                            </x-ui.button>
+                            <x-ui.button variant="ghost" size="sm" @click="open = false; roleFilter = ''; selected = []">
+                                {{ __('Cancel') }}
+                            </x-ui.button>
+                        </div>
                     </div>
                 </div>
             @endif

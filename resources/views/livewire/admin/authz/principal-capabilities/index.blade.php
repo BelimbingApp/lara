@@ -47,7 +47,7 @@ new class extends Component
     <x-slot name="title">{{ __('Principal Capabilities') }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="__('Principal Capabilities')" :subtitle="__('Direct capability grants to principals')" />
+        <x-ui.page-header :title="__('Principal Capabilities')" :subtitle="__('Per-user capability overrides — allow or deny specific capabilities outside of role assignments')" />
 
         <x-ui.card>
             <div class="mb-2">
@@ -98,7 +98,7 @@ new class extends Component
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="6" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No principal capabilities found.') }}</td>
+                                <td colspan="6" class="px-table-cell-x py-8 text-center text-sm text-muted">{{ __('No per-user overrides. Capabilities are currently granted through roles only.') }}</td>
                             </tr>
                         @endforelse
                     </tbody>

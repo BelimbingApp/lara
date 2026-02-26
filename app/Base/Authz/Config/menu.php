@@ -13,6 +13,15 @@ return [
             'position' => 210,
         ],
         [
+            'id' => 'authz.capabilities',
+            'label' => 'Capabilities',
+            'icon' => 'heroicon-o-puzzle-piece',
+            'route' => 'admin.authz.capabilities.index',
+            'permission' => 'admin.capability.list',
+            'parent' => 'authz',
+            'position' => 5,
+        ],
+        [
             'id' => 'authz.roles',
             'label' => 'Roles',
             'icon' => 'heroicon-o-shield-check',

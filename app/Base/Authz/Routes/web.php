@@ -35,6 +35,9 @@ Route::middleware('auth')->group(function () {
         ->name('admin.roles.show');
 
     // Authz administration
+    Volt::route('admin/authz/capabilities', 'admin.authz.capabilities.index')
+        ->middleware('authz:admin.capability.list')
+        ->name('admin.authz.capabilities.index');
     Volt::route('admin/authz/principal-roles', 'admin.authz.principal-roles.index')
         ->middleware('authz:admin.principal_role.list')
         ->name('admin.authz.principal-roles.index');
