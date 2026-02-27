@@ -7,6 +7,7 @@
     'editable' => false,
     'searchMethod' => null,
     'searchUrl' => null,
+    'disabled' => false,
 ])
 
 @php
@@ -20,7 +21,7 @@
     ])->values()->all());
 @endphp
 
-<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'error', 'placeholder', 'required', 'options', 'editable', 'searchMethod', 'searchUrl', 'id'])->class(['space-y-1']) }}>
+<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'error', 'placeholder', 'required', 'options', 'editable', 'searchMethod', 'searchUrl', 'disabled', 'id'])->class(['space-y-1']) }}>
     @if($label)
         <label for="{{ $id }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
             {{ $label }}
@@ -40,6 +41,7 @@
             searchMethod: {{ $searchMethod ? "'".addslashes($searchMethod)."'" : 'null' }},
             searchUrl: {{ $searchUrl ? "'".addslashes($searchUrl)."'" : 'null' }},
             options: {{ $optionsJs }},
+            disabled: {{ $disabled ? 'true' : 'false' }},
             selectedValue: @entangle($attributes->wire('model')),
 
             get selectedOption() {
@@ -111,7 +113,7 @@
                 this.selectedValue = null
                 this.query = ''
                 this.open = false
-                this.$nextTick(() => this.$refs.input.focus())
+                this.$nextTick(() => this.$refs.input?.focus())
             },
 
             select(opt) {
@@ -180,7 +182,7 @@
             },
         }"
         @click.outside="closeList()"
-        @focusout="setTimeout(() => { if (!$el.contains(document.activeElement)) closeList() }, 0)"
+        @focusout="setTimeout(() => { if (open && !$el.contains(document.activeElement)) closeList() }, 150)"
         class="relative"
     >
         <div class="relative">
@@ -197,6 +199,7 @@
                 @keydown="onKeydown($event)"
                 x-model="query"
                 placeholder="{{ $placeholder }}"
+                @if($disabled) disabled @endif
                 @if($required) aria-required="true" @endif
                 @class([
                     'w-full px-input-x py-input-y pr-8 text-sm border rounded-2xl transition-colors',
@@ -210,7 +213,7 @@
             <button
                 type="button"
                 x-cloak
-                x-show="selectedValue != null && selectedValue !== ''"
+                x-show="!disabled && selectedValue != null && selectedValue !== ''"
                 @click="clear()"
                 class="absolute inset-y-0 right-2 flex items-center text-muted hover:text-ink"
                 tabindex="-1"
