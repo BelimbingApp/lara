@@ -1,3 +1,24 @@
+{{--
+    Combobox component: accessible dropdown with optional free-text input and server-side search.
+
+    Props:
+    - label: Optional label above the input
+    - error: Validation error message (shows red border)
+    - placeholder: Input placeholder text
+    - required: Shows asterisk on label, sets aria-required
+    - options: Array of [value, label] for static options (or initial options when searchUrl is used)
+    - editable: When true, allows free text; on blur/Enter commits value even if not in options
+    - searchUrl: Fetch URL for server-side search; appends ?q=... on query change (no Livewire, no focus loss)
+    - disabled: When true, disables the input
+
+    Features:
+    - Select from list: pick by click or keyboard (ArrowUp/Down, Enter, Escape)
+    - searchUrl: fetches options via fetch(); when set, list uses Alpine x-for (reactive)
+    - Static options: list uses Blade @foreach with client-side filtering (matchesFilter)
+    - Clear button when a value is selected
+    - ARIA: combobox, listbox, aria-controls, aria-activedescendant, aria-haspopup
+    - Respects prefers-reduced-motion
+--}}
 @props([
     'label' => null,
     'error' => null,
@@ -5,8 +26,8 @@
     'required' => false,
     'options' => [],
     'editable' => false,
-    'searchMethod' => null,
     'searchUrl' => null,
+    'disabled' => false,
 ])
 
 @php
@@ -20,7 +41,7 @@
     ])->values()->all());
 @endphp
 
-<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'error', 'placeholder', 'required', 'options', 'editable', 'searchMethod', 'searchUrl', 'id'])->class(['space-y-1']) }}>
+<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'error', 'placeholder', 'required', 'options', 'editable', 'searchUrl', 'disabled', 'id'])->class(['space-y-1']) }}>
     @if($label)
         <label for="{{ $id }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
             {{ $label }}
@@ -37,9 +58,10 @@
             activeValue: null,
             searchTimeout: null,
             editable: {{ $editable ? 'true' : 'false' }},
-            searchMethod: {{ $searchMethod ? "'".addslashes($searchMethod)."'" : 'null' }},
             searchUrl: {{ $searchUrl ? "'".addslashes($searchUrl)."'" : 'null' }},
             options: {{ $optionsJs }},
+            listboxId: '{{ $id }}-listbox',
+            disabled: {{ $disabled ? 'true' : 'false' }},
             selectedValue: @entangle($attributes->wire('model')),
 
             get selectedOption() {
@@ -52,6 +74,11 @@
                 return q ? this.options.filter(o => o.label.toLowerCase().includes(q)) : this.options
             },
 
+            get activeOptionId() {
+                const idx = this.filtered.findIndex(o => o.value === this.activeValue)
+                return idx >= 0 ? '{{ $id }}-option-' + idx : undefined
+            },
+
             init() {
                 this.syncQuery()
                 this.$watch('selectedValue', () => this.syncQuery())
@@ -59,19 +86,12 @@
                     this.$watch('query', () => {
                         clearTimeout(this.searchTimeout)
                         this.searchTimeout = setTimeout(() => {
-                            const url = new URL(this.searchUrl)
+                            const url = new URL(this.searchUrl, window.location.origin)
                             url.searchParams.set('q', this.query)
-                            fetch(url, { credentials: 'same-origin' })
+                            fetch(url.toString(), { credentials: 'same-origin' })
                                 .then(r => r.json())
                                 .then(data => { this.options = Array.isArray(data) ? data : [] })
                                 .catch(() => { this.options = [] })
-                        }, 300)
-                    })
-                } else if (this.searchMethod) {
-                    this.$watch('query', () => {
-                        clearTimeout(this.searchTimeout)
-                        this.searchTimeout = setTimeout(() => {
-                            this.$wire.call(this.searchMethod, this.query)
                         }, 300)
                     })
                 }
@@ -111,17 +131,11 @@
                 this.selectedValue = null
                 this.query = ''
                 this.open = false
-                this.$nextTick(() => this.$refs.input.focus())
+                this.$nextTick(() => this.$refs.input?.focus())
             },
 
-            select(opt) {
-                this.selectedValue = opt.value
-                this.query = opt.label
-                this.open = false
-            },
-
-            selectByValue(val, label) {
-                this.selectedValue = val
+            selectOpt(value, label) {
+                this.selectedValue = value
                 this.query = label
                 this.open = false
             },
@@ -162,7 +176,7 @@
                     if (this.open) {
                         const opt = this.filtered.find(o => o.value === this.activeValue)
                         if (opt) {
-                            this.select(opt)
+                            this.selectOpt(opt.value, opt.label)
                         } else if (this.editable) {
                             this.closeList()
                         }
@@ -190,13 +204,17 @@
                 type="text"
                 autocomplete="off"
                 role="combobox"
+                aria-haspopup="listbox"
                 aria-autocomplete="list"
                 :aria-expanded="open"
+                :aria-controls="listboxId"
+                :aria-activedescendant="activeOptionId"
                 @focus="openList()"
                 @input="openList()"
                 @keydown="onKeydown($event)"
                 x-model="query"
                 placeholder="{{ $placeholder }}"
+                @if($disabled) disabled @endif
                 @if($required) aria-required="true" @endif
                 @class([
                     'w-full px-input-x py-input-y pr-8 text-sm border rounded-2xl transition-colors',
@@ -210,7 +228,7 @@
             <button
                 type="button"
                 x-cloak
-                x-show="selectedValue != null && selectedValue !== ''"
+                x-show="!disabled && selectedValue != null && selectedValue !== ''"
                 @click="clear()"
                 class="absolute inset-y-0 right-2 flex items-center text-muted hover:text-ink"
                 tabindex="-1"
@@ -224,23 +242,25 @@
             x-cloak
             x-show="open"
             x-transition.opacity.duration.150ms
-            class="absolute z-50 mt-1 w-full rounded-2xl border border-border-input bg-surface-card shadow-sm"
+            class="combobox-dropdown absolute z-50 mt-1 w-full rounded-2xl border border-border-input bg-surface-card shadow-sm"
         >
             <ul
+                id="{{ $id }}-listbox"
                 x-ref="listbox"
                 x-show="filtered.length > 0"
                 role="listbox"
                 class="max-h-60 overflow-auto py-1"
             >
                 @if($searchUrl)
-                <template x-for="option in filtered" :key="option.value">
+                <template x-for="(option, index) in filtered" :key="option.value">
                     <li
+                        :id="'{{ $id }}-option-' + index"
                         role="option"
                         :data-value="option.value"
                         :aria-selected="option.value === String(selectedValue)"
                         @mouseenter="setActiveByValue(option.value)"
-                        @mousedown.prevent="select(option)"
-                        class="px-input-x py-1.5 text-sm cursor-pointer select-none"
+                        @mousedown.prevent="selectOpt(option.value, option.label)"
+                        class="px-input-x py-input-y text-sm cursor-pointer select-none"
                         :class="option.value === activeValue ? 'bg-accent text-accent-on' : 'text-ink hover:bg-surface-subtle'"
                     >
                         <span x-text="option.label"></span>
@@ -250,13 +270,14 @@
                 @foreach($options as $o)
                 <li
                     x-show="matchesFilter($el.dataset.label)"
+                    id="{{ $id }}-option-{{ $loop->index }}"
                     role="option"
                     data-value="{{ e($o['value'] ?? '') }}"
                     data-label="{{ e($o['label'] ?? '') }}"
                     :aria-selected="$el.dataset.value === String(selectedValue)"
                     @mouseenter="setActiveByValue($el.dataset.value)"
-                    @mousedown.prevent="selectByValue($el.dataset.value, $el.dataset.label)"
-                    class="px-input-x py-1.5 text-sm cursor-pointer select-none"
+                    @mousedown.prevent="selectOpt($el.dataset.value, $el.dataset.label)"
+                    class="px-input-x py-input-y text-sm cursor-pointer select-none"
                     :class="$el.dataset.value === activeValue ? 'bg-accent text-accent-on' : 'text-ink hover:bg-surface-subtle'"
                 >
                     <span>{{ $o['label'] ?? '' }}</span>
@@ -264,7 +285,7 @@
                 @endforeach
                 @endif
             </ul>
-            <p x-show="filtered.length === 0" class="px-input-x py-2 text-sm text-muted">{{ __('No results found.') }}</p>
+            <p x-show="filtered.length === 0" class="px-input-x py-input-y text-sm text-muted">{{ __('No results found.') }}</p>
         </div>
     </div>
 
