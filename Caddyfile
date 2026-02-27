@@ -10,26 +10,35 @@
 		format console
 	}
 
-	# Vite HMR WebSocket
+	# Reverb WebSocket (Laravel Echo) - proxy wss to Reverb's ws
+	@reverb_ws {
+		path /app/*
+		expression `header({'Connection':'*Upgrade*','Upgrade':'websocket'}) || header({':protocol':'websocket'})`
+	}
+	handle @reverb_ws {
+		reverse_proxy 127.0.0.1:8080
+	}
+
+	# Vite HMR WebSocket (path / ; HTTP/1.1 uses Connection+Upgrade, HTTP/2 uses :protocol)
 	@vite_ws {
-		path /?token=*
-		header Upgrade websocket
+		path /
+		expression `header({'Connection':'*Upgrade*','Upgrade':'websocket'}) || header({':protocol':'websocket'})`
 	}
 	handle @vite_ws {
-		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT}
+		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT:5173}
 	}
 
 	# Vite / Frontend Config (dev mode paths + production builds)
 	# Try Vite first for dev assets, fallback to Laravel for built assets
 	@vite_dev path /@vite/* /@fs/* /node_modules/* /resources/*
 	handle @vite_dev {
-		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT}
+		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT:5173}
 	}
 
 	# Built assets (CSS/JS from public/build) - serve from Laravel
 	@built_assets path /build/* /assets/*
 	handle @built_assets {
-		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT:8000} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
@@ -39,7 +48,7 @@
 
 	# Laravel Backend
 	handle {
-		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT:8000} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
@@ -64,7 +73,7 @@
 
 	# API / Backend (Laravel)
 	handle {
-		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT} {
+		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT:8000} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
