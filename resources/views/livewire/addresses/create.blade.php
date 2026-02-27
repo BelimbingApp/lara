@@ -2,7 +2,6 @@
 
 use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
 use App\Modules\Core\Address\Models\Address;
-use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
 
@@ -92,11 +91,7 @@ new class extends Component
     public function with(): array
     {
         return [
-            'countryOptions' => Country::query()
-                ->orderBy('country')
-                ->get(['iso', 'country'])
-                ->map(fn ($c) => ['value' => $c->iso, 'label' => $c->country])
-                ->all(),
+            'countryOptions' => $this->loadCountryOptionsForCombobox(),
         ];
     }
 
@@ -121,23 +116,13 @@ new class extends Component
 
     protected function rules(): array
     {
-        return [
-            'label' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'line1' => ['nullable', 'string'],
-            'line2' => ['nullable', 'string'],
-            'line3' => ['nullable', 'string'],
-            'locality' => ['nullable', 'string', 'max:255'],
-            'postcode' => ['nullable', 'string', 'max:255'],
+        return array_merge(Address::fieldRules(), [
             'country_iso' => ['nullable', 'string', 'size:2'],
             'admin1_code' => ['nullable', 'string', 'max:20'],
-            'raw_input' => ['nullable', 'string'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'source_ref' => ['nullable', 'string', 'max:255'],
             'parser_version' => ['nullable', 'string', 'max:255'],
             'parse_confidence' => ['nullable', 'numeric', 'between:0,1'],
             'verification_status' => ['required', 'in:unverified,suggested,verified'],
-        ];
+        ]);
     }
 }; ?>
 

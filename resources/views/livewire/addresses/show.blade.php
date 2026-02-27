@@ -2,8 +2,6 @@
 
 use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
 use App\Modules\Core\Address\Models\Address;
-use App\Modules\Core\Geonames\Models\Admin1;
-use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
@@ -42,18 +40,7 @@ new class extends Component
 
     public function saveField(string $field, mixed $value): void
     {
-        $rules = [
-            'label' => ['nullable', 'string', 'max:255'],
-            'phone' => ['nullable', 'string', 'max:255'],
-            'line1' => ['nullable', 'string'],
-            'line2' => ['nullable', 'string'],
-            'line3' => ['nullable', 'string'],
-            'locality' => ['nullable', 'string', 'max:255'],
-            'postcode' => ['nullable', 'string', 'max:255'],
-            'source' => ['nullable', 'string', 'max:255'],
-            'source_ref' => ['nullable', 'string', 'max:255'],
-            'raw_input' => ['nullable', 'string'],
-        ];
+        $rules = Address::fieldRules();
 
         if (! isset($rules[$field])) {
             return;
@@ -181,11 +168,7 @@ new class extends Component
 
         return [
             'linkedEntities' => $entities,
-            'countryOptions' => Country::query()
-                ->orderBy('country')
-                ->get(['iso', 'country'])
-                ->map(fn ($c) => ['value' => $c->iso, 'label' => $c->country])
-                ->all(),
+            'countryOptions' => $this->loadCountryOptionsForCombobox(),
         ];
     }
 }; ?>

@@ -7,11 +7,27 @@ namespace App\Modules\Core\Address\Concerns;
 
 use App\Modules\Core\Geonames\Jobs\ImportPostcodes;
 use App\Modules\Core\Geonames\Models\Admin1;
+use App\Modules\Core\Geonames\Models\Country;
 use App\Modules\Core\Geonames\Models\Postcode;
 
 trait HasAddressGeoLookups
 {
     private const POSTCODE_SEARCH_LIMIT = 10;
+
+    /**
+     * Load country options for combobox (ISO + name).
+     *
+     * @return array<int, array{value: string, label: string}>
+     */
+    public function loadCountryOptionsForCombobox(): array
+    {
+        return Country::query()
+            ->orderBy('country')
+            ->get(['iso', 'country'])
+            ->map(fn ($c) => ['value' => $c->iso, 'label' => $c->country])
+            ->values()
+            ->all();
+    }
 
     /**
      * Load admin1 (state/province) options for a country.

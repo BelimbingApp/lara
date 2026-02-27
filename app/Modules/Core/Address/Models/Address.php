@@ -87,6 +87,27 @@ class Address extends Model
     }
 
     /**
+     * Validation rules for address fields (shared by create form and inline-edit).
+     *
+     * @return array<string, array<int, string>>
+     */
+    public static function fieldRules(): array
+    {
+        return [
+            'label' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'line1' => ['nullable', 'string'],
+            'line2' => ['nullable', 'string'],
+            'line3' => ['nullable', 'string'],
+            'locality' => ['nullable', 'string', 'max:255'],
+            'postcode' => ['nullable', 'string', 'max:255'],
+            'source' => ['nullable', 'string', 'max:255'],
+            'source_ref' => ['nullable', 'string', 'max:255'],
+            'raw_input' => ['nullable', 'string'],
+        ];
+    }
+
+    /**
      * Get the Geonames admin1 referenced by this address.
      */
     public function admin1(): BelongsTo
