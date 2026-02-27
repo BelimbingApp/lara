@@ -30,25 +30,6 @@ beforeEach(function (): void {
     }
 });
 
-/**
- * Create a user with core_admin role for tests that need authz capabilities.
- */
-function createAdminUser(): User
-{
-    $company = Company::factory()->create();
-    $user = User::factory()->create(['company_id' => $company->id]);
-    $role = Role::query()->where('code', 'core_admin')->whereNull('company_id')->firstOrFail();
-
-    PrincipalRole::query()->create([
-        'company_id' => $company->id,
-        'principal_type' => PrincipalType::HUMAN_USER->value,
-        'principal_id' => $user->id,
-        'role_id' => $role->id,
-    ]);
-
-    return $user;
-}
-
 test('guests are redirected to login from user pages', function (): void {
     $user = User::factory()->create();
 

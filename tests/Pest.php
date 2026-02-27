@@ -1,5 +1,11 @@
 <?php
 
+use App\Base\Authz\Enums\PrincipalType;
+use App\Base\Authz\Models\PrincipalRole;
+use App\Base\Authz\Models\Role;
+use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\User\Models\User;
+
 /*
 |--------------------------------------------------------------------------
 | Test Case
@@ -41,7 +47,21 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Create a user with core_admin role for tests that need authz capabilities.
+ */
+function createAdminUser(): User
 {
-    // ..
+    $company = Company::factory()->create();
+    $user = User::factory()->create(['company_id' => $company->id]);
+    $role = Role::query()->where('code', 'core_admin')->whereNull('company_id')->firstOrFail();
+
+    PrincipalRole::query()->create([
+        'company_id' => $company->id,
+        'principal_type' => PrincipalType::HUMAN_USER->value,
+        'principal_id' => $user->id,
+        'role_id' => $role->id,
+    ]);
+
+    return $user;
 }
