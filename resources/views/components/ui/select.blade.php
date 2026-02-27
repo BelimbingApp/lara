@@ -1,16 +1,20 @@
 @props([
     'label' => null,
     'error' => null,
+    'id' => 'select-' . \Illuminate\Support\Str::random(8),
+    'name' => null,
 ])
 
 <div class="space-y-1">
     @if($label)
-        <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
+        <label for="{{ $id }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
             {{ $label }}
         </label>
     @endif
 
     <select
+        id="{{ $id }}"
+        @if($name) name="{{ $name }}" @endif
         {{ $attributes->except(['label', 'error'])->class([
             'w-full px-input-x py-input-y text-sm',
             'border border-border-input rounded-2xl',

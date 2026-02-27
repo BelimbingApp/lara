@@ -64,14 +64,11 @@ new class extends Component
                         placeholder="{{ __('Search by capability, reason, actor, or resource...') }}"
                     />
                 </div>
-                <select
-                    wire:model.live="filterResult"
-                    class="rounded-lg border border-border-input bg-surface-card text-sm text-ink px-input-x py-input-y focus:ring-2 focus:ring-accent focus:border-accent"
-                >
+                <x-ui.select wire:model.live="filterResult">
                     <option value="">{{ __('All Results') }}</option>
                     <option value="allowed">{{ __('Allowed') }}</option>
                     <option value="denied">{{ __('Denied') }}</option>
-                </select>
+                </x-ui.select>
             </div>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">

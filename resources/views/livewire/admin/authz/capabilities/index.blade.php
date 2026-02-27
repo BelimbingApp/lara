@@ -111,15 +111,12 @@ new class extends Component
                         placeholder="{{ __('Search by capability or module...') }}"
                     />
                 </div>
-                <select
-                    wire:model.live="filterDomain"
-                    class="rounded-lg border border-border-input bg-surface-card text-sm text-ink px-input-x py-input-y focus:ring-2 focus:ring-accent focus:border-accent"
-                >
+                <x-ui.select wire:model.live="filterDomain">
                     <option value="">{{ __('All Domains') }}</option>
                     @foreach($domains as $domain)
                         <option value="{{ $domain }}">{{ $domain }}</option>
                     @endforeach
-                </select>
+                </x-ui.select>
             </div>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">

@@ -104,17 +104,11 @@ new class extends Component
                         placeholder="{{ __('Search by name, employee number, email, designation, or job description...') }}"
                     />
                 </div>
-                <div class="flex items-center gap-2">
-                    <label class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Filter') }}</label>
-                    <select
-                        wire:model.live="type_filter"
-                        class="px-input-x py-input-y text-sm border border-border-input rounded-lg bg-surface-card text-ink focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-0"
-                    >
-                        <option value="all">{{ __('All') }}</option>
-                        <option value="human">{{ __('Human only') }}</option>
-                        <option value="digital_worker">{{ __('Digital Worker only') }}</option>
-                    </select>
-                </div>
+                <x-ui.select wire:model.live="type_filter">
+                    <option value="all">{{ __('All') }}</option>
+                    <option value="human">{{ __('Human only') }}</option>
+                    <option value="digital_worker">{{ __('Digital Worker only') }}</option>
+                </x-ui.select>
             </div>
 
             <div class="overflow-x-auto -mx-card-inner px-card-inner">

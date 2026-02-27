@@ -1,5 +1,7 @@
 @props([
     'placeholder' => 'Search...',
+    'id' => 'search-input-' . \Illuminate\Support\Str::random(8),
+    'name' => null,
 ])
 
 <div class="relative">
@@ -9,6 +11,8 @@
     />
     <input
         type="search"
+        id="{{ $id }}"
+        @if($name) name="{{ $name }}" @endif
         placeholder="{{ $placeholder }}"
         {{ $attributes->class([
             'w-full pl-8 pr-input-x py-input-y text-sm',
