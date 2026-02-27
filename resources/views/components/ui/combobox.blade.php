@@ -224,7 +224,7 @@
             x-cloak
             x-show="open"
             x-transition.opacity.duration.150ms
-            class="absolute z-50 mt-1 w-full rounded-2xl border border-border-input bg-surface-card shadow-sm"
+            class="combobox-dropdown absolute z-50 mt-1 w-full rounded-2xl border border-border-input bg-surface-card shadow-sm"
         >
             <ul
                 x-ref="listbox"
