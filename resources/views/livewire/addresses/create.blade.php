@@ -29,6 +29,10 @@ new class extends Component
 
     public array $admin1Options = [];
 
+    public array $postcodeOptions = [];
+
+    public array $localityOptions = [];
+
     public ?string $raw_input = null;
 
     public ?string $source = 'manual';
@@ -45,6 +49,9 @@ new class extends Component
     {
         $this->admin1_code = null;
         $this->admin1Options = [];
+        $this->postcode = null;
+        $this->postcodeOptions = [];
+        $this->localityOptions = [];
 
         if ($value) {
             $this->ensurePostcodesImported(strtoupper($value));
@@ -55,20 +62,28 @@ new class extends Component
     public function updatedPostcode($value): void
     {
         if (! $this->country_iso || ! $value) {
+            $this->localityOptions = [];
             return;
         }
 
-        $result = $this->lookupPostcode($this->country_iso, $value);
+        $result = $this->lookupLocalitiesByPostcode($this->country_iso, $value);
 
-        if ($result) {
-            $this->locality = $result['locality'];
+        if (! $result) {
+            $this->localityOptions = [];
+            return;
+        }
 
-            if (! $this->admin1_code && $result['admin1_code']) {
-                $this->admin1_code = $result['admin1_code'];
+        $this->localityOptions = $result['localities'];
 
-                if (empty($this->admin1Options)) {
-                    $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
-                }
+        if (count($result['localities']) === 1 && ! $this->locality) {
+            $this->locality = $result['localities'][0]['value'];
+        }
+
+        if (! $this->admin1_code && $result['admin1_code']) {
+            $this->admin1_code = $result['admin1_code'];
+
+            if (empty($this->admin1Options)) {
+                $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
             }
         }
     }
@@ -204,19 +219,23 @@ new class extends Component
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input
-                        wire:model.blur="postcode"
+                    <x-ui.combobox
+                        wire:model.live="postcode"
+                        wire:key="create-postcode-{{ $country_iso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
-                        type="text"
-                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        placeholder="{{ __('Search postcode...') }}"
+                        :options="$postcodeOptions"
+                        :editable="true"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $country_iso ?? '' }}"
                         :error="$errors->first('postcode')"
                     />
 
-                    <x-ui.input
-                        wire:model="locality"
+                    <x-ui.combobox
+                        wire:model.live="locality"
                         label="{{ __('Locality') }}"
-                        type="text"
                         placeholder="{{ __('City / town') }}"
+                        :options="$localityOptions"
+                        :editable="true"
                         :error="$errors->first('locality')"
                     />
                 </div>

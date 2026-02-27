@@ -53,6 +53,10 @@ new class extends Component
 
     public array $new_address_admin1_options = [];
 
+    public array $new_address_postcode_options = [];
+
+    public array $new_address_locality_options = [];
+
     public bool $showEditAddressModal = false;
 
     public ?int $edit_address_id = null;
@@ -76,6 +80,10 @@ new class extends Component
     public ?string $edit_address_admin1_code = null;
 
     public array $edit_address_admin1_options = [];
+
+    public array $edit_address_postcode_options = [];
+
+    public array $edit_address_locality_options = [];
 
     public function mount(Company $company): void
     {
@@ -232,6 +240,9 @@ new class extends Component
     {
         $this->new_address_admin1_code = null;
         $this->new_address_admin1_options = [];
+        $this->new_address_postcode = null;
+        $this->new_address_postcode_options = [];
+        $this->new_address_locality_options = [];
 
         if ($value) {
             $this->ensurePostcodesImported(strtoupper($value));
@@ -242,20 +253,30 @@ new class extends Component
     public function updatedNewAddressPostcode($value): void
     {
         if (! $this->new_address_country_iso || ! $value) {
+            $this->new_address_locality_options = [];
+
             return;
         }
 
-        $result = $this->lookupPostcode($this->new_address_country_iso, $value);
+        $result = $this->lookupLocalitiesByPostcode($this->new_address_country_iso, $value);
 
-        if ($result) {
-            $this->new_address_locality = $result['locality'];
+        if (! $result) {
+            $this->new_address_locality_options = [];
 
-            if (! $this->new_address_admin1_code && $result['admin1_code']) {
-                $this->new_address_admin1_code = $result['admin1_code'];
+            return;
+        }
 
-                if (empty($this->new_address_admin1_options)) {
-                    $this->new_address_admin1_options = $this->loadAdmin1ForCountry($this->new_address_country_iso);
-                }
+        $this->new_address_locality_options = $result['localities'];
+
+        if (count($result['localities']) === 1 && ! $this->new_address_locality) {
+            $this->new_address_locality = $result['localities'][0]['value'];
+        }
+
+        if (! $this->new_address_admin1_code && $result['admin1_code']) {
+            $this->new_address_admin1_code = $result['admin1_code'];
+
+            if (empty($this->new_address_admin1_options)) {
+                $this->new_address_admin1_options = $this->loadAdmin1ForCountry($this->new_address_country_iso);
             }
         }
     }
@@ -307,6 +328,7 @@ new class extends Component
             'new_address_postcode', 'new_address_country_iso', 'new_address_kind',
             'new_address_is_primary', 'new_address_priority',
             'new_address_admin1_code', 'new_address_admin1_options',
+            'new_address_postcode_options', 'new_address_locality_options',
         ]);
         Session::flash('success', __('Address created and attached.'));
     }
@@ -328,6 +350,11 @@ new class extends Component
         $this->edit_address_admin1_options = $address->country_iso
             ? $this->loadAdmin1ForCountry($address->country_iso)
             : [];
+        $this->edit_address_postcode_options = [];
+        $localityLookup = ($address->country_iso && $address->postcode)
+            ? $this->lookupLocalitiesByPostcode($address->country_iso, $address->postcode)
+            : null;
+        $this->edit_address_locality_options = $localityLookup ? $localityLookup['localities'] : [];
 
         $this->showEditAddressModal = true;
     }
@@ -336,6 +363,9 @@ new class extends Component
     {
         $this->edit_address_admin1_code = null;
         $this->edit_address_admin1_options = [];
+        $this->edit_address_postcode = null;
+        $this->edit_address_postcode_options = [];
+        $this->edit_address_locality_options = [];
 
         if ($value) {
             $this->ensurePostcodesImported(strtoupper($value));
@@ -346,20 +376,30 @@ new class extends Component
     public function updatedEditAddressPostcode($value): void
     {
         if (! $this->edit_address_country_iso || ! $value) {
+            $this->edit_address_locality_options = [];
+
             return;
         }
 
-        $result = $this->lookupPostcode($this->edit_address_country_iso, $value);
+        $result = $this->lookupLocalitiesByPostcode($this->edit_address_country_iso, $value);
 
-        if ($result) {
-            $this->edit_address_locality = $result['locality'];
+        if (! $result) {
+            $this->edit_address_locality_options = [];
 
-            if (! $this->edit_address_admin1_code && $result['admin1_code']) {
-                $this->edit_address_admin1_code = $result['admin1_code'];
+            return;
+        }
 
-                if (empty($this->edit_address_admin1_options)) {
-                    $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($this->edit_address_country_iso);
-                }
+        $this->edit_address_locality_options = $result['localities'];
+
+        if (count($result['localities']) === 1 && ! $this->edit_address_locality) {
+            $this->edit_address_locality = $result['localities'][0]['value'];
+        }
+
+        if (! $this->edit_address_admin1_code && $result['admin1_code']) {
+            $this->edit_address_admin1_code = $result['admin1_code'];
+
+            if (empty($this->edit_address_admin1_options)) {
+                $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($this->edit_address_country_iso);
             }
         }
     }
@@ -398,6 +438,7 @@ new class extends Component
             'edit_address_line1', 'edit_address_line2', 'edit_address_line3',
             'edit_address_locality', 'edit_address_postcode', 'edit_address_country_iso',
             'edit_address_admin1_code', 'edit_address_admin1_options',
+            'edit_address_postcode_options', 'edit_address_locality_options',
         ]);
         Session::flash('success', __('Address updated.'));
     }
@@ -970,19 +1011,23 @@ new class extends Component
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input
-                        wire:model.blur="new_address_postcode"
+                    <x-ui.combobox
+                        wire:model.live="new_address_postcode"
+                        wire:key="new-postcode-{{ $new_address_country_iso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
-                        type="text"
-                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        placeholder="{{ __('Search postcode...') }}"
+                        :options="$new_address_postcode_options"
+                        :editable="true"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $new_address_country_iso ?? '' }}"
                         :error="$errors->first('new_address_postcode')"
                     />
 
-                    <x-ui.input
-                        wire:model="new_address_locality"
+                    <x-ui.combobox
+                        wire:model.live="new_address_locality"
                         label="{{ __('Locality') }}"
-                        type="text"
                         placeholder="{{ __('City / town') }}"
+                        :options="$new_address_locality_options"
+                        :editable="true"
                         :error="$errors->first('new_address_locality')"
                     />
                 </div>
@@ -1051,19 +1096,23 @@ new class extends Component
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input
-                        wire:model.blur="edit_address_postcode"
+                    <x-ui.combobox
+                        wire:model.live="edit_address_postcode"
+                        wire:key="edit-postcode-{{ $edit_address_country_iso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
-                        type="text"
-                        placeholder="{{ __('Postal code — auto-fills locality') }}"
+                        placeholder="{{ __('Search postcode...') }}"
+                        :options="$edit_address_postcode_options"
+                        :editable="true"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $edit_address_country_iso ?? '' }}"
                         :error="$errors->first('edit_address_postcode')"
                     />
 
-                    <x-ui.input
-                        wire:model="edit_address_locality"
+                    <x-ui.combobox
+                        wire:model.live="edit_address_locality"
                         label="{{ __('Locality') }}"
-                        type="text"
                         placeholder="{{ __('City / town') }}"
+                        :options="$edit_address_locality_options"
+                        :editable="true"
                         :error="$errors->first('edit_address_locality')"
                     />
                 </div>

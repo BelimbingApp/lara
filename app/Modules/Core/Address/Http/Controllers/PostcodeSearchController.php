@@ -1,0 +1,32 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Modules\Core\Address\Http\Controllers;
+
+use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class PostcodeSearchController
+{
+    use HasAddressGeoLookups;
+
+    /**
+     * Search postcodes for combobox (JSON API, no Livewire - avoids DOM morph / focus loss).
+     */
+    public function __invoke(Request $request): JsonResponse
+    {
+        $country = $request->query('country', '');
+        $query = $request->query('q', '');
+
+        if ($country === '') {
+            return response()->json([]);
+        }
+
+        $results = $this->searchPostcodesInCountry($country, $query);
+
+        return response()->json($results);
+    }
+}

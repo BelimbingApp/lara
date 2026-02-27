@@ -19,11 +19,21 @@ new class extends Component
 
     public array $admin1Options = [];
 
+    public ?string $postcode = null;
+
+    public array $postcodeOptions = [];
+
+    public ?string $locality = null;
+
+    public array $localityOptions = [];
+
     public function mount(Address $address): void
     {
         $this->address = $address->load(['country', 'admin1']);
         $this->country_iso = $address->country_iso;
         $this->admin1_code = $address->admin1_code;
+        $this->postcode = $address->postcode;
+        $this->locality = $address->locality;
 
         if ($this->country_iso) {
             $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
@@ -53,21 +63,6 @@ new class extends Component
 
         $this->address->$field = $validated[$field];
         $this->address->save();
-
-        if ($field === 'postcode' && $this->address->country_iso && $validated[$field]) {
-            $result = $this->lookupPostcode($this->address->country_iso, $validated[$field]);
-
-            if ($result) {
-                $this->address->locality = $result['locality'];
-
-                if (! $this->address->admin1_code && $result['admin1_code']) {
-                    $this->address->admin1_code = $result['admin1_code'];
-                    $this->admin1_code = $result['admin1_code'];
-                }
-
-                $this->address->save();
-            }
-        }
     }
 
     public function saveCountry(string $iso): void
@@ -91,6 +86,8 @@ new class extends Component
     {
         $this->saveCountry($value ?? '');
         $this->admin1_code = null;
+        $this->postcode = null;
+        $this->postcodeOptions = [];
 
         if ($value) {
             $this->ensurePostcodesImported(strtoupper($value));
@@ -99,12 +96,53 @@ new class extends Component
         $this->admin1Options = $value ? $this->loadAdmin1ForCountry($value) : [];
 
         $this->address->admin1_code = null;
+        $this->address->postcode = null;
+        $this->address->save();
+    }
+
+    public function updatedPostcode($value): void
+    {
+        $this->address->postcode = $value;
+        $this->address->save();
+
+        if (! $this->address->country_iso || ! $value) {
+            $this->localityOptions = [];
+
+            return;
+        }
+
+        $result = $this->lookupLocalitiesByPostcode($this->address->country_iso, $value);
+
+        if (! $result) {
+            $this->localityOptions = [];
+
+            return;
+        }
+
+        $this->localityOptions = $result['localities'];
+
+        if (count($result['localities']) === 1) {
+            $this->address->locality = $result['localities'][0]['value'];
+            $this->locality = $result['localities'][0]['value'];
+        }
+
+        if (! $this->address->admin1_code && $result['admin1_code']) {
+            $this->address->admin1_code = $result['admin1_code'];
+            $this->admin1_code = $result['admin1_code'];
+        }
+
         $this->address->save();
     }
 
     public function updatedAdmin1Code($value): void
     {
         $this->address->admin1_code = $value;
+        $this->address->save();
+    }
+
+    public function updatedLocality($value): void
+    {
+        $this->address->locality = $value;
         $this->address->save();
     }
 
@@ -278,43 +316,25 @@ new class extends Component
                         :options="$admin1Options"
                     />
                 </div>
-                <div x-data="{ editing: false, val: '{{ addslashes($address->postcode ?? '') }}' }">
-                    <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Postcode') }}</dt>
-                    <dd class="text-sm text-ink">
-                        <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                            <span x-text="val || '-'"></span>
-                            <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <input
-                            x-show="editing"
-                            x-ref="input"
-                            x-model="val"
-                            @keydown.enter="editing = false; $wire.saveField('postcode', val)"
-                            @keydown.escape="editing = false; val = '{{ addslashes($address->postcode ?? '') }}'"
-                            @blur="editing = false; $wire.saveField('postcode', val)"
-                            type="text"
-                            class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                    </dd>
+                <div>
+                    <x-ui.combobox
+                        wire:model.live="postcode"
+                        wire:key="show-postcode-{{ $country_iso ?? 'none' }}"
+                        label="{{ __('Postcode') }}"
+                        placeholder="{{ __('Search postcode...') }}"
+                        :options="$postcodeOptions"
+                        :editable="true"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $country_iso ?? '' }}"
+                    />
                 </div>
-                <div x-data="{ editing: false, val: '{{ addslashes($address->locality ?? '') }}' }">
-                    <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Locality') }}</dt>
-                    <dd class="text-sm text-ink">
-                        <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
-                            <span x-text="val || '-'"></span>
-                            <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-                        </div>
-                        <input
-                            x-show="editing"
-                            x-ref="input"
-                            x-model="val"
-                            @keydown.enter="editing = false; $wire.saveField('locality', val)"
-                            @keydown.escape="editing = false; val = '{{ addslashes($address->locality ?? '') }}'"
-                            @blur="editing = false; $wire.saveField('locality', val)"
-                            type="text"
-                            class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
-                        />
-                    </dd>
+                <div>
+                    <x-ui.combobox
+                        wire:model.live="locality"
+                        label="{{ __('Locality') }}"
+                        placeholder="{{ __('City / town') }}"
+                        :options="$localityOptions"
+                        :editable="true"
+                    />
                 </div>
                 <div x-data="{ editing: false, val: '{{ $address->verification_status }}' }">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Verification Status') }}</dt>
