@@ -1,18 +1,15 @@
 <?php
 
+use App\Modules\Core\Address\Livewire\AbstractAddressForm;
 use App\Modules\Core\Address\Models\Address;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\LegalEntityType;
-use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
-use App\Modules\Core\Geonames\Models\Admin1 as GeonamesAdmin1;
 use App\Modules\Core\Geonames\Models\Country;
 use Illuminate\Support\Facades\Session;
 use Livewire\Volt\Component;
 
-new class extends Component
+new class extends AbstractAddressForm
 {
-    use HasAddressGeoLookups;
-
     public Company $company;
 
     public int $attach_address_id = 0;
@@ -25,73 +22,25 @@ new class extends Component
 
     public bool $showAttachModal = false;
 
-    public bool $showCreateAddressModal = false;
+    public bool $showAddressModal = false;
 
-    public string $new_address_label = '';
+    public ?int $addressFormId = null;
 
-    public ?string $new_address_phone = null;
+    public ?string $label = null;
 
-    public ?string $new_address_line1 = null;
+    public ?string $phone = null;
 
-    public ?string $new_address_line2 = null;
+    public ?string $line1 = null;
 
-    public ?string $new_address_line3 = null;
+    public ?string $line2 = null;
 
-    public ?string $new_address_locality = null;
+    public ?string $line3 = null;
 
-    public ?string $new_address_postcode = null;
+    public array $kind = [];
 
-    public ?string $new_address_country_iso = null;
+    public bool $is_primary = false;
 
-    public array $new_address_kind = [];
-
-    public bool $new_address_is_primary = false;
-
-    public int $new_address_priority = 0;
-
-    public ?string $new_address_admin1_code = null;
-
-    public array $new_address_admin1_options = [];
-
-    public array $new_address_postcode_options = [];
-
-    public array $new_address_locality_options = [];
-
-    public bool $new_address_admin1_is_auto = false;
-
-    public bool $new_address_locality_is_auto = false;
-
-    public bool $showEditAddressModal = false;
-
-    public ?int $edit_address_id = null;
-
-    public string $edit_address_label = '';
-
-    public ?string $edit_address_phone = null;
-
-    public ?string $edit_address_line1 = null;
-
-    public ?string $edit_address_line2 = null;
-
-    public ?string $edit_address_line3 = null;
-
-    public ?string $edit_address_locality = null;
-
-    public ?string $edit_address_postcode = null;
-
-    public ?string $edit_address_country_iso = null;
-
-    public ?string $edit_address_admin1_code = null;
-
-    public array $edit_address_admin1_options = [];
-
-    public array $edit_address_postcode_options = [];
-
-    public array $edit_address_locality_options = [];
-
-    public bool $edit_address_admin1_is_auto = false;
-
-    public bool $edit_address_locality_is_auto = false;
+    public int $priority = 0;
 
     public function mount(Company $company): void
     {
@@ -243,256 +192,140 @@ new class extends Component
         Session::flash('success', __('Address attached.'));
     }
 
-    public function updatedNewAddressCountryIso($value): void
+    public function openAddressModal(?int $addressId = null): void
     {
-        $this->new_address_admin1_code = null;
-        $this->new_address_admin1_is_auto = false;
-        $this->new_address_admin1_options = [];
-        $this->new_address_postcode = null;
-        $this->new_address_postcode_options = [];
-        $this->new_address_locality = null;
-        $this->new_address_locality_is_auto = false;
-        $this->new_address_locality_options = [];
+        $this->addressFormId = $addressId;
 
-        if ($value) {
-            $this->ensurePostcodesImported(strtoupper($value));
-            $this->new_address_admin1_options = $this->loadAdmin1ForCountry($value);
+        if ($addressId === null) {
+            $this->resetAddressForm();
+        } else {
+            $address = Address::query()->findOrFail($addressId);
+            $this->label = $address->label ?? '';
+            $this->phone = $address->phone;
+            $this->line1 = $address->line1;
+            $this->line2 = $address->line2;
+            $this->line3 = $address->line3;
+            $this->country_iso = $address->country_iso;
+            $this->admin1_code = $address->admin1_code;
+            $this->postcode = $address->postcode;
+            $this->locality = $address->locality;
+            $this->admin1IsAuto = false;
+            $this->localityIsAuto = false;
+            $this->admin1Options = $address->country_iso
+                ? $this->loadAdmin1ForCountry($address->country_iso)
+                : [];
+            $this->postcodeOptions = [];
+            $localityLookup = ($address->country_iso && $address->postcode)
+                ? $this->lookupLocalitiesByPostcode($address->country_iso, $address->postcode)
+                : null;
+            $this->localityOptions = $localityLookup ? $localityLookup['localities'] : [];
+        }
+
+        if ($this->country_iso) {
+            $this->ensurePostcodesImported(strtoupper($this->country_iso));
+        }
+
+        $this->showAddressModal = true;
+    }
+
+    public function saveAddress(): void
+    {
+        if ($this->addressFormId === null) {
+            $this->createAndAttachAddress();
+        } else {
+            $this->updateAddress();
         }
     }
 
-    public function updatedNewAddressPostcode($value): void
+    protected function resetAddressForm(): void
     {
-        if (! $this->new_address_country_iso || ! $value) {
-            $this->new_address_locality_options = [];
-            return;
-        }
-
-        if ($this->new_address_admin1_is_auto) {
-            $this->new_address_admin1_code = null;
-            $this->new_address_admin1_is_auto = false;
-        }
-        if ($this->new_address_locality_is_auto) {
-            $this->new_address_locality = null;
-            $this->new_address_locality_is_auto = false;
-        }
-
-        $result = $this->lookupLocalitiesByPostcode($this->new_address_country_iso, $value);
-
-        if (! $result) {
-            $this->new_address_locality_options = [];
-            return;
-        }
-
-        $this->new_address_locality_options = $result['localities'];
-
-        if (count($result['localities']) === 1) {
-            $this->new_address_locality = $result['localities'][0]['value'];
-            $this->new_address_locality_is_auto = true;
-        }
-
-        if ($result['admin1_code']) {
-            $this->new_address_admin1_code = $result['admin1_code'];
-            $this->new_address_admin1_is_auto = true;
-
-            if (empty($this->new_address_admin1_options)) {
-                $this->new_address_admin1_options = $this->loadAdmin1ForCountry($this->new_address_country_iso);
-            }
-        }
+        $this->label = null;
+        $this->phone = null;
+        $this->line1 = null;
+        $this->line2 = null;
+        $this->line3 = null;
+        $this->kind = [];
+        $this->is_primary = false;
+        $this->priority = 0;
+        $this->resetAddressFormGeoState();
+        $this->country_iso = null;
     }
 
-    public function updatedNewAddressAdmin1Code(): void
-    {
-        $this->new_address_admin1_is_auto = false;
-    }
-
-    public function updatedNewAddressLocality(): void
-    {
-        $this->new_address_locality_is_auto = false;
-    }
-
-    public function createAndAttachAddress(): void
+    protected function createAndAttachAddress(): void
     {
         $validated = $this->validate([
-            'new_address_label' => ['nullable', 'string', 'max:255'],
-            'new_address_phone' => ['nullable', 'string', 'max:255'],
-            'new_address_line1' => ['nullable', 'string'],
-            'new_address_line2' => ['nullable', 'string'],
-            'new_address_line3' => ['nullable', 'string'],
-            'new_address_locality' => ['nullable', 'string', 'max:255'],
-            'new_address_postcode' => ['nullable', 'string', 'max:255'],
-            'new_address_country_iso' => ['nullable', 'string', 'size:2'],
-            'new_address_admin1_code' => ['nullable', 'string', 'max:20'],
-            'new_address_kind' => ['required', 'array', 'min:1'],
-            'new_address_kind.*' => ['string', 'in:headquarters,billing,shipping,branch,other'],
-            'new_address_is_primary' => ['boolean'],
-            'new_address_priority' => ['integer'],
+            'label' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'line1' => ['nullable', 'string'],
+            'line2' => ['nullable', 'string'],
+            'line3' => ['nullable', 'string'],
+            'locality' => ['nullable', 'string', 'max:255'],
+            'postcode' => ['nullable', 'string', 'max:255'],
+            'country_iso' => ['nullable', 'string', 'size:2'],
+            'admin1_code' => ['nullable', 'string', 'max:20'],
+            'kind' => ['required', 'array', 'min:1'],
+            'kind.*' => ['string', 'in:headquarters,billing,shipping,branch,other'],
+            'is_primary' => ['boolean'],
+            'priority' => ['integer'],
         ]);
 
         $address = Address::query()->create([
-            'label' => $validated['new_address_label'],
-            'phone' => $validated['new_address_phone'],
-            'line1' => $validated['new_address_line1'],
-            'line2' => $validated['new_address_line2'],
-            'line3' => $validated['new_address_line3'],
-            'locality' => $validated['new_address_locality'],
-            'postcode' => $validated['new_address_postcode'],
-            'country_iso' => $validated['new_address_country_iso'] ? strtoupper($validated['new_address_country_iso']) : null,
-            'admin1_code' => $validated['new_address_admin1_code'],
+            'label' => $validated['label'],
+            'phone' => $validated['phone'],
+            'line1' => $validated['line1'],
+            'line2' => $validated['line2'],
+            'line3' => $validated['line3'],
+            'locality' => $validated['locality'],
+            'postcode' => $validated['postcode'],
+            'country_iso' => $validated['country_iso'] ? strtoupper($validated['country_iso']) : null,
+            'admin1_code' => $validated['admin1_code'],
             'source' => 'manual',
             'verification_status' => 'unverified',
         ]);
 
         $this->company->addresses()->attach($address->id, [
-            'kind' => $validated['new_address_kind'],
-            'is_primary' => $validated['new_address_is_primary'],
-            'priority' => $validated['new_address_priority'],
+            'kind' => $validated['kind'],
+            'is_primary' => $validated['is_primary'],
+            'priority' => $validated['priority'],
             'valid_from' => now()->toDateString(),
         ]);
 
         $this->company->load('addresses');
-        $this->showCreateAddressModal = false;
-        $this->reset([
-            'new_address_label', 'new_address_phone', 'new_address_line1',
-            'new_address_line2', 'new_address_line3', 'new_address_locality',
-            'new_address_postcode', 'new_address_country_iso', 'new_address_kind',
-            'new_address_is_primary', 'new_address_priority',
-            'new_address_admin1_code', 'new_address_admin1_options',
-            'new_address_postcode_options', 'new_address_locality_options',
-            'new_address_admin1_is_auto', 'new_address_locality_is_auto',
-        ]);
+        $this->showAddressModal = false;
+        $this->resetAddressForm();
         Session::flash('success', __('Address created and attached.'));
     }
 
-    public function editAddress(int $addressId): void
-    {
-        $address = Address::query()->findOrFail($addressId);
-
-        $this->edit_address_id = $address->id;
-        $this->edit_address_label = $address->label ?? '';
-        $this->edit_address_phone = $address->phone;
-        $this->edit_address_line1 = $address->line1;
-        $this->edit_address_line2 = $address->line2;
-        $this->edit_address_line3 = $address->line3;
-        $this->edit_address_locality = $address->locality;
-        $this->edit_address_postcode = $address->postcode;
-        $this->edit_address_country_iso = $address->country_iso;
-        $this->edit_address_admin1_code = $address->admin1_code;
-        $this->edit_address_admin1_options = $address->country_iso
-            ? $this->loadAdmin1ForCountry($address->country_iso)
-            : [];
-        $this->edit_address_postcode_options = [];
-        $localityLookup = ($address->country_iso && $address->postcode)
-            ? $this->lookupLocalitiesByPostcode($address->country_iso, $address->postcode)
-            : null;
-        $this->edit_address_locality_options = $localityLookup ? $localityLookup['localities'] : [];
-
-        $this->showEditAddressModal = true;
-    }
-
-    public function updatedEditAddressCountryIso($value): void
-    {
-        $this->edit_address_admin1_code = null;
-        $this->edit_address_admin1_is_auto = false;
-        $this->edit_address_admin1_options = [];
-        $this->edit_address_postcode = null;
-        $this->edit_address_postcode_options = [];
-        $this->edit_address_locality = null;
-        $this->edit_address_locality_is_auto = false;
-        $this->edit_address_locality_options = [];
-
-        if ($value) {
-            $this->ensurePostcodesImported(strtoupper($value));
-            $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($value);
-        }
-    }
-
-    public function updatedEditAddressPostcode($value): void
-    {
-        if (! $this->edit_address_country_iso || ! $value) {
-            $this->edit_address_locality_options = [];
-            return;
-        }
-
-        if ($this->edit_address_admin1_is_auto) {
-            $this->edit_address_admin1_code = null;
-            $this->edit_address_admin1_is_auto = false;
-        }
-        if ($this->edit_address_locality_is_auto) {
-            $this->edit_address_locality = null;
-            $this->edit_address_locality_is_auto = false;
-        }
-
-        $result = $this->lookupLocalitiesByPostcode($this->edit_address_country_iso, $value);
-
-        if (! $result) {
-            $this->edit_address_locality_options = [];
-            return;
-        }
-
-        $this->edit_address_locality_options = $result['localities'];
-
-        if (count($result['localities']) === 1) {
-            $this->edit_address_locality = $result['localities'][0]['value'];
-            $this->edit_address_locality_is_auto = true;
-        }
-
-        if ($result['admin1_code']) {
-            $this->edit_address_admin1_code = $result['admin1_code'];
-            $this->edit_address_admin1_is_auto = true;
-
-            if (empty($this->edit_address_admin1_options)) {
-                $this->edit_address_admin1_options = $this->loadAdmin1ForCountry($this->edit_address_country_iso);
-            }
-        }
-    }
-
-    public function updatedEditAddressAdmin1Code(): void
-    {
-        $this->edit_address_admin1_is_auto = false;
-    }
-
-    public function updatedEditAddressLocality(): void
-    {
-        $this->edit_address_locality_is_auto = false;
-    }
-
-    public function updateAddress(): void
+    protected function updateAddress(): void
     {
         $validated = $this->validate([
-            'edit_address_label' => ['nullable', 'string', 'max:255'],
-            'edit_address_phone' => ['nullable', 'string', 'max:255'],
-            'edit_address_line1' => ['nullable', 'string'],
-            'edit_address_line2' => ['nullable', 'string'],
-            'edit_address_line3' => ['nullable', 'string'],
-            'edit_address_locality' => ['nullable', 'string', 'max:255'],
-            'edit_address_postcode' => ['nullable', 'string', 'max:255'],
-            'edit_address_country_iso' => ['nullable', 'string', 'size:2'],
-            'edit_address_admin1_code' => ['nullable', 'string', 'max:20'],
+            'label' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'line1' => ['nullable', 'string'],
+            'line2' => ['nullable', 'string'],
+            'line3' => ['nullable', 'string'],
+            'locality' => ['nullable', 'string', 'max:255'],
+            'postcode' => ['nullable', 'string', 'max:255'],
+            'country_iso' => ['nullable', 'string', 'size:2'],
+            'admin1_code' => ['nullable', 'string', 'max:20'],
         ]);
 
-        $address = Address::query()->findOrFail($this->edit_address_id);
+        $address = Address::query()->findOrFail($this->addressFormId);
         $address->update([
-            'label' => $validated['edit_address_label'],
-            'phone' => $validated['edit_address_phone'],
-            'line1' => $validated['edit_address_line1'],
-            'line2' => $validated['edit_address_line2'],
-            'line3' => $validated['edit_address_line3'],
-            'locality' => $validated['edit_address_locality'],
-            'postcode' => $validated['edit_address_postcode'],
-            'country_iso' => $validated['edit_address_country_iso'] ? strtoupper($validated['edit_address_country_iso']) : null,
-            'admin1_code' => $validated['edit_address_admin1_code'],
+            'label' => $validated['label'],
+            'phone' => $validated['phone'],
+            'line1' => $validated['line1'],
+            'line2' => $validated['line2'],
+            'line3' => $validated['line3'],
+            'locality' => $validated['locality'],
+            'postcode' => $validated['postcode'],
+            'country_iso' => $validated['country_iso'] ? strtoupper($validated['country_iso']) : null,
+            'admin1_code' => $validated['admin1_code'],
         ]);
 
         $this->company->load('addresses');
-        $this->showEditAddressModal = false;
-        $this->reset([
-            'edit_address_id', 'edit_address_label', 'edit_address_phone',
-            'edit_address_line1', 'edit_address_line2', 'edit_address_line3',
-            'edit_address_locality', 'edit_address_postcode', 'edit_address_country_iso',
-            'edit_address_admin1_code', 'edit_address_admin1_options',
-            'edit_address_postcode_options', 'edit_address_locality_options',
-            'edit_address_admin1_is_auto', 'edit_address_locality_is_auto',
-        ]);
+        $this->showAddressModal = false;
+        $this->resetAddressForm();
         Session::flash('success', __('Address updated.'));
     }
 
@@ -869,7 +702,7 @@ new class extends Component
                     <x-ui.badge>{{ $company->addresses->count() }}</x-ui.badge>
                 </h3>
                 <div class="flex items-center gap-2">
-                    <x-ui.button variant="primary" size="sm" wire:click="$set('showCreateAddressModal', true)">
+                    <x-ui.button variant="primary" size="sm" wire:click="openAddressModal(null)">
                         <x-icon name="heroicon-o-plus" class="w-4 h-4" />
                         {{ __('Create & Attach') }}
                     </x-ui.button>
@@ -898,7 +731,7 @@ new class extends Component
                         @forelse($company->addresses as $address)
                             <tr wire:key="address-{{ $address->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <button wire:click="editAddress({{ $address->id }})" class="text-link hover:underline cursor-pointer">{{ $address->label ?? '-' }}</button>
+                                    <button wire:click="openAddressModal({{ $address->id }})" class="text-link hover:underline cursor-pointer">{{ $address->label ?? '-' }}</button>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ collect([$address->line1, $address->locality, $address->country_iso])->filter()->implode(', ') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted"
@@ -1031,62 +864,65 @@ new class extends Component
             </div>
         </x-ui.modal>
 
-        <x-ui.modal wire:model="showCreateAddressModal" class="max-w-lg">
+        <x-ui.modal wire:model="showAddressModal" class="max-w-lg">
             <div class="p-6 space-y-4">
-                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Create & Attach Address') }}</h3>
+                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                    {{ $addressFormId === null ? __('Create & Attach Address') : __('Edit Address') }}
+                </h3>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input wire:model="new_address_label" label="{{ __('Label') }}" type="text" placeholder="{{ __('HQ, Warehouse, etc.') }}" :error="$errors->first('new_address_label')" />
-                    <x-ui.input wire:model="new_address_phone" label="{{ __('Phone') }}" type="text" placeholder="{{ __('Contact number') }}" :error="$errors->first('new_address_phone')" />
+                    <x-ui.input wire:model="label" label="{{ __('Label') }}" type="text" placeholder="{{ __('HQ, Warehouse, etc.') }}" :error="$errors->first('label')" />
+                    <x-ui.input wire:model="phone" label="{{ __('Phone') }}" type="text" placeholder="{{ __('Contact number') }}" :error="$errors->first('phone')" />
                 </div>
 
-                <x-ui.input wire:model="new_address_line1" label="{{ __('Address Line 1') }}" type="text" placeholder="{{ __('Street and number') }}" :error="$errors->first('new_address_line1')" />
-                <x-ui.input wire:model="new_address_line2" label="{{ __('Address Line 2') }}" type="text" placeholder="{{ __('Building, suite (optional)') }}" :error="$errors->first('new_address_line2')" />
-                <x-ui.input wire:model="new_address_line3" label="{{ __('Address Line 3') }}" type="text" placeholder="{{ __('Additional detail (optional)') }}" :error="$errors->first('new_address_line3')" />
+                <x-ui.input wire:model="line1" label="{{ __('Address Line 1') }}" type="text" placeholder="{{ __('Street and number') }}" :error="$errors->first('line1')" />
+                <x-ui.input wire:model="line2" label="{{ __('Address Line 2') }}" type="text" placeholder="{{ __('Building, suite (optional)') }}" :error="$errors->first('line2')" />
+                <x-ui.input wire:model="line3" label="{{ __('Address Line 3') }}" type="text" placeholder="{{ __('Additional detail (optional)') }}" :error="$errors->first('line3')" />
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.combobox
-                        wire:model.live="new_address_country_iso"
+                        wire:model.live="country_iso"
                         label="{{ __('Country') }}"
                         placeholder="{{ __('Search country...') }}"
                         :options="$countries->map(fn($c) => ['value' => $c->iso, 'label' => $c->country])->all()"
-                        :error="$errors->first('new_address_country_iso')"
+                        :error="$errors->first('country_iso')"
                     />
 
                     <x-ui.combobox
-                        wire:model.live="new_address_admin1_code"
-                        wire:key="modal-admin1-{{ $new_address_country_iso ?? 'none' }}"
+                        wire:model.live="admin1_code"
+                        wire:key="modal-admin1-{{ $country_iso ?? 'none' }}"
                         label="{{ __('State / Province') }}"
-                        :hint="$new_address_admin1_is_auto ? __('(from postcode)') : null"
+                        :hint="$admin1IsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('Search state...') }}"
-                        :options="$new_address_admin1_options"
-                        :error="$errors->first('new_address_admin1_code')"
+                        :options="$admin1Options"
+                        :error="$errors->first('admin1_code')"
                     />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.combobox
-                        wire:model.live="new_address_postcode"
-                        wire:key="new-postcode-{{ $new_address_country_iso ?? 'none' }}"
+                        wire:model.live="postcode"
+                        wire:key="modal-postcode-{{ $country_iso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
                         placeholder="{{ __('Search postcode...') }}"
-                        :options="$new_address_postcode_options"
+                        :options="$postcodeOptions"
                         :editable="true"
-                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $new_address_country_iso ?? '' }}"
-                        :error="$errors->first('new_address_postcode')"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $country_iso ?? '' }}"
+                        :error="$errors->first('postcode')"
                     />
 
                     <x-ui.combobox
-                        wire:model.live="new_address_locality"
+                        wire:model.live="locality"
                         label="{{ __('Locality') }}"
-                        :hint="$new_address_locality_is_auto ? __('(from postcode)') : null"
+                        :hint="$localityIsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('City / town') }}"
-                        :options="$new_address_locality_options"
+                        :options="$localityOptions"
                         :editable="true"
-                        :error="$errors->first('new_address_locality')"
+                        :error="$errors->first('locality')"
                     />
                 </div>
 
+                @if($addressFormId === null)
                 <div class="border-t border-border-default pt-4">
                     <h4 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-3">{{ __('Link Settings') }}</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1095,88 +931,28 @@ new class extends Component
                             <div class="flex flex-wrap gap-x-4 gap-y-1">
                                 @foreach(['headquarters', 'billing', 'shipping', 'branch', 'other'] as $kindOption)
                                     <label class="flex items-center gap-2 text-sm cursor-pointer">
-                                        <input type="checkbox" value="{{ $kindOption }}" wire:model="new_address_kind" class="rounded border-border-input text-accent focus:ring-accent" />
+                                        <input type="checkbox" value="{{ $kindOption }}" wire:model="kind" class="rounded border-border-input text-accent focus:ring-accent" />
                                         {{ __(ucfirst($kindOption)) }}
                                     </label>
                                 @endforeach
                             </div>
                         </div>
                         <div>
-                            <x-ui.input wire:model="new_address_priority" label="{{ __('Priority') }}" type="number" />
+                            <x-ui.input wire:model="priority" label="{{ __('Priority') }}" type="number" />
                             <p class="text-xs text-muted mt-1">{{ __('Lower number = higher priority. Used to order addresses of the same kind (0 = top).') }}</p>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <x-ui.checkbox wire:model="new_address_is_primary" label="{{ __('Primary Address') }}" />
+                        <x-ui.checkbox wire:model="is_primary" label="{{ __('Primary Address') }}" />
                     </div>
                 </div>
+                @endif
 
                 <div class="flex items-center gap-4 pt-2">
-                    <x-ui.button variant="primary" wire:click="createAndAttachAddress">{{ __('Create & Attach') }}</x-ui.button>
-                    <x-ui.button type="button" variant="ghost" wire:click="$set('showCreateAddressModal', false)">{{ __('Cancel') }}</x-ui.button>
-                </div>
-            </div>
-        </x-ui.modal>
-
-        <x-ui.modal wire:model="showEditAddressModal" class="max-w-lg">
-            <div class="p-6 space-y-4">
-                <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Edit Address') }}</h3>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input wire:model="edit_address_label" label="{{ __('Label') }}" type="text" placeholder="{{ __('HQ, Warehouse, etc.') }}" :error="$errors->first('edit_address_label')" />
-                    <x-ui.input wire:model="edit_address_phone" label="{{ __('Phone') }}" type="text" placeholder="{{ __('Contact number') }}" :error="$errors->first('edit_address_phone')" />
-                </div>
-
-                <x-ui.input wire:model="edit_address_line1" label="{{ __('Address Line 1') }}" type="text" placeholder="{{ __('Street and number') }}" :error="$errors->first('edit_address_line1')" />
-                <x-ui.input wire:model="edit_address_line2" label="{{ __('Address Line 2') }}" type="text" placeholder="{{ __('Building, suite (optional)') }}" :error="$errors->first('edit_address_line2')" />
-                <x-ui.input wire:model="edit_address_line3" label="{{ __('Address Line 3') }}" type="text" placeholder="{{ __('Additional detail (optional)') }}" :error="$errors->first('edit_address_line3')" />
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.combobox
-                        wire:model.live="edit_address_country_iso"
-                        label="{{ __('Country') }}"
-                        placeholder="{{ __('Search country...') }}"
-                        :options="$countries->map(fn($c) => ['value' => $c->iso, 'label' => $c->country])->all()"
-                        :error="$errors->first('edit_address_country_iso')"
-                    />
-
-                    <x-ui.combobox
-                        wire:model.live="edit_address_admin1_code"
-                        wire:key="edit-admin1-{{ $edit_address_country_iso ?? 'none' }}"
-                        label="{{ __('State / Province') }}"
-                        :hint="$edit_address_admin1_is_auto ? __('(from postcode)') : null"
-                        placeholder="{{ __('Search state...') }}"
-                        :options="$edit_address_admin1_options"
-                        :error="$errors->first('edit_address_admin1_code')"
-                    />
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.combobox
-                        wire:model.live="edit_address_postcode"
-                        wire:key="edit-postcode-{{ $edit_address_country_iso ?? 'none' }}"
-                        label="{{ __('Postcode') }}"
-                        placeholder="{{ __('Search postcode...') }}"
-                        :options="$edit_address_postcode_options"
-                        :editable="true"
-                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $edit_address_country_iso ?? '' }}"
-                        :error="$errors->first('edit_address_postcode')"
-                    />
-
-                    <x-ui.combobox
-                        wire:model.live="edit_address_locality"
-                        label="{{ __('Locality') }}"
-                        :hint="$edit_address_locality_is_auto ? __('(from postcode)') : null"
-                        placeholder="{{ __('City / town') }}"
-                        :options="$edit_address_locality_options"
-                        :editable="true"
-                        :error="$errors->first('edit_address_locality')"
-                    />
-                </div>
-
-                <div class="flex items-center gap-4 pt-2">
-                    <x-ui.button variant="primary" wire:click="updateAddress">{{ __('Save') }}</x-ui.button>
-                    <x-ui.button type="button" variant="ghost" wire:click="$set('showEditAddressModal', false)">{{ __('Cancel') }}</x-ui.button>
+                    <x-ui.button variant="primary" wire:click="saveAddress">
+                        {{ $addressFormId === null ? __('Create & Attach') : __('Save') }}
+                    </x-ui.button>
+                    <x-ui.button type="button" variant="ghost" wire:click="$set('showAddressModal', false)">{{ __('Cancel') }}</x-ui.button>
                 </div>
             </div>
         </x-ui.modal>

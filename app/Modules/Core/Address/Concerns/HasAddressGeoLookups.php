@@ -54,6 +54,7 @@ trait HasAddressGeoLookups
         }
 
         // Fallback when Admin1 seed data is missing: derive options from imported postcodes.
+        // Only include codes that exist in geonames_admin1 to avoid FK violations.
         return Postcode::query()
             ->where('country_iso', $iso)
             ->whereNotNull('admin1_code')
@@ -61,14 +62,18 @@ trait HasAddressGeoLookups
             ->distinct()
             ->orderBy('admin1_code')
             ->get()
-            ->map(function (Postcode $postcode) use ($iso): array {
-                $code = (string) $postcode->admin1_code;
+            ->map(function (Postcode $postcode) use ($iso): ?array {
+                $code = $iso.'.'.((string) $postcode->admin1_code);
+                if (! Admin1::query()->where('code', $code)->exists()) {
+                    return null;
+                }
 
                 return [
-                    'value' => $iso.'.'.$code,
-                    'label' => $code,
+                    'value' => $code,
+                    'label' => (string) $postcode->admin1_code,
                 ];
             })
+            ->filter()
             ->values()
             ->all();
     }
@@ -197,9 +202,13 @@ trait HasAddressGeoLookups
         }
 
         $first = $results->first();
-        $admin1Code = $first->admin1_code
-            ? $iso.'.'.$first->admin1_code
-            : null;
+        $admin1Code = null;
+        if ($first->admin1_code) {
+            $candidate = $iso.'.'.$first->admin1_code;
+            if (Admin1::query()->where('code', $candidate)->exists()) {
+                $admin1Code = $candidate;
+            }
+        }
 
         return [
             'localities' => $localities,

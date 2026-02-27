@@ -1,33 +1,13 @@
 <?php
 
-use App\Modules\Core\Address\Concerns\HasAddressGeoLookups;
+use App\Modules\Core\Address\Livewire\AbstractAddressForm;
 use App\Modules\Core\Address\Models\Address;
 use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
-new class extends Component
+new class extends AbstractAddressForm
 {
-    use HasAddressGeoLookups;
-
     public Address $address;
-
-    public ?string $country_iso = null;
-
-    public ?string $admin1_code = null;
-
-    public array $admin1Options = [];
-
-    public ?string $postcode = null;
-
-    public array $postcodeOptions = [];
-
-    public ?string $locality = null;
-
-    public array $localityOptions = [];
-
-    public bool $admin1IsAuto = false;
-
-    public bool $localityIsAuto = false;
 
     public function mount(Address $address): void
     {
@@ -76,20 +56,7 @@ new class extends Component
     public function updatedCountryIso($value): void
     {
         $this->saveCountry($value ?? '');
-        $this->admin1_code = null;
-        $this->admin1IsAuto = false;
-        $this->postcode = null;
-        $this->postcodeOptions = [];
-        $this->locality = null;
-        $this->localityIsAuto = false;
-        $this->localityOptions = [];
-
-        if ($value) {
-            $this->ensurePostcodesImported(strtoupper($value));
-        }
-
-        $this->admin1Options = $value ? $this->loadAdmin1ForCountry($value) : [];
-
+        parent::updatedCountryIso($value);
         $this->address->admin1_code = null;
         $this->address->postcode = null;
         $this->address->locality = null;
@@ -100,60 +67,23 @@ new class extends Component
     {
         $this->address->postcode = $value;
         $this->address->save();
-
-        if (! $this->address->country_iso || ! $value) {
-            $this->localityOptions = [];
-
-            return;
-        }
-
-        if ($this->admin1IsAuto) {
-            $this->address->admin1_code = null;
-            $this->admin1_code = null;
-            $this->admin1IsAuto = false;
-        }
-        if ($this->localityIsAuto) {
-            $this->address->locality = null;
-            $this->locality = null;
-            $this->localityIsAuto = false;
-        }
-
-        $result = $this->lookupLocalitiesByPostcode($this->address->country_iso, $value);
-
-        if (! $result) {
-            $this->localityOptions = [];
-
-            return;
-        }
-
-        $this->localityOptions = $result['localities'];
-
-        if (count($result['localities']) === 1) {
-            $this->address->locality = $result['localities'][0]['value'];
-            $this->locality = $result['localities'][0]['value'];
-            $this->localityIsAuto = true;
-        }
-
-        if ($result['admin1_code']) {
-            $this->address->admin1_code = $result['admin1_code'];
-            $this->admin1_code = $result['admin1_code'];
-            $this->admin1IsAuto = true;
-        }
-
+        parent::updatedPostcode($value);
+        $this->address->admin1_code = $this->admin1_code;
+        $this->address->locality = $this->locality;
         $this->address->save();
     }
 
-    public function updatedAdmin1Code($value): void
+    public function updatedAdmin1Code($value = null): void
     {
-        $this->admin1IsAuto = false;
-        $this->address->admin1_code = $value;
+        parent::updatedAdmin1Code($value);
+        $this->address->admin1_code = $value ?? $this->admin1_code;
         $this->address->save();
     }
 
-    public function updatedLocality($value): void
+    public function updatedLocality($value = null): void
     {
-        $this->localityIsAuto = false;
-        $this->address->locality = $value;
+        parent::updatedLocality($value);
+        $this->address->locality = $value ?? $this->locality;
         $this->address->save();
     }
 
