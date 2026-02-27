@@ -1,4 +1,17 @@
-{{-- aria-activedescendant + aria-controls deferred: causes dropdown to fail on second open when used with Livewire (DOM morph). --}}
+{{--
+    Combobox: accessible dropdown with optional free-text input and server-side search.
+
+    Props: label, error, placeholder, required, options, editable, searchMethod, searchUrl, disabled
+
+    Features:
+    - Select from list: click or keyboard (ArrowUp/Down, Enter, Escape)
+    - editable: free text; on blur/Enter commits value even if not in options
+    - searchUrl: fetches options via fetch; appends ?q=...; triggers on open + query change (no Livewire, no focus loss)
+    - searchMethod: Livewire method; debounced on query change (can cause DOM morph / focus loss)
+    - fetchOptions() runs on openList when searchUrl is set, so postcode shows options on focus
+    - Clear button when value selected
+    - aria-activedescendant + aria-controls deferred: causes dropdown to fail on second open with Livewire
+--}}
 @props([
     'label' => null,
     'error' => null,
@@ -61,14 +74,7 @@
                 if (this.searchUrl) {
                     this.$watch('query', () => {
                         clearTimeout(this.searchTimeout)
-                        this.searchTimeout = setTimeout(() => {
-                            const url = new URL(this.searchUrl, window.location.origin)
-                            url.searchParams.set('q', this.query)
-                            fetch(url.toString(), { credentials: 'same-origin' })
-                                .then(r => r.json())
-                                .then(data => { this.options = Array.isArray(data) ? data : [] })
-                                .catch(() => { this.options = [] })
-                        }, 300)
+                        this.searchTimeout = setTimeout(() => this.fetchOptions(), 300)
                     })
                 } else if (this.searchMethod) {
                     this.$watch('query', () => {
@@ -78,6 +84,16 @@
                         }, 300)
                     })
                 }
+            },
+
+            fetchOptions() {
+                if (!this.searchUrl) return
+                const url = new URL(this.searchUrl, window.location.origin)
+                url.searchParams.set('q', this.query)
+                fetch(url.toString(), { credentials: 'same-origin' })
+                    .then(r => r.json())
+                    .then(data => { this.options = Array.isArray(data) ? data : [] })
+                    .catch(() => { this.options = [] })
             },
 
             syncQuery() {
@@ -91,6 +107,7 @@
 
             openList() {
                 this.open = true
+                if (this.searchUrl) this.fetchOptions()
                 this.activeValue = this.filtered.length ? this.filtered[0].value : null
                 this.$nextTick(() => this.scrollActive())
             },
