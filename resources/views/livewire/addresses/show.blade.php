@@ -25,6 +25,10 @@ new class extends Component
 
     public array $localityOptions = [];
 
+    public bool $admin1IsAuto = false;
+
+    public bool $localityIsAuto = false;
+
     public function mount(Address $address): void
     {
         $this->address = $address->load(['country', 'admin1']);
@@ -73,9 +77,11 @@ new class extends Component
     {
         $this->saveCountry($value ?? '');
         $this->admin1_code = null;
+        $this->admin1IsAuto = false;
         $this->postcode = null;
         $this->postcodeOptions = [];
         $this->locality = null;
+        $this->localityIsAuto = false;
         $this->localityOptions = [];
 
         if ($value) {
@@ -101,6 +107,17 @@ new class extends Component
             return;
         }
 
+        if ($this->admin1IsAuto) {
+            $this->address->admin1_code = null;
+            $this->admin1_code = null;
+            $this->admin1IsAuto = false;
+        }
+        if ($this->localityIsAuto) {
+            $this->address->locality = null;
+            $this->locality = null;
+            $this->localityIsAuto = false;
+        }
+
         $result = $this->lookupLocalitiesByPostcode($this->address->country_iso, $value);
 
         if (! $result) {
@@ -114,11 +131,13 @@ new class extends Component
         if (count($result['localities']) === 1) {
             $this->address->locality = $result['localities'][0]['value'];
             $this->locality = $result['localities'][0]['value'];
+            $this->localityIsAuto = true;
         }
 
-        if (! $this->address->admin1_code && $result['admin1_code']) {
+        if ($result['admin1_code']) {
             $this->address->admin1_code = $result['admin1_code'];
             $this->admin1_code = $result['admin1_code'];
+            $this->admin1IsAuto = true;
         }
 
         $this->address->save();
@@ -126,12 +145,14 @@ new class extends Component
 
     public function updatedAdmin1Code($value): void
     {
+        $this->admin1IsAuto = false;
         $this->address->admin1_code = $value;
         $this->address->save();
     }
 
     public function updatedLocality($value): void
     {
+        $this->localityIsAuto = false;
         $this->address->locality = $value;
         $this->address->save();
     }
@@ -298,6 +319,7 @@ new class extends Component
                         wire:model.live="admin1_code"
                         wire:key="show-admin1-{{ $country_iso ?? 'none' }}"
                         label="{{ __('State / Province') }}"
+                        :hint="$admin1IsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('Search state...') }}"
                         :options="$admin1Options"
                     />
@@ -317,6 +339,7 @@ new class extends Component
                     <x-ui.combobox
                         wire:model.live="locality"
                         label="{{ __('Locality') }}"
+                        :hint="$localityIsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('City / town') }}"
                         :options="$localityOptions"
                         :editable="true"

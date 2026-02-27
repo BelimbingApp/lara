@@ -14,6 +14,7 @@
 --}}
 @props([
     'label' => null,
+    'hint' => null,
     'error' => null,
     'placeholder' => '',
     'required' => false,
@@ -35,14 +36,21 @@
     ])->values()->all());
 @endphp
 
-<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'error', 'placeholder', 'required', 'options', 'editable', 'searchMethod', 'searchUrl', 'disabled', 'id'])->class(['space-y-1']) }}>
-    @if($label)
-        <label for="{{ $id }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
-            {{ $label }}
-            @if($required)
-                <span class="text-status-danger">*</span>
+<div {{ $attributes->whereDoesntStartWith('wire:model')->except(['label', 'hint', 'error', 'placeholder', 'required', 'options', 'editable', 'searchMethod', 'searchUrl', 'disabled', 'id'])->class(['space-y-1']) }}>
+    @if($label || $hint)
+        <div class="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
+            @if($label)
+                <label for="{{ $id }}" class="text-[11px] uppercase tracking-wider font-semibold text-muted">
+                    {{ $label }}
+                    @if($required)
+                        <span class="text-status-danger">*</span>
+                    @endif
+                </label>
             @endif
-        </label>
+            @if($hint)
+                <span class="text-[11px] text-muted">{{ $hint }}</span>
+            @endif
+        </div>
     @endif
 
     <div

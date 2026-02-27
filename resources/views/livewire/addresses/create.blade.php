@@ -32,6 +32,10 @@ new class extends Component
 
     public array $localityOptions = [];
 
+    public bool $admin1IsAuto = false;
+
+    public bool $localityIsAuto = false;
+
     public ?string $raw_input = null;
 
     public ?string $source = 'manual';
@@ -47,10 +51,12 @@ new class extends Component
     public function updatedCountryIso($value): void
     {
         $this->admin1_code = null;
+        $this->admin1IsAuto = false;
         $this->admin1Options = [];
         $this->postcode = null;
         $this->postcodeOptions = [];
         $this->locality = null;
+        $this->localityIsAuto = false;
         $this->localityOptions = [];
 
         if ($value) {
@@ -66,6 +72,15 @@ new class extends Component
             return;
         }
 
+        if ($this->admin1IsAuto) {
+            $this->admin1_code = null;
+            $this->admin1IsAuto = false;
+        }
+        if ($this->localityIsAuto) {
+            $this->locality = null;
+            $this->localityIsAuto = false;
+        }
+
         $result = $this->lookupLocalitiesByPostcode($this->country_iso, $value);
 
         if (! $result) {
@@ -75,17 +90,29 @@ new class extends Component
 
         $this->localityOptions = $result['localities'];
 
-        if (count($result['localities']) === 1 && ! $this->locality) {
+        if (count($result['localities']) === 1) {
             $this->locality = $result['localities'][0]['value'];
+            $this->localityIsAuto = true;
         }
 
-        if (! $this->admin1_code && $result['admin1_code']) {
+        if ($result['admin1_code']) {
             $this->admin1_code = $result['admin1_code'];
+            $this->admin1IsAuto = true;
 
             if (empty($this->admin1Options)) {
                 $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
             }
         }
+    }
+
+    public function updatedAdmin1Code(): void
+    {
+        $this->admin1IsAuto = false;
+    }
+
+    public function updatedLocality(): void
+    {
+        $this->localityIsAuto = false;
     }
 
     public function with(): array
@@ -198,6 +225,7 @@ new class extends Component
                         wire:model.live="admin1_code"
                         wire:key="create-admin1-{{ $country_iso ?? 'none' }}"
                         label="{{ __('State / Province') }}"
+                        :hint="$admin1IsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('Search state...') }}"
                         :options="$admin1Options"
                         :error="$errors->first('admin1_code')"
@@ -219,6 +247,7 @@ new class extends Component
                     <x-ui.combobox
                         wire:model.live="locality"
                         label="{{ __('Locality') }}"
+                        :hint="$localityIsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('City / town') }}"
                         :options="$localityOptions"
                         :editable="true"

@@ -2,7 +2,7 @@
     ":count country(s) imported successfully.": ":count country(s) imported successfully.",
     ":count country(s) updated successfully.": ":count country(s) updated successfully.",
     "Actions": "Actions",
-    "Add a new user to the system": "Add a new user to the system",
+    "(from postcode)":"(from postcode)","Add a new user to the system": "Add a new user to the system",
     "Admin1 Code": "Admin1 Code",
     "Admin1 Divisions": "Admin1 Divisions",
     "Admin1 divisions updated from Geonames.": "Admin1 divisions updated from Geonames.",
