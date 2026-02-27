@@ -447,8 +447,8 @@ new class extends Component
                 @if($user->id !== auth()->id() && !session('impersonation.original_user_id'))
                     <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
                         @csrf
-                        <x-ui.button type="submit" variant="ghost" title="{{ __('View as this user') }}">
-                            <x-icon name="heroicon-o-eye" class="w-4 h-4" />
+                        <x-ui.button type="submit" variant="ghost" title="{{ __('Impersonate this user') }}">
+                            <x-icon name="heroicon-o-impersonate" class="w-4 h-4" />
                             {{ __('Impersonate') }}
                         </x-ui.button>
                     </form>

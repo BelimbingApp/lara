@@ -109,6 +109,7 @@ new class extends Component
         <x-ui.card>
             <div class="mb-2">
                 <x-ui.search-input
+                    wire:key="users-search"
                     wire:model.live.debounce.300ms="search"
                     placeholder="{{ __('Search by name or email...') }}"
                 />
@@ -148,8 +149,9 @@ new class extends Component
                                         @if($user->id !== auth()->id() && !session('impersonation.original_user_id'))
                                             <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
                                                 @csrf
-                                                <x-ui.button type="submit" variant="ghost" size="sm" title="{{ __('View as this user') }}">
-                                                    <x-icon name="heroicon-o-eye" class="w-4 h-4" />
+                                                <x-ui.button type="submit" variant="ghost" size="sm" title="{{ __('Impersonate this user') }}">
+                                                    <x-icon name="heroicon-o-impersonate" class="w-4 h-4" />
+                                                    {{ __('Impersonate') }}
                                                 </x-ui.button>
                                             </form>
                                         @endif

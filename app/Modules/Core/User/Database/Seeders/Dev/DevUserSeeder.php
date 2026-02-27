@@ -38,7 +38,7 @@ class DevUserSeeder extends DevSeeder
                 continue;
             }
 
-            User::query()->firstOrCreate(
+            $user = User::query()->firstOrCreate(
                 ['email' => $definition['email']],
                 [
                     'company_id' => $company->id,
@@ -47,6 +47,15 @@ class DevUserSeeder extends DevSeeder
                     'email_verified_at' => now(),
                 ]
             );
+
+            $employee = Employee::query()
+                ->where('email', $definition['email'])
+                ->where('company_id', $company->id)
+                ->first();
+
+            if ($employee) {
+                $user->update(['employee_id' => $employee->id]);
+            }
         }
 
         $this->assignAdminEmployeeId();
@@ -89,15 +98,20 @@ class DevUserSeeder extends DevSeeder
     private function users(): array
     {
         return [
-            // Stellar Industries — two users
+            // Stellar Industries — three users (linked to employees in DevEmployeeSeeder)
             [
                 'name' => 'Lim Wei Jie',
                 'email' => 'weijie.lim@stellarindustries.com.my',
                 'company' => 'Stellar Industries Sdn Bhd',
             ],
             [
-                'name' => 'Siti Aminah',
-                'email' => 'aminah.siti@stellarindustries.com.my',
+                'name' => 'Tan Siew Mei',
+                'email' => 'siewmei.tan@stellarindustries.com.my',
+                'company' => 'Stellar Industries Sdn Bhd',
+            ],
+            [
+                'name' => 'Ahmad bin Ismail',
+                'email' => 'ahmad.ismail@stellarindustries.com.my',
                 'company' => 'Stellar Industries Sdn Bhd',
             ],
 
