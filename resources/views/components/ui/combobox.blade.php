@@ -1,3 +1,4 @@
+{{-- aria-activedescendant + aria-controls deferred: causes dropdown to fail on second open when used with Livewire (DOM morph). --}}
 @props([
     'label' => null,
     'error' => null,
@@ -61,9 +62,9 @@
                     this.$watch('query', () => {
                         clearTimeout(this.searchTimeout)
                         this.searchTimeout = setTimeout(() => {
-                            const url = new URL(this.searchUrl)
+                            const url = new URL(this.searchUrl, window.location.origin)
                             url.searchParams.set('q', this.query)
-                            fetch(url, { credentials: 'same-origin' })
+                            fetch(url.toString(), { credentials: 'same-origin' })
                                 .then(r => r.json())
                                 .then(data => { this.options = Array.isArray(data) ? data : [] })
                                 .catch(() => { this.options = [] })
@@ -116,14 +117,8 @@
                 this.$nextTick(() => this.$refs.input?.focus())
             },
 
-            select(opt) {
-                this.selectedValue = opt.value
-                this.query = opt.label
-                this.open = false
-            },
-
-            selectByValue(val, label) {
-                this.selectedValue = val
+            selectOpt(value, label) {
+                this.selectedValue = value
                 this.query = label
                 this.open = false
             },
@@ -164,7 +159,7 @@
                     if (this.open) {
                         const opt = this.filtered.find(o => o.value === this.activeValue)
                         if (opt) {
-                            this.select(opt)
+                            this.selectOpt(opt.value, opt.label)
                         } else if (this.editable) {
                             this.closeList()
                         }
@@ -242,7 +237,7 @@
                         :data-value="option.value"
                         :aria-selected="option.value === String(selectedValue)"
                         @mouseenter="setActiveByValue(option.value)"
-                        @mousedown.prevent="select(option)"
+                        @mousedown.prevent="selectOpt(option.value, option.label)"
                         class="px-input-x py-1.5 text-sm cursor-pointer select-none"
                         :class="option.value === activeValue ? 'bg-accent text-accent-on' : 'text-ink hover:bg-surface-subtle'"
                     >
@@ -258,7 +253,7 @@
                     data-label="{{ e($o['label'] ?? '') }}"
                     :aria-selected="$el.dataset.value === String(selectedValue)"
                     @mouseenter="setActiveByValue($el.dataset.value)"
-                    @mousedown.prevent="selectByValue($el.dataset.value, $el.dataset.label)"
+                    @mousedown.prevent="selectOpt($el.dataset.value, $el.dataset.label)"
                     class="px-input-x py-1.5 text-sm cursor-pointer select-none"
                     :class="$el.dataset.value === activeValue ? 'bg-accent text-accent-on' : 'text-ink hover:bg-surface-subtle'"
                 >

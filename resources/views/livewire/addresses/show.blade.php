@@ -88,6 +88,8 @@ new class extends Component
         $this->admin1_code = null;
         $this->postcode = null;
         $this->postcodeOptions = [];
+        $this->locality = null;
+        $this->localityOptions = [];
 
         if ($value) {
             $this->ensurePostcodesImported(strtoupper($value));
@@ -97,6 +99,7 @@ new class extends Component
 
         $this->address->admin1_code = null;
         $this->address->postcode = null;
+        $this->address->locality = null;
         $this->address->save();
     }
 

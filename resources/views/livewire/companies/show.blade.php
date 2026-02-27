@@ -242,6 +242,7 @@ new class extends Component
         $this->new_address_admin1_options = [];
         $this->new_address_postcode = null;
         $this->new_address_postcode_options = [];
+        $this->new_address_locality = null;
         $this->new_address_locality_options = [];
 
         if ($value) {
@@ -365,6 +366,7 @@ new class extends Component
         $this->edit_address_admin1_options = [];
         $this->edit_address_postcode = null;
         $this->edit_address_postcode_options = [];
+        $this->edit_address_locality = null;
         $this->edit_address_locality_options = [];
 
         if ($value) {

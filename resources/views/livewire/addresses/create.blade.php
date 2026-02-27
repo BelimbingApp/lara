@@ -51,6 +51,7 @@ new class extends Component
         $this->admin1Options = [];
         $this->postcode = null;
         $this->postcodeOptions = [];
+        $this->locality = null;
         $this->localityOptions = [];
 
         if ($value) {
