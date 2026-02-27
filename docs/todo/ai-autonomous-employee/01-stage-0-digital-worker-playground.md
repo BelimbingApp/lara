@@ -4,7 +4,7 @@
 **Scope:** Web-only Digital Worker chat loop with persistent sessions/messages and visible runtime metadata
 **Target Outcome:** A user can open Digital Worker Playground, chat, switch sessions, refresh, and keep full history.
 **Prerequisite:** `docs/architecture/authorization.md` and `docs/todo/authorization/00-prd.md` Stage B + Stage D
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 
 ## 1. Stage 0 Contract
 
@@ -40,12 +40,13 @@ Align with `docs/architecture/ai-digital-worker.md`: one `employees` table for b
 - `job_description` (TEXT, nullable) — optional short role label per architecture §4.5; full Digital Worker context is workspace-based when OpenClaw-like runtime is adopted
 - `supervisor_id` already exists — for Digital Worker supervision chain to human
 
-### 3.2 New tables
+### 3.2 New tables (transcript only; memory/recall out of scope — see §11 below)
 
 1. `digital_worker_sessions`
    - `id`, `employee_id` (FK → employees where employee_type = 'digital_worker'), `channel_type` (`web`), `title`, `last_activity_at`, timestamps
 2. `digital_worker_messages`
    - `id`, `digital_worker_session_id`, `role` (`user`|`assistant`|`system`), `content` (JSON/text), `run_id`, `meta` (JSON), timestamps
+   - **Transcript only** — ordered turn-by-turn chat history for context assembly. Semantic memory (long-term recall over markdown) is a post–Stage 0 concern; see `docs/architecture/ai-digital-worker.md` §12.
 
 ### 3.3 Constraints/indexes
 
@@ -62,7 +63,7 @@ Align with `docs/architecture/ai-digital-worker.md`: one `employees` table for b
    - append user message
    - append assistant message
    - fetch ordered timeline
-3. `AutonomousEmployeeRuntime` (Stage 0 adapter)
+3. `DigitalWorkerRuntime` (Stage 0 adapter)
    - takes latest conversation context
    - returns plain assistant text + metadata (`run_id`, `model`, `latency_ms`)
 4. Authorization policy
@@ -121,7 +122,14 @@ Behavior requirements:
 5. Volt UI shell + components
 6. Pest tests + UAT run
 
-## 10. Risks and Mitigations
+## 11. Future: Memory and Recall
+
+Stage 0 persists only the **chat transcript** (messages table). Long-term semantic memory (MemSearch-style: markdown source of truth, vector index for recall) is out of scope. When implementing memory:
+
+- See `docs/architecture/ai-digital-worker.md` §12 for the design: transcript vs memory, MemSearch pattern, PHP-native implementation, SQLite per Digital Worker.
+- Workspace layout: `workspace/{employee_id}/` with MEMORY.md, memory/*.md, and memory.db (vector index).
+
+## 12. Risks and Mitigations
 
 1. **Risk:** Chat state desync between frontend and DB
    - **Mitigation:** Source-of-truth reload after each send completion

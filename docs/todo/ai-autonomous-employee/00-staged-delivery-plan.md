@@ -2,7 +2,7 @@
 
 **Status:** Planning
 **Source Context:** `docs/architecture/ai-digital-worker.md`
-**Last Updated:** 2026-02-25
+**Last Updated:** 2026-02-26
 **Prerequisite:** `docs/architecture/authorization.md`, `docs/todo/authorization/00-prd.md`
 
 ## 1. Problem Essence
@@ -247,6 +247,7 @@ Convert interaction data into operational insight and measurable business value.
 3. Tool idempotency for retries
 4. Data model choice for message/action logs (DB-only vs hybrid with files)
 5. Access controls for multi-company and supervisor/subordinate Digital Worker interactions
+6. **Memory/recall architecture:** Transcript (messages table) vs semantic memory (MemSearch-style). Decision: PHP-native, markdown source of truth, SQLite per Digital Worker for vectors. See `docs/architecture/ai-digital-worker.md` §12.
 
 ## 7. Suggested Delivery Rhythm
 

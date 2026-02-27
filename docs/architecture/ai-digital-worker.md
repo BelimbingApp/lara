@@ -49,8 +49,8 @@ One subject model for authorization and org operations:
 
 ### 3.3 Digital Worker-Specific Management Operations
 
-1. `createAutonomousEmployee(supervisorId, profile)`
-2. `setAutonomousEmployeeScope(employeeId, scope)`
+1. `createDigitalWorker(supervisorId, profile)`
+2. `setDigitalWorkerScope(employeeId, scope)`
 3. `validateDelegation(supervisorId, subordinateId)`
 
 The UI remains the same employee UI; Digital Worker uses type-aware behavior, not a separate product surface.
@@ -340,8 +340,98 @@ Multi-level security constraints
 
 ---
 
+## 12. Memory and Recall Architecture
+
+*Relevant when implementing Digital Worker semantic memory (long-term recall beyond the chat transcript). See also §4.5 (workspace files) and §11 (OpenClaw).*
+
+### 12.1 Transcript vs Memory
+
+| Concern | Transcript | Memory (Recall) |
+|---------|------------|-----------------|
+| **Purpose** | Chat turn-by-turn history (user/assistant messages in order) | Long-term searchable knowledge (facts, decisions, observations) |
+| **Source** | `digital_worker_messages` table (relational) | Markdown files (MEMORY.md, memory/YYYY-MM-DD.md) |
+| **Usage** | Provide last N turns as LLM context | Semantic search: "recall relevant past knowledge" before responding |
+| **Stage** | Stage 0 (Playground) | Post-Stage 0 |
+
+Both are needed for a capable Digital Worker: transcript for immediate context, memory for history.
+
+### 12.2 MemSearch Pattern
+
+[MemSearch](https://zilliztech.github.io/memsearch/) (Zilliz/Milvus) extracts OpenClaw's memory system into a standalone library. Core principles:
+
+- **Markdown as source of truth** — Plain `.md` files are the canonical store; the vector index is derived and rebuildable.
+- **Vector store as index** — Embeddings enable semantic search; the index can be dropped and rebuilt from markdown anytime.
+- **Git-native** — Version knowledge bases with standard git workflows.
+- **No vendor lock-in** — Switch embedding or vector backends without data loss.
+
+Reference: [Milvus blog: We extracted OpenClaw's memory system and open-sourced it (MemSearch)](https://milvus.io/blog/we-extracted-openclaws-memory-system-and-opensourced-it-memsearch.md)
+
+### 12.3 BLB Implementation Direction
+
+**PHP-native implementation** — Implement the MemSearch pattern in PHP to avoid Python subprocesses and keep the stack homogeneous. Components:
+
+- Markdown parsing: `league/commonmark` or similar
+- Chunking: by heading and paragraph structure
+- Embeddings: HTTP calls to OpenAI, Voyage, or Ollama
+- Vector storage: see §12.4
+
+**Vector backend: SQLite per Digital Worker** — Use a dedicated SQLite database per Digital Worker for vector storage:
+
+- Each Digital Worker gets `workspace/{employee_id}/memory.db`
+- Aligns with per-agent workspace isolation (OpenClaw pattern)
+- Strong tenant isolation by design; backup/export = copy one file
+- Requires a vector extension: [sqlite-vec](https://github.com/asg017/sqlite-vec) or [sqlite-vss](https://github.com/asg017/sqlite-vss)
+
+**Workspace layout (per Digital Worker):**
+
+```
+workspace/{employee_id}/
+├── MEMORY.md              # Persistent facts & decisions
+├── memory/
+│   ├── 2026-02-07.md      # Daily log
+│   └── 2026-02-09.md
+└── memory.db              # Vector index for this DW's markdown (derived, rebuildable)
+```
+
+**Alternative:** pgvector in the main PostgreSQL database with `employee_id` for tenancy. Simpler ops (one DB, standard migrations) but less natural per-DW isolation. Choose based on scale and deployment constraints.
+
+### 12.4 Search Strategy: Hybrid Vector + BM25
+
+MemSearch demonstrates that hybrid retrieval outperforms pure vector search for agent memory. Default weighting:
+
+- **Vector search (70%):** Semantic matching — a query for "Redis cache config" finds chunks about "Redis L1 cache with 5min TTL" even with different wording.
+- **BM25 keyword search (30%):** Exact matching — a query for "PostgreSQL 16" does not return results about "PostgreSQL 15". Critical for error codes, function names, version-specific facts.
+
+The 70/30 split is MemSearch's empirically tuned default. For workflows heavy on exact matches (code references, IDs), raise BM25 weight to 50%. BLB's PHP-native implementation should support configurable weights per Digital Worker or globally.
+
+### 12.5 Compaction: Daily Logs → Long-Term Memory
+
+MemSearch includes a **compact** workflow that distills older daily logs (`memory/YYYY-MM-DD.md`) into curated long-term entries in `MEMORY.md`. This prevents unbounded growth of daily files while preserving key facts and decisions.
+
+**Pattern:**
+1. Periodically (e.g., weekly or on threshold), feed older daily logs to the LLM with a distillation prompt.
+2. Extract durable facts, decisions, and preferences into `MEMORY.md` (append or merge under headings).
+3. Archive or delete processed daily logs (or keep as raw history if storage allows).
+4. Re-index after compaction.
+
+**BLB consideration:** Compaction can run as a scheduled Laravel command per Digital Worker. The human supervisor should be able to review and edit `MEMORY.md` directly (transparency principle). Compaction is post–Stage 0 but should be designed alongside the initial memory implementation to avoid rework.
+
+### 12.6 Implementation Scope (Future)
+
+1. Scan markdown in `workspace/{employee_id}/`
+2. Chunk by heading/paragraph; embed via HTTP
+3. Store vectors in SQLite (sqlite-vec) or pgvector
+4. Search: hybrid vector (70%) + BM25 (30%), return top-K chunks with source attribution
+5. Deduplication: content hash to skip re-embedding unchanged chunks
+6. Sync: file watcher with debounce (~1500ms) or Laravel scheduler for incremental indexing
+7. Compaction: scheduled distillation of daily logs into `MEMORY.md`
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-02-25 | AI + Kiat | Pivoted from PA document to Digital Worker architecture; unified employee model and delegation invariants |
+| 0.2 | 2026-02-26 | AI + Kiat | Added §12 Memory and Recall: transcript vs memory, MemSearch pattern, PHP-native direction, SQLite per DW |
+| 0.3 | 2026-02-27 | AI + Kiat | Renamed §3.3 operations to Digital Worker; added §12.4 hybrid search strategy (vector 70% + BM25 30%); added §12.5 compaction workflow |
