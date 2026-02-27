@@ -12,19 +12,26 @@
         </label>
     @endif
 
-    <select
-        id="{{ $id }}"
-        @if($name) name="{{ $name }}" @endif
-        {{ $attributes->except(['label', 'error'])->class([
-            'w-full px-input-x py-input-y text-sm',
-            'border border-border-input rounded-2xl',
-            'bg-surface-card text-ink',
-            'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',
-            'border-status-danger focus:ring-status-danger' => $error,
-        ]) }}
-    >
-        {{ $slot }}
-    </select>
+    <div class="relative">
+        <select
+            id="{{ $id }}"
+            @if($name) name="{{ $name }}" @endif
+            {{ $attributes->except(['label', 'error'])->class([
+                'w-full pl-input-x pr-10 py-input-y text-sm appearance-none',
+                'border border-border-input rounded-2xl',
+                'bg-surface-card text-ink',
+                'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',
+                'border-status-danger focus:ring-status-danger' => $error,
+            ]) }}
+        >
+            {{ $slot }}
+        </select>
+        <x-icon
+            name="heroicon-m-chevron-down"
+            class="absolute right-[8px] top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none"
+            aria-hidden="true"
+        />
+    </div>
 
     @if($error)
         <p class="text-sm text-status-danger">{{ $error }}</p>
