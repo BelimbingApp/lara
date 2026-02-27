@@ -24,7 +24,7 @@
                 @if(count($children) > 0)
                     <span
                         @click.prevent="expanded = !expanded"
-                        class="text-[12px] shrink-0 text-accent w-3 text-center cursor-pointer mr-0.5"
+                        class="text-[12px] shrink-0 text-link w-3 text-center cursor-pointer mr-0.5"
                         aria-hidden="true"
                     >
                         <span x-show="!expanded">⮞</span>
@@ -60,7 +60,7 @@
                 @click="expanded = !expanded"
                 class="flex items-center gap-0.5 w-full px-1 py-px text-sm rounded-none cursor-pointer transition text-link {{ $hasActiveChild ? 'font-medium' : 'font-normal hover:bg-surface-subtle' }}"
             >
-                <span class="text-[12px] shrink-0 text-accent w-3 text-center" aria-hidden="true">
+                <span class="text-[12px] shrink-0 text-link w-3 text-center" aria-hidden="true">
                     <span x-show="!expanded">⮞</span>
                     <span x-show="expanded">⮟</span>
                 </span>

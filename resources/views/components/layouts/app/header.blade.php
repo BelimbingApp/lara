@@ -26,13 +26,13 @@
 
             <!-- Action Buttons -->
             <div class="hidden lg:flex gap-2">
-                <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors" title="{{ __('Search') }}">
+                <a href="#" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-accent transition-colors" title="{{ __('Search') }}">
                     <x-icon name="heroicon-o-magnifying-glass" class="w-5 h-5" />
                 </a>
-                <a href="https://github.com/BelimbingApp/lara" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors" title="{{ __('Repository') }}">
+                <a href="https://github.com/BelimbingApp/lara" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-accent transition-colors" title="{{ __('Repository') }}">
                     <x-icon name="heroicon-o-folder" class="w-5 h-5" />
                 </a>
-                <a href="https://laravel.com/docs/starter-kits#livewire" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors" title="{{ __('Documentation') }}">
+                <a href="https://laravel.com/docs/starter-kits#livewire" target="_blank" class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-accent transition-colors" title="{{ __('Documentation') }}">
                     <x-icon name="heroicon-o-book-open" class="w-5 h-5" />
                 </a>
             </div>

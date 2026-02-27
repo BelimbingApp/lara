@@ -135,7 +135,7 @@ new class extends Component
                                                 {{ $user->initials() }}
                                             </span>
                                         </div>
-                                        <a href="{{ route('admin.users.show', $user) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $user->name }}</a>
+                                        <a href="{{ route('admin.users.show', $user) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $user->name }}</a>
                                     </div>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $user->email }}</td>
@@ -154,7 +154,7 @@ new class extends Component
                                             </form>
                                         @endif
                                         <x-ui.button
-                                            variant="danger"
+                                            variant="danger-ghost"
                                             size="sm"
                                             wire:click="delete({{ $user->id }})"
                                             wire:confirm="{{ __('Are you sure you want to delete this user?') }}"

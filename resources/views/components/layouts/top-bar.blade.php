@@ -4,7 +4,7 @@
         <button
             type="button"
             @click="$dispatch('toggle-sidebar')"
-            class="inline-flex items-center justify-center w-8 h-8 rounded-sm text-link hover:bg-surface-subtle transition"
+            class="inline-flex items-center justify-center w-8 h-8 rounded-sm text-accent hover:bg-surface-subtle transition"
             aria-label="{{ __('Toggle sidebar') }}"
             title="{{ __('Toggle sidebar') }}"
         >

@@ -97,7 +97,7 @@ new class extends Component
     <div class="space-y-section-gap">
         <x-ui.page-header :title="__('Legal Entity Types')" :subtitle="__('Manage company legal structure categories')">
             <x-slot name="actions">
-                <a href="{{ route('admin.companies.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                <a href="{{ route('admin.companies.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-accent hover:bg-surface-subtle transition-colors">
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                     {{ __('Back to Companies') }}
                 </a>
@@ -182,14 +182,15 @@ new class extends Component
                                     </button>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
-                                    <button
+                                    <x-ui.button
+                                        variant="danger-ghost"
+                                        size="sm"
                                         wire:click="deleteType({{ $type->id }})"
                                         wire:confirm="{{ __('Are you sure you want to delete this legal entity type?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                     >
                                         <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                         {{ __('Delete') }}
-                                    </button>
+                                    </x-ui.button>
                                 </td>
                             </tr>
                         @empty
@@ -245,7 +246,7 @@ new class extends Component
                 <x-ui.button type="submit" variant="primary">
                     {{ __('Create') }}
                 </x-ui.button>
-                <button type="button" wire:click="$set('showCreateModal', false)" class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                <button type="button" wire:click="$set('showCreateModal', false)" class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-accent hover:bg-surface-subtle transition-colors">
                     {{ __('Cancel') }}
                 </button>
             </div>

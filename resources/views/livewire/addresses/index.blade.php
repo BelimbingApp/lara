@@ -113,7 +113,7 @@ new class extends Component
                         @forelse($addresses as $address)
                             <tr wire:key="address-{{ $address->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <a href="{{ route('admin.addresses.show', $address) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $address->label ?: __('Unlabeled') }}</a>
+                                    <a href="{{ route('admin.addresses.show', $address) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $address->label ?: __('Unlabeled') }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y text-sm text-muted">
                                     <div class="max-w-xl truncate">{{ $address->line1 ?: __('No line 1') }}</div>
@@ -131,14 +131,15 @@ new class extends Component
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     <div class="flex items-center justify-end gap-2">
-                                        <button
+                                        <x-ui.button
+                                            variant="danger-ghost"
+                                            size="sm"
                                             wire:click="delete({{ $address->id }})"
                                             wire:confirm="{{ __('Are you sure you want to delete this address?') }}"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                         >
                                             <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                             {{ __('Delete') }}
-                                        </button>
+                                        </x-ui.button>
                                     </div>
                                 </td>
                             </tr>

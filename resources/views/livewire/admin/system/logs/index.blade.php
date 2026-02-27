@@ -57,7 +57,7 @@ new class extends Component
                     <tbody class="bg-surface-card divide-y divide-border-default">
                         @forelse($files as $file)
                             <tr wire:key="log-{{ $file->getFilename() }}" class="hover:bg-surface-subtle/50 transition-colors cursor-pointer {{ $selectedFile === $file->getFilename() ? 'bg-surface-subtle' : '' }}" wire:click="selectFile('{{ $file->getFilename() }}')">
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-link font-medium">{{ $file->getFilename() }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-accent font-medium">{{ $file->getFilename() }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ Number::fileSize($file->getSize()) }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ Carbon::createFromTimestamp($file->getMTime())->diffForHumans() }}</td>
                             </tr>

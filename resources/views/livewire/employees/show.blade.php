@@ -216,7 +216,7 @@ new class extends Component
     <div class="space-y-section-gap">
         <x-ui.page-header :title="$employee->displayName()" :subtitle="$employee->designation ?? $employee->job_description">
             <x-slot name="actions">
-                <a href="{{ route('admin.employees.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                <a href="{{ route('admin.employees.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-accent hover:bg-surface-subtle transition-colors">
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                     {{ __('Back to List') }}
                 </a>
@@ -498,7 +498,7 @@ new class extends Component
                             <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
                                 <span>
                                     @if($employee->user)
-                                        <a href="{{ route('admin.users.show', $employee->user) }}" wire:navigate class="text-link hover:underline" @click.stop>{{ $employee->user->name }}</a>
+                                        <a href="{{ route('admin.users.show', $employee->user) }}" wire:navigate class="text-accent hover:underline" @click.stop>{{ $employee->user->name }}</a>
                                     @else
                                         <span class="text-muted">{{ __('None') }}</span>
                                     @endif
@@ -578,7 +578,7 @@ new class extends Component
                         @forelse($employee->subordinates as $sub)
                             <tr wire:key="sub-{{ $sub->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <a href="{{ route('admin.employees.show', $sub) }}" wire:navigate class="text-link hover:underline">{{ $sub->displayName() }}</a>
+                                    <a href="{{ route('admin.employees.show', $sub) }}" wire:navigate class="text-accent hover:underline">{{ $sub->displayName() }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $sub->designation ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
@@ -591,14 +591,15 @@ new class extends Component
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $sub->department?->type?->name ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
-                                    <button
+                                    <x-ui.button
+                                        variant="danger-ghost"
+                                        size="sm"
                                         wire:click="removeSubordinate({{ $sub->id }})"
                                         wire:confirm="{{ __('Remove this employee as subordinate?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                     >
                                         <x-icon name="heroicon-o-x-mark" class="w-4 h-4" />
                                         {{ __('Remove') }}
-                                    </button>
+                                    </x-ui.button>
                                 </td>
                             </tr>
                         @empty
@@ -641,7 +642,7 @@ new class extends Component
                         @forelse($employee->addresses as $address)
                             <tr wire:key="address-{{ $address->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <a href="{{ route('admin.addresses.show', $address) }}" wire:navigate class="text-link hover:underline">{{ $address->label ?? '-' }}</a>
+                                    <a href="{{ route('admin.addresses.show', $address) }}" wire:navigate class="text-accent hover:underline">{{ $address->label ?? '-' }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ collect([$address->line1, $address->locality, $address->country_iso])->filter()->implode(', ') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted"
@@ -704,14 +705,15 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->pivot->valid_from ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->pivot->valid_to ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
-                                    <button
+                                    <x-ui.button
+                                        variant="danger-ghost"
+                                        size="sm"
                                         wire:click="unlinkAddress({{ $address->id }})"
                                         wire:confirm="{{ __('Are you sure you want to unlink this address?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                     >
                                         <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
                                         {{ __('Unlink') }}
-                                    </button>
+                                    </x-ui.button>
                                 </td>
                             </tr>
                         @empty

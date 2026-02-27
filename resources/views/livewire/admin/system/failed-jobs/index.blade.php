@@ -95,19 +95,20 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     <button
                                         wire:click="retryJob('{{ $job->uuid }}')"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors"
+                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg text-accent hover:bg-surface-subtle transition-colors"
                                     >
                                         <x-icon name="heroicon-o-arrow-path" class="w-4 h-4" />
                                         {{ __('Retry') }}
                                     </button>
-                                    <button
+                                    <x-ui.button
+                                        variant="danger-ghost"
+                                        size="sm"
                                         wire:click="deleteJob({{ $job->id }})"
                                         wire:confirm="{{ __('Are you sure you want to delete this failed job?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                     >
                                         <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                         {{ __('Delete') }}
-                                    </button>
+                                    </x-ui.button>
                                 </td>
                             </tr>
                         @empty

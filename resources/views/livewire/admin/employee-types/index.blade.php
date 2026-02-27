@@ -113,18 +113,19 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $type->employees_count }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     @if(!$type->is_system)
-                                        <a href="{{ route('admin.employee-types.edit', $type) }}" wire:navigate class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors">
+                                        <a href="{{ route('admin.employee-types.edit', $type) }}" wire:navigate class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg text-accent hover:bg-surface-subtle transition-colors">
                                             <x-icon name="heroicon-o-pencil" class="w-4 h-4" />
                                             {{ __('Edit') }}
                                         </a>
-                                        <button
+                                        <x-ui.button
+                                            variant="danger-ghost"
+                                            size="sm"
                                             wire:click="delete({{ $type->id }})"
                                             wire:confirm="{{ __('Delete this employee type?') }}"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                         >
                                             <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                             {{ __('Delete') }}
-                                        </button>
+                                        </x-ui.button>
                                     @else
                                         <span class="text-muted text-xs">{{ __('System types cannot be edited') }}</span>
                                     @endif

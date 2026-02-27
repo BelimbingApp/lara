@@ -357,11 +357,11 @@ new class extends Component
             <x-slot name="actions">
                 @if (! $role->is_system && $canDelete)
                     <x-ui.button
-                        variant="ghost"
+                        variant="danger-ghost"
                         wire:click="deleteRole"
                         wire:confirm="{{ __('Delete this role? All capability assignments and user assignments will be removed.') }}"
                     >
-                        <x-icon name="heroicon-o-trash" class="w-4 h-4 text-status-danger" />
+                        <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                         {{ __('Delete') }}
                     </x-ui.button>
                 @endif
@@ -598,7 +598,7 @@ new class extends Component
                         @forelse($assignedUsers as $assignedUser)
                             <tr wire:key="user-{{ $assignedUser->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <a href="{{ route('admin.users.show', $assignedUser) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $assignedUser->name }}</a>
+                                    <a href="{{ route('admin.users.show', $assignedUser) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $assignedUser->name }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $assignedUser->email }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $assignedUser->company?->name ?? '—' }}</td>

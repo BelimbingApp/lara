@@ -354,7 +354,7 @@ new class extends AbstractAddressForm
     <div class="space-y-section-gap">
         <x-ui.page-header :title="$company->name" :subtitle="$company->legal_name">
             <x-slot name="actions">
-                <a href="{{ route('admin.companies.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl hover:bg-surface-subtle text-link transition-colors">
+                <a href="{{ route('admin.companies.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-accent hover:bg-surface-subtle transition-colors">
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
                     {{ __('Back to List') }}
                 </a>
@@ -731,7 +731,7 @@ new class extends AbstractAddressForm
                         @forelse($company->addresses as $address)
                             <tr wire:key="address-{{ $address->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <button wire:click="openAddressModal({{ $address->id }})" class="text-link hover:underline cursor-pointer">{{ $address->label ?? '-' }}</button>
+                                    <button wire:click="openAddressModal({{ $address->id }})" class="text-accent hover:underline cursor-pointer">{{ $address->label ?? '-' }}</button>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ collect([$address->line1, $address->locality, $address->country_iso])->filter()->implode(', ') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted"
@@ -798,19 +798,20 @@ new class extends AbstractAddressForm
                                         <a
                                             href="{{ route('admin.addresses.show', $address) }}"
                                             wire:navigate
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-surface-subtle text-link transition-colors"
+                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg text-accent hover:bg-surface-subtle transition-colors"
                                         >
                                             <x-icon name="heroicon-o-arrow-top-right-on-square" class="w-4 h-4" />
                                             {{ __('Open') }}
                                         </a>
-                                        <button
+                                        <x-ui.button
+                                            variant="danger-ghost"
+                                            size="sm"
                                             wire:click="unlinkAddress({{ $address->id }})"
                                             wire:confirm="{{ __('Are you sure you want to unlink this address?') }}"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                         >
                                             <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
                                             {{ __('Unlink') }}
-                                        </button>
+                                        </x-ui.button>
                                     </div>
                                 </td>
                             </tr>
@@ -978,7 +979,7 @@ new class extends AbstractAddressForm
                             @foreach($company->children as $child)
                                 <tr wire:key="child-{{ $child->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                        <a href="{{ route('admin.companies.show', $child) }}" wire:navigate class="text-link hover:underline">{{ $child->name }}</a>
+                                        <a href="{{ route('admin.companies.show', $child) }}" wire:navigate class="text-accent hover:underline">{{ $child->name }}</a>
                                     </td>
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
                                         <x-ui.badge :variant="match($child->status) {
@@ -1093,7 +1094,7 @@ new class extends AbstractAddressForm
                         @forelse($allRelationships as $rel)
                             <tr wire:key="rel-{{ $rel->id }}-{{ $rel->direction }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-ink font-medium">
-                                    <a href="{{ route('admin.companies.show', $rel->company) }}" wire:navigate class="text-link hover:underline">{{ $rel->company->name }}</a>
+                                    <a href="{{ route('admin.companies.show', $rel->company) }}" wire:navigate class="text-accent hover:underline">{{ $rel->company->name }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $rel->type->name ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $rel->direction }}</td>
@@ -1136,7 +1137,7 @@ new class extends AbstractAddressForm
                             <tr wire:key="access-{{ $access->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     @if($access->user)
-                                        <a href="{{ route('admin.users.show', $access->user) }}" wire:navigate class="text-link hover:underline">{{ $access->user->name }}</a>
+                                        <a href="{{ route('admin.users.show', $access->user) }}" wire:navigate class="text-accent hover:underline">{{ $access->user->name }}</a>
                                     @else
                                         —
                                     @endif

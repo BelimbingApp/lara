@@ -115,7 +115,7 @@ new class extends Component
                         @forelse($companies as $company)
                             <tr wire:key="company-{{ $company->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <a href="{{ route('admin.companies.show', $company) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $company->name }}</a>
+                                    <a href="{{ route('admin.companies.show', $company) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $company->name }}</a>
                                     <div class="text-xs text-muted tabular-nums">{{ $company->code }}</div>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
@@ -132,14 +132,15 @@ new class extends Component
                                         @if ($company->isLicensee())
                                             <x-ui.badge variant="default">{{ __('Licensee') }}</x-ui.badge>
                                         @else
-                                            <button
+                                            <x-ui.button
+                                                variant="danger-ghost"
+                                                size="sm"
                                                 wire:click="delete({{ $company->id }})"
                                                 wire:confirm="{{ __('Are you sure you want to delete this company?') }}"
-                                                class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                             >
                                                 <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                                 {{ __('Delete') }}
-                                            </button>
+                                            </x-ui.button>
                                         @endif
                                     </div>
                                 </td>

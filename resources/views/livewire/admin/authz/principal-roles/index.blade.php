@@ -76,7 +76,7 @@ new class extends Component
                             <tr wire:key="assignment-{{ $assignment->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
                                     @if($assignment->principal_name && $assignment->principal_type === 'human_user')
-                                        <a href="{{ route('admin.users.show', $assignment->principal_id) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $assignment->principal_name }}</a>
+                                        <a href="{{ route('admin.users.show', $assignment->principal_id) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $assignment->principal_name }}</a>
                                         <div class="text-xs text-muted">{{ $assignment->principal_email }}</div>
                                     @elseif($assignment->principal_name)
                                         <div class="text-sm font-medium text-ink">{{ $assignment->principal_name }}</div>
@@ -93,7 +93,7 @@ new class extends Component
                                     @endif
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <a href="{{ route('admin.roles.show', $assignment->role_id) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $assignment->role->name }}</a>
+                                    <a href="{{ route('admin.roles.show', $assignment->role_id) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $assignment->role->name }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $assignment->company_name ?? __('Global') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $assignment->created_at->format('Y-m-d H:i') }}</td>

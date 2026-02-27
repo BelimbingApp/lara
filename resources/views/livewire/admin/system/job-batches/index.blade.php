@@ -106,14 +106,15 @@ new class extends Component
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ Carbon::createFromTimestamp($batch->created_at)->format('Y-m-d H:i:s') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     @if(!$batch->cancelled_at && !$batch->finished_at)
-                                        <button
+                                        <x-ui.button
+                                            variant="danger-ghost"
+                                            size="sm"
                                             wire:click="cancelBatch('{{ $batch->id }}')"
                                             wire:confirm="{{ __('Are you sure you want to cancel this batch?') }}"
-                                            class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                         >
                                             <x-icon name="heroicon-o-x-circle" class="w-4 h-4" />
                                             {{ __('Cancel') }}
-                                        </button>
+                                        </x-ui.button>
                                     @endif
                                 </td>
                             </tr>

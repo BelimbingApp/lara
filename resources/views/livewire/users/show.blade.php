@@ -862,11 +862,11 @@ new class extends Component
                         @forelse($user->employee ? [$user->employee] : [] as $employee)
                             <tr wire:key="employee-{{ $employee->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
-                                    <a href="{{ route('admin.employees.show', $employee) }}" wire:navigate class="text-link hover:underline">{{ $employee->employee_number ?? '—' }}</a>
+                                    <a href="{{ route('admin.employees.show', $employee) }}" wire:navigate class="text-accent hover:underline">{{ $employee->employee_number ?? '—' }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     @if ($employee->company)
-                                        <a href="{{ route('admin.companies.show', $employee->company) }}" wire:navigate class="text-link hover:underline">{{ $employee->company->name }}</a>
+                                        <a href="{{ route('admin.companies.show', $employee->company) }}" wire:navigate class="text-accent hover:underline">{{ $employee->company->name }}</a>
                                     @else
                                         —
                                     @endif
@@ -884,14 +884,15 @@ new class extends Component
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $employee->employment_start?->format('Y-m-d') ?? '—' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
-                                    <button
+                                    <x-ui.button
+                                        variant="danger-ghost"
+                                        size="sm"
                                         wire:click="unlinkEmployee({{ $employee->id }})"
                                         wire:confirm="{{ __('Unlink this employee record from the user?') }}"
-                                        class="inline-flex items-center gap-1 px-3 py-1.5 text-sm rounded-lg hover:bg-status-danger-subtle text-status-danger transition-colors"
                                     >
                                         <x-icon name="heroicon-o-link-slash" class="w-4 h-4" />
                                         {{ __('Unlink') }}
-                                    </button>
+                                    </x-ui.button>
                                 </td>
                             </tr>
                         @empty
@@ -980,7 +981,7 @@ new class extends Component
                             <tr wire:key="access-{{ $access->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
                                     @if ($access->company)
-                                        <a href="{{ route('admin.companies.show', $access->company) }}" wire:navigate class="text-link hover:underline">{{ $access->company->name }}</a>
+                                        <a href="{{ route('admin.companies.show', $access->company) }}" wire:navigate class="text-accent hover:underline">{{ $access->company->name }}</a>
                                     @else
                                         —
                                     @endif

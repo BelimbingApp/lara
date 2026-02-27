@@ -90,7 +90,7 @@ new class extends Component
                         @forelse($roles as $role)
                             <tr wire:key="role-{{ $role->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
-                                    <a href="{{ route('admin.roles.show', $role) }}" wire:navigate class="text-sm font-medium text-link hover:underline">{{ $role->name }}</a>
+                                    <a href="{{ route('admin.roles.show', $role) }}" wire:navigate class="text-sm font-medium text-accent hover:underline">{{ $role->name }}</a>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $role->code }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
