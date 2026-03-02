@@ -17,7 +17,7 @@
                     <tbody class="bg-surface-card divide-y divide-border-default">
                         @forelse($events as $event)
                             <tr class="hover:bg-surface-subtle/50 transition-colors">
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap font-mono text-sm text-ink">{{ \App\Base\Schedule\Controllers\ScheduledTaskController::cleanCommand($event->command) }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap font-mono text-sm text-ink">{{ $event->command }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted font-mono">{{ $event->expression }}</td>
                                 <td class="px-table-cell-x py-table-cell-y text-sm text-muted">{{ $event->description ?? '—' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $event->timezone ?? config('app.timezone') }}</td>
