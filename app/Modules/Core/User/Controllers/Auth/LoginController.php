@@ -77,6 +77,6 @@ class LoginController
      */
     private function throttleKey(Request $request): string
     {
-        return Str::transliterate(Str::lower($request->string('email')).'|'.$request->ip());
+        return Str::transliterate(Str::lower($request->string('email')->toString()).'|'.$request->ip());
     }
 }
