@@ -28,8 +28,19 @@ class LogController
         if ($selectedFile !== '') {
             $path = $logPath.DIRECTORY_SEPARATOR.$selectedFile;
             if (File::exists($path) && str_starts_with(realpath($path), realpath($logPath))) {
-                $lines = file($path, FILE_IGNORE_NEW_LINES);
-                $tailContent = implode("\n", array_slice($lines, -100));
+                $tailLines = 100;
+                $fileObject = new \SplFileObject($path, 'r');
+                $fileObject->seek(PHP_INT_MAX);
+                $lastLine = $fileObject->key();
+                $startLine = max(0, $lastLine - $tailLines + 1);
+
+                $lines = [];
+                for ($lineNumber = $startLine; $lineNumber <= $lastLine; $lineNumber++) {
+                    $fileObject->seek($lineNumber);
+                    $lines[] = rtrim($fileObject->current(), "\r\n");
+                }
+
+                $tailContent = implode("\n", $lines);
             }
         }
 
