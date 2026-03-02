@@ -54,8 +54,10 @@ Establish a safe, testable end-to-end loop: web chat UI -> Digital Worker runtim
 
 **What Is Implemented**
 1. Digital Worker as employee: `employees` with `employee_type` and `job_description`; file-based sessions (JSONL per session + `.meta.json`) in per-Digital Worker workspace directories (see [01-stage-0 §3.2](01-stage-0-digital-worker-playground.md))
-2. Basic runtime orchestration with no high-risk tools
-3. Persistence for all user/assistant messages (append-only JSONL files with `LOCK_EX`)
+2. Per-DW LLM configuration: company-level provider credentials (`ai_providers` table, encrypted keys), per-DW model selection via workspace `config.json`, config resolution cascade (DW → company provider → global defaults). See `docs/architecture/ai-digital-worker.md` §15.
+3. Basic runtime orchestration with no high-risk tools (per-DW model-aware)
+4. Persistence for all user/assistant messages (append-only JSONL files with `LOCK_EX`)
+5. DW onboarding UI: guided setup flow for identity, LLM config, and authorization. See `docs/architecture/ai-digital-worker.md` §16.
 
 **Manual Test Script**
 1. Open playground page as a user
@@ -249,6 +251,7 @@ Convert interaction data into operational insight and measurable business value.
 4. Data model choice for message/action logs — **decided:** file-based (JSONL per session, OpenClaw pattern); see Stage 0 checklist §3.2
 5. Access controls for multi-company and supervisor/subordinate Digital Worker interactions
 6. **Memory/recall architecture:** Transcript (messages table) vs semantic memory (MemSearch-style). Decision: PHP-native, markdown source of truth, SQLite per Digital Worker for vectors. See `docs/architecture/ai-digital-worker.md` §14.
+7. **Per-DW LLM config resolution:** Provider credentials (company-level, encrypted DB) vs model selection (per-DW workspace). Config cascade must handle missing provider, inactive provider, and missing config.json gracefully. See `docs/architecture/ai-digital-worker.md` §15.
 
 ## 7. Suggested Delivery Rhythm
 

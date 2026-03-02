@@ -13,6 +13,8 @@
 2. Persisted session/message history
 3. Basic Digital Worker response runtime (no business write tools)
 4. Debug metadata visible in UI (run id, model, latency)
+5. Per-DW LLM configuration: company-level provider credentials, per-DW model selection via workspace `config.json`, config resolution cascade
+6. DW onboarding UI: guided setup for identity, LLM config, and authorization
 
 ### Out of Scope
 1. Approval workflow
@@ -46,6 +48,7 @@ Following the OpenClaw pattern: sessions and messages are stored as files in a p
 
 ```
 storage/app/workspace/{employee_id}/
+├── config.json                # Per-DW LLM configuration (provider, model, params)
 ├── sessions/
 │   ├── {uuid}.jsonl           # Append-only transcript (one JSON line per message)
 │   └── {uuid}.meta.json       # Session metadata (title, channel, timestamps)
@@ -72,7 +75,36 @@ storage/app/workspace/{employee_id}/
 {"role": "assistant", "content": "Hi there!", "timestamp": "2026-02-27T10:00:01Z", "run_id": "run_abc123", "meta": {"model": "gpt-4o-mini", "latency_ms": 850, "tokens": {"prompt": 42, "completion": 8}}}
 ```
 
-### 3.3 File Conventions
+### 3.3 Provider Credentials (Database)
+
+Company-level LLM provider credentials stored in `ai_providers` table. See `docs/architecture/ai-digital-worker.md` §15.1 for full schema.
+
+**Migration:** `app/Base/AI/Database/Migrations/` (module-aware)
+
+Key columns: `company_id`, `name` (unique per company), `display_name`, `base_url`, `api_key` (encrypted), `is_active`, `created_by`.
+
+**Model:** `App\Modules\Core\AI\Models\AiProvider` with `encrypted` cast on `api_key`.
+
+### 3.4 Per-DW Workspace Config (`config.json`)
+
+Each Digital Worker's workspace contains a `config.json` for per-DW LLM overrides:
+
+```json
+{
+    "llm": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 4096,
+        "temperature": 0.5
+    }
+}
+```
+
+- `provider` references `ai_providers.name` within the DW's company
+- Falls back to global `config('ai.llm.*')` when absent
+- See `docs/architecture/ai-digital-worker.md` §15.2–§15.3 for resolution rules
+
+### 3.5 File Conventions
 
 1. Workspace base path: `storage/app/workspace/` (configurable via `config('ai.workspace_path')`)
    - Config file: `app/Base/AI/Config/ai.php` (module-level config, registered by `AIServiceProvider`)
@@ -95,20 +127,33 @@ Module: `app/Base/AI/`
    - append user message (JSONL append)
    - append assistant message (JSONL append)
    - read ordered timeline (parse JSONL)
-3. `DigitalWorkerRuntime` (Stage 0 adapter)
-   - takes latest conversation context
+3. `ConfigResolver`
+   - reads per-DW `config.json` from workspace
+   - resolves provider credentials from `ai_providers` by `(company_id, provider_name)`
+   - merges with global defaults (`config('ai.llm.*')`) via cascade (see architecture §15.3)
+   - validates config before runtime call (missing key → clear error, not cURL timeout)
+4. `DigitalWorkerRuntime` (Stage 0 adapter)
+   - takes latest conversation context + resolved LLM config
    - calls OpenAI-compatible API via Laravel HTTP client
    - returns plain assistant text + metadata (`run_id`, `model`, `latency_ms`)
-4. Authorization policy
+5. `AiProvider` model + migration
+   - Eloquent model with `encrypted` cast on `api_key`
+   - company-scoped, supervisor-viewable (names only), admin-editable
+6. Authorization policy
    - user can only access sessions for Digital Workers they supervise (Digital Worker chained to human)
+   - `ai.provider.manage` gates provider credential CRUD
+   - `ai.digital_worker.configure_llm` gates per-DW model config changes
 
 ## 5. Frontend Deliverables (Volt/Livewire)
 
 1. Volt page component for playground shell
-2. Session list (left panel)
-3. Chat timeline (main panel)
-4. Composer submit action
-5. Debug panel (right panel, latest run metadata)
+2. DW tab bar (switch between supervised Digital Workers)
+3. Session list (left panel)
+4. Chat timeline (main panel)
+5. Composer submit action
+6. Debug panel (right panel, latest run metadata — shows which model was used)
+7. DW onboarding flow (tabbed: identity → LLM config → authorization → review)
+8. Provider management page (company admin: add/edit/disable LLM providers)
 
 Behavior requirements:
 

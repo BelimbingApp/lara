@@ -22,6 +22,7 @@ BLB needs Digital Workers to be managed as first-class employees under the same 
 5. Cost/token accounting is deferred to a future HR module.
 6. Digital Worker permissions are constrained by delegation and cannot exceed supervisor effective permissions.
 7. **Digital Worker context for execution:** OpenClaw-style workspaces (IDENTITY, SOUL, AGENTS, etc.) define “who” and “how”; BLB keeps a single `job_description` field as a short role label for now; full workspace-based context is the target when integrating an OpenClaw-like runtime.
+8. **Per-DW LLM model selection:** Each Digital Worker can use a different LLM provider and model, configured via workspace `config.json` with company-level provider credentials. This enables cost-optimized model assignment by job type (see §15).
 
 ---
 
@@ -143,6 +144,9 @@ Capabilities for Digital Worker administration should be explicit in AuthZ, for 
 3. `employee.digital_worker.assign_role`
 4. `employee.digital_worker.assign_permission`
 5. `employee.digital_worker.disable`
+6. `ai.digital_worker.configure_llm` — set or change LLM provider/model for a supervised DW (see §15)
+7. `ai.provider.manage` — add, update, disable company-level LLM provider credentials (see §15.4)
+8. `ai.provider.view` — view available providers (name, status; not raw keys)
 
 The final capability vocabulary is owned by the AuthZ module.
 
@@ -182,7 +186,7 @@ The per-Digital Worker workspace base path is configured in `app/Base/AI/Config/
 - Env override: `AI_WORKSPACE_PATH`
 - Default: `storage_path('app/workspace')` → `storage/app/workspace/`
 
-Each Digital Worker gets a subdirectory: `{workspace_path}/{employee_id}/` containing `sessions/`, and future `MEMORY.md`, `memory/`, `memory.db` (see §14).
+Each Digital Worker gets a subdirectory: `{workspace_path}/{employee_id}/` containing `config.json` (per-DW LLM config, see §15), `sessions/`, and future `MEMORY.md`, `memory/`, `memory.db` (see §14).
 
 ---
 
@@ -446,6 +450,138 @@ MemSearch includes a **compact** workflow that distills older daily logs (`memor
 
 ---
 
+## 15. Per-DW LLM Configuration
+
+Each Digital Worker can use a different LLM provider and model. This enables cost-optimized model assignment by job type: a design-focused DW might use Gemini for multimodal, a coding DW might use Claude Opus, a research DW might use GPT, and a general-purpose DW might use an open-weight model. The architecture separates **provider credentials** (company-level, sensitive) from **model selection** (per-DW, in workspace).
+
+### 15.1 Provider Credentials (Company-Level)
+
+API keys are sensitive and should not be stored in workspace files (plaintext on disk). Provider credentials are stored encrypted in the database, scoped to the company.
+
+**Table: `ai_providers`**
+
+| Column | Type | Description |
+|--------|------|-------------|
+| `id` | ULID | Primary key |
+| `company_id` | FK | Owning company |
+| `name` | string | Unique key within company (e.g. `openai`, `anthropic`, `google`, `ollama-local`) |
+| `display_name` | string | Human-readable label (e.g. "OpenAI GPT", "Local Ollama") |
+| `base_url` | string | API endpoint (e.g. `https://api.openai.com/v1`) |
+| `api_key` | encrypted | Provider API key (Laravel encrypted cast) |
+| `is_active` | boolean | Whether available for DW assignment |
+| `created_by` | FK (employee) | Who configured this provider |
+| `timestamps` | | |
+
+**Design rationale:**
+- Company-level scoping: the company pays for API access; all DWs in that company share the pool of configured providers.
+- A company can have multiple providers (OpenAI for general, Anthropic for coding, a self-hosted Ollama for cost-sensitive tasks).
+- Keys are encrypted at rest via Laravel's `encrypted` cast — never stored in workspace files or config.
+- The `name` column is a stable reference key used in DW workspace `config.json`.
+
+### 15.2 Per-DW Model Selection (Workspace Config)
+
+Each Digital Worker's workspace contains a `config.json` that specifies which provider and model to use. This file is part of the workspace, not the database.
+
+**Workspace layout (updated):**
+
+```
+workspace/{employee_id}/
+├── config.json                # DW-specific runtime configuration
+├── sessions/
+│   ├── {uuid}.jsonl
+│   └── {uuid}.meta.json
+├── MEMORY.md                  # (future)
+├── memory/                    # (future)
+└── memory.db                  # (future)
+```
+
+**`config.json` structure:**
+
+```json
+{
+    "llm": {
+        "provider": "anthropic",
+        "model": "claude-sonnet-4-20250514",
+        "max_tokens": 4096,
+        "temperature": 0.5
+    }
+}
+```
+
+- `provider`: references `ai_providers.name` within the DW's company. If the provider is not found or inactive, the runtime falls back to the global default.
+- `model`: the specific model within that provider.
+- `max_tokens`, `temperature`: optional per-DW overrides; fall back to global `config('ai.llm.*')` defaults.
+
+### 15.3 Config Resolution Order
+
+The runtime resolves LLM configuration with a cascade:
+
+1. **DW workspace `config.json`** — per-DW overrides (provider, model, temperature, max_tokens)
+2. **Company provider credentials** — `ai_providers` row matching the provider name + company_id (supplies `base_url` and `api_key`)
+3. **Global defaults** — `config('ai.llm.*')` from `app/Base/AI/Config/ai.php` / `.env` (fallback when no workspace config or provider exists)
+
+**Resolution rules:**
+- If `config.json` specifies a provider → look up `ai_providers` by `(company_id, name)` → use that row's `base_url` and `api_key`, merged with per-DW model/params.
+- If `config.json` has no provider or the provider is not found → fall back to global `config('ai.llm.*')`.
+- If `config.json` does not exist → use global defaults entirely (backward-compatible with Stage 0 initial implementation).
+
+### 15.4 Authorization for Provider Management
+
+| Capability | Who | Purpose |
+|------------|-----|---------|
+| `ai.provider.manage` | Company admin | Add, update, disable LLM provider credentials |
+| `ai.provider.view` | DW supervisors | See available providers (but not raw API keys) when configuring DWs |
+
+Provider management is a company-level operation, separate from DW onboarding. Only users with `ai.provider.manage` can create or edit provider entries. DW supervisors can see the list of available providers (name, display_name, is_active) but never the raw API key.
+
+---
+
+## 16. Digital Worker Onboarding
+
+### 16.1 Onboarding Flow
+
+Setting up a Digital Worker is a multi-step process that spans the employee module and AI module. The onboarding UI provides a guided flow (tabbed or wizard-style) within the existing employee management surface.
+
+**Steps:**
+
+1. **Identity** — Create employee with `employee_type = 'digital_worker'`. Set name, job description, supervisor (defaults to current user). Employee module handles this.
+2. **LLM Configuration** — Select provider from the company's available providers, pick model, optionally override temperature/max_tokens. Writes `config.json` to the DW workspace.
+3. **Authorization** — Assign roles and capabilities. Scoped by what the supervisor has (existing AuthZ Stage D constraint: supervisor can only assign what they have).
+4. **Review & Activate** — Summary of the DW setup. Set status to active. DW appears in supervisor's playground.
+
+### 16.2 Authorization for Onboarding
+
+| Capability | Who | Purpose |
+|------------|-----|---------|
+| `employee.digital_worker.create` | Supervisor | Create a new DW employee record |
+| `employee.digital_worker.update` | Supervisor | Edit DW identity, job description |
+| `ai.digital_worker.configure_llm` | Supervisor | Set or change LLM provider/model for a DW they supervise |
+| `employee.digital_worker.assign_role` | Supervisor | Assign roles (existing AuthZ, supervisor-scoped) |
+| `employee.digital_worker.assign_permission` | Supervisor | Grant capabilities (existing AuthZ, supervisor-scoped) |
+| `employee.digital_worker.disable` | Supervisor | Deactivate a DW |
+
+**Constraints:**
+- A supervisor can only onboard DWs under their own supervision (not other users' DWs).
+- Roles/capabilities assigned to the DW must be a subset of the supervisor's effective permissions (existing AuthZ Stage D invariant).
+- LLM provider must be active and belong to the same company.
+- The onboarding flow reuses existing employee creation and AuthZ assignment UIs — it is a guided orchestration, not a separate product surface.
+
+### 16.3 Separation of Concerns
+
+| Concern | Owner | Scope |
+|---------|-------|-------|
+| Provider credentials (API keys, base URLs) | Company admin (`ai.provider.manage`) | Company-wide |
+| DW identity (name, job, supervisor) | Employee module (`employee.digital_worker.*`) | Per-DW |
+| DW model selection (provider, model, params) | AI module (`ai.digital_worker.configure_llm`) | Per-DW workspace |
+| Roles and permissions | AuthZ module (`employee.digital_worker.assign_role/permission`) | Per-DW |
+
+This separation means:
+- **Company admin** sets up which LLM providers are available (one-time or occasional).
+- **DW supervisor** picks from pre-approved providers when onboarding a DW — they don't need to know API keys.
+- **Cost control** is natural: the company admin controls which providers (and thus cost tiers) are available; the supervisor picks the best fit for the DW's job.
+
+---
+
 ## Revision History
 
 | Version | Date | Author | Changes |
@@ -454,3 +590,4 @@ MemSearch includes a **compact** workflow that distills older daily logs (`memor
 | 0.2 | 2026-02-26 | AI + Kiat | Added §14 Memory and Recall: transcript vs memory, MemSearch pattern, PHP-native direction, SQLite per DW |
 | 0.3 | 2026-02-27 | AI + Kiat | Renamed §3.3 operations to Digital Worker; added §14.4 hybrid search strategy (vector 70% + BM25 30%); added §14.5 compaction workflow |
 | 0.4 | 2026-02-27 | AI + Kiat | Added §8 Implementation Dependencies, §9 Workspace Configuration; renumbered §8–12 → §10–14 |
+| 0.5 | 2026-02-28 | AI + Kiat | Added §15 Per-DW LLM Configuration (provider credentials, workspace config.json, config resolution); §16 Digital Worker Onboarding (flow, authorization, separation of concerns) |
