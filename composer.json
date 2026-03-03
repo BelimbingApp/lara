@@ -13,8 +13,8 @@
     "license": "AGPL-3.0-only",
     "require": {
         "php": "^8.2",
-        "laravel/framework": "^12.52.0",
-        "laravel/reverb": "^1.7.1",
+        "laravel/framework": "^12.53.0",
+        "laravel/reverb": "^1.8.0",
         "laravel/tinker": "^2.11.2",
         "livewire/volt": "^1.10.2"
     },
