@@ -746,8 +746,8 @@ new class extends Component
                         wire:click="proceedToConnect"
                         :disabled="count($selectedTemplates) === 0"
                     >
-                        <x-icon name="heroicon-o-arrow-right" class="w-4 h-4" />
-                        {{ trans_choice('Connect :count Provider|Connect :count Providers', count($selectedTemplates), ['count' => count($selectedTemplates)]) }}
+                        <x-icon name="heroicon-o-sparkles" class="w-4 h-4" />
+                        {{ count($selectedTemplates) === 0 ? __('Connect Providers') : __('Connect Providers (:count)', ['count' => count($selectedTemplates)]) }}
                     </x-ui.button>
                 </x-slot>
             </x-ui.page-header>
@@ -779,7 +779,7 @@ new class extends Component
                                         @else
                                             <input
                                                 type="checkbox"
-                                                class="w-4 h-4 rounded border border-border-input bg-surface-card text-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
+                                                class="w-4 h-4 rounded border border-border-input bg-surface-card accent-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
                                                 @checked(in_array($entry['key'], $selectedTemplates, true))
                                                 wire:click="toggleSelectTemplate('{{ $entry['key'] }}')"
                                             />
