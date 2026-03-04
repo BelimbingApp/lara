@@ -627,19 +627,24 @@ new class extends Component
     }
 
     /**
-     * Reorder providers by dragging: assign sequential priorities from the given ID order.
-     *
-     * @param  array<int, int>  $orderedIds
+     * Move a provider up one position in priority (lower number = higher priority).
      */
-    public function reorderProviders(array $orderedIds): void
+    public function movePriorityUp(int $providerId): void
     {
-        $companyId = auth()->user()->employee?->company_id;
+        $provider = AiProvider::query()->find($providerId);
 
-        if (! $companyId) {
+        if (! $provider || $provider->priority <= 1) {
             return;
         }
 
-        AiProvider::reorderByIds($companyId, $orderedIds);
+        $above = AiProvider::query()
+            ->where('company_id', $provider->company_id)
+            ->where('priority', $provider->priority - 1)
+            ->first();
+
+        if ($above) {
+            $provider->swapPriority($above);
+        }
     }
 
     /**
@@ -1696,63 +1701,22 @@ new class extends Component
                                 <th class="hidden md:table-cell px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Base URL') }}</th>
                                 <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Models') }}</th>
                                 <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Status') }}</th>
+                                <th class="px-table-cell-x py-table-header-y text-center text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Priority') }}</th>
                                 <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Actions') }}</th>
                             </tr>
                         </thead>
-                        <tbody
-                            x-data="{
-                                dragId: null,
-                                overId: null,
-                                overPos: null,
-                                start(id, event) {
-                                    if (!event.target.closest('.drag-handle')) { event.preventDefault(); return; }
-                                    this.dragId = id;
-                                    event.dataTransfer.effectAllowed = 'move';
-                                },
-                                over(id, event) {
-                                    if (!this.dragId) return;
-                                    event.preventDefault();
-                                    this.overId = id;
-                                    const rect = event.currentTarget.getBoundingClientRect();
-                                    this.overPos = event.clientY < rect.top + rect.height / 2 ? 'before' : 'after';
-                                },
-                                drop(id, event) {
-                                    event.preventDefault();
-                                    if (!this.dragId || this.dragId === id) { this.reset(); return; }
-                                    const rows = [...$el.querySelectorAll('[data-pid]')];
-                                    let ids = rows.map(r => +r.dataset.pid);
-                                    ids.splice(ids.indexOf(this.dragId), 1);
-                                    let to = ids.indexOf(id);
-                                    if (this.overPos === 'after') to++;
-                                    ids.splice(to, 0, this.dragId);
-                                    $wire.reorderProviders(ids);
-                                    this.reset();
-                                },
-                                end() { this.reset(); },
-                                reset() { this.dragId = null; this.overId = null; this.overPos = null; }
-                            }"
-                            @dragover.prevent
-                            class="bg-surface-card divide-y divide-border-default"
-                        >
+                        <tbody class="bg-surface-card divide-y divide-border-default">
                             @forelse($providers as $provider)
                                 <tr
-                                    data-pid="{{ $provider->id }}"
                                     wire:key="provider-{{ $provider->id }}"
-                                    draggable="true"
-                                    @dragstart="start({{ $provider->id }}, $event)"
-                                    @dragover="over({{ $provider->id }}, $event)"
-                                    @drop="drop({{ $provider->id }}, $event)"
-                                    @dragend="end()"
                                     wire:click="toggleProvider({{ $provider->id }})"
-                                    :class="{
-                                        'opacity-40': dragId === {{ $provider->id }},
-                                        'border-t-2 border-accent': overId === {{ $provider->id }} && overPos === 'before',
-                                        'border-b-2 border-accent': overId === {{ $provider->id }} && overPos === 'after',
-                                    }"
                                     class="hover:bg-surface-subtle/50 transition-colors cursor-pointer"
                                 >
-                                    <td class="drag-handle w-8 px-table-cell-x py-table-cell-y cursor-grab active:cursor-grabbing select-none" @click.stop>
-                                        <x-icon name="heroicon-o-bars-3" class="w-4 h-4 text-muted" />
+                                    <td class="px-table-cell-x py-table-cell-y">
+                                        <x-icon
+                                            :name="$expandedProviderId === $provider->id ? 'heroicon-m-chevron-down' : 'heroicon-m-chevron-right'"
+                                            class="w-4 h-4 text-muted"
+                                        />
                                     </td>
                                     <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
                                         <div class="flex items-center gap-1">
@@ -1772,6 +1736,20 @@ new class extends Component
                                                 <x-ui.badge variant="success">{{ __('Active') }}</x-ui.badge>
                                             @else
                                                 <x-ui.badge variant="default">{{ __('Inactive') }}</x-ui.badge>
+                                            @endif
+                                        </div>
+                                    </td>
+                                    <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-center" @click.stop>
+                                        <div class="inline-flex items-center gap-1">
+                                            <span class="text-xs text-muted tabular-nums">{{ $provider->priority }}</span>
+                                            @if($provider->priority > 1)
+                                                <button
+                                                    wire:click="movePriorityUp({{ $provider->id }})"
+                                                    class="text-muted hover:text-ink hover:bg-surface-subtle p-0.5 rounded transition-colors"
+                                                    title="{{ __('Move up') }}"
+                                                >
+                                                    <x-icon name="heroicon-m-chevron-up" class="w-3.5 h-3.5" />
+                                                </button>
                                             @endif
                                         </div>
                                     </td>
@@ -1799,7 +1777,7 @@ new class extends Component
                                 @if($helpProviderKey === $provider->name)
                                     @php $help = $this->activeProviderHelp(); @endphp
                                     <tr wire:key="provider-{{ $provider->id }}-help">
-                                        <td colspan="7" class="px-4 pb-3 pt-0">
+                                        <td colspan="8" class="px-4 pb-3 pt-0">
                                             <div
                                                 x-data
                                                 x-init="$el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })"
@@ -1865,7 +1843,7 @@ new class extends Component
                                 {{-- Expanded models sub-table --}}
                                 @if($expandedProviderId === $provider->id)
                                     <tr wire:key="provider-{{ $provider->id }}-models">
-                                        <td colspan="7" class="p-0">
+                                        <td colspan="8" class="p-0">
                                             <div class="bg-surface-subtle/30 border-t border-border-default px-8 py-3">
                                                <div class="flex items-center justify-between mb-2">
                                                     <span class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Models') }}</span>
@@ -1987,7 +1965,7 @@ new class extends Component
                                 @endif
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-table-cell-x py-8 text-center">
+                                    <td colspan="8" class="px-table-cell-x py-8 text-center">
                                         <div class="space-y-2">
                                             <p class="text-sm text-muted">{{ __('No providers connected yet.') }}</p>
                                             <x-ui.button variant="primary" wire:click="openCatalog">

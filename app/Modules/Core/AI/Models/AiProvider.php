@@ -157,20 +157,16 @@ class AiProvider extends Model
     }
 
     /**
-     * Reorder providers for a company by assigning sequential priorities from an ordered ID list.
+     * Swap priority with another provider.
      *
-     * Providers not included in the list retain their existing priority values.
-     *
-     * @param  int  $companyId
-     * @param  array<int, int>  $orderedIds  Provider IDs in desired priority order (first = highest priority)
+     * @param  self  $other  The provider to swap priorities with
      */
-    public static function reorderByIds(int $companyId, array $orderedIds): void
+    public function swapPriority(self $other): void
     {
-        foreach ($orderedIds as $position => $id) {
-            self::query()
-                ->where('id', $id)
-                ->where('company_id', $companyId)
-                ->update(['priority' => $position + 1]);
-        }
+        $thisPriority = $this->priority;
+        $otherPriority = $other->priority;
+
+        $this->update(['priority' => $otherPriority]);
+        $other->update(['priority' => $thisPriority]);
     }
 }
