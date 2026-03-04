@@ -24,10 +24,12 @@ app/Modules/Core/Geonames/
 │   └── PostcodeImportProgress.php
 ├── Jobs/
 │   └── ImportPostcodes.php
-└── Models/
-    ├── Country.php
-    ├── Admin1.php
-    └── Postcode.php
+├── Models/
+│   ├── Country.php
+│   ├── Admin1.php
+│   └── Postcode.php
+└── Services/
+    └── GeonamesDownloader.php
 ```
 
 ---
@@ -56,9 +58,10 @@ Three pages under `/admin/geonames/`:
 
 ## 4. Seeders
 
--   All seeders cache downloaded files for 7 days in `storage/download/geonames/`.
+-   **Download strategy:** `GeonamesDownloader` (in `Services/`) performs all fetches. When the server sends an `ETag` header, the next run sends `If-None-Match`; a 304 response skips re-download. When no ETag is available, cached files are reused if younger than 7 days (TTL). ETags are stored in sidecar files (e.g. `countryInfo.txt.etag`).
+-   All seeders cache downloaded files in `storage/download/geonames/`.
 -   **CountrySeeder / Admin1Seeder:** Upsert strategy — preserves user-edited `name` fields.
--   **PostcodeSeeder:** Delete + re-insert per country (transactional). Broadcasts progress events.
+-   **PostcodeSeeder:** Delete + re-insert per country (transactional). Keeps the `.zip` file so ETag can be used on the next run; the extracted `.txt` is used when the zip is unchanged. Broadcasts progress events.
 -   Can be run via CLI:
     ```bash
     php artisan db:seed --class=CountrySeeder
@@ -68,11 +71,16 @@ Three pages under `/admin/geonames/`:
 
 ## 5. Postcode Import Flow
 
-1.  User selects countries → Livewire dispatches `ImportPostcodes` queued job.
-2.  Job runs `PostcodeSeeder` which downloads, parses, and imports per country.
-3.  Each step broadcasts `PostcodeImportProgress` event via Reverb.
-4.  Frontend listens via Echo/Alpine.js, shows progress bar.
-5.  On completion, UI auto-refreshes the table.
+1.  User selects countries → Livewire dispatches `ImportPostcodes` job to the queue (`dispatch()`).
+2.  Livewire starts a one-off queue worker in the background (`queue:work --once`) so the job is processed without requiring a long-running worker.
+3.  The worker runs the job when it reaches the front of the queue; the job runs `PostcodeSeeder`, which downloads, parses, and imports per country.
+4.  Each step broadcasts `PostcodeImportProgress` event via Reverb.
+5.  Frontend listens via Echo/Alpine.js, shows progress bar.
+6.  On completion, UI auto-refreshes the table.
+
+**Progress UI:** As soon as you click Import or Update, a generic “Importing… This may take several minutes.” message is shown (no WebSocket required). For **live per-country progress** (e.g. “Downloading US.zip… 1 / 3 countries”), Reverb must be running, `BROADCAST_CONNECTION=reverb` and `VITE_REVERB_APP_KEY` must be set, and the Reverb server must be started (e.g. `bun run dev:all` or `php artisan reverb:start`). See `docs/architecture/broadcasting.md`.
+
+**Queue worker:** The UI starts a one-off worker in the background after each dispatch (`queue:work --once`), so the job runs without a long-running worker. Jobs stay in the queue only if that background process cannot run (e.g. disabled or failed).
 
 ---
 

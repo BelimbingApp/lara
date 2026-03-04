@@ -199,7 +199,20 @@ new class extends Component
             </x-ui.card>
         @endif
 
-        {{-- Progress --}}
+        {{-- Fallback: show as soon as Import/Update is clicked (no Echo required) --}}
+        <div
+            wire:loading.flex
+            wire:target="import,update"
+            class="flex items-center gap-3 p-4 bg-status-info-subtle border border-status-info-border rounded-2xl text-status-info"
+        >
+            <x-icon name="heroicon-o-arrow-path" class="w-5 h-5 shrink-0 animate-spin" />
+            <div class="flex-1">
+                <div class="text-sm font-medium">{{ __('Importing...') }}</div>
+                <p class="text-xs mt-1 opacity-75">{{ __('This may take several minutes. Do not close this page.') }}</p>
+            </div>
+        </div>
+
+        {{-- Live progress via WebSocket (when Reverb + Echo are configured) --}}
         <div
             x-data="{
                 progress: null,
@@ -207,8 +220,8 @@ new class extends Component
                     if (window.Echo) {
                         window.Echo.channel('postcode-import')
                             .listen('.App\\Modules\\Core\\Geonames\\Events\\PostcodeImportProgress', (e) => {
-                                this.progress = e
-                                if (e.status === 'completed' && e.current === e.total) {
+                                this.progress = e && (e.status !== undefined ? e : e.payload || e)
+                                if (this.progress && this.progress.status === 'completed' && this.progress.current === this.progress.total) {
                                     setTimeout(() => {
                                         this.progress = null
                                         $wire.$refresh()

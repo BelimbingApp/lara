@@ -5,10 +5,10 @@
 
 namespace App\Modules\Core\Geonames\Database\Seeders;
 
+use App\Modules\Core\Geonames\Services\GeonamesDownloader;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
 
 class Admin1Seeder extends Seeder
 {
@@ -52,8 +52,8 @@ class Admin1Seeder extends Seeder
     /**
      * Download the admin1 codes file from geonames.org.
      *
-     * Uses a cached copy when available, and re-downloads when the file is missing
-     * or older than 7 days.
+     * Uses ETag when the server provides it (conditional GET); otherwise uses
+     * a cached copy when the file is less than 7 days old.
      */
     protected function downloadFile(): ?string
     {
@@ -65,23 +65,19 @@ class Admin1Seeder extends Seeder
             File::makeDirectory($downloadPath, 0755, true);
         }
 
-        if (
-            ! File::exists($filePath)
-            || File::lastModified($filePath) < now()->subDays(7)->timestamp
-        ) {
-            $this->command?->info('Downloading admin1CodesASCII.txt...');
-            $response = Http::timeout(300)->get($url);
+        $downloader = app(GeonamesDownloader::class);
+        $result = $downloader->download($url, $filePath);
 
-            if (! $response->successful()) {
-                $this->command?->error('Failed to download file: '.$response->status());
+        if (! $result['success']) {
+            $this->command?->error('Failed to download file: '.($result['status'] ?? 'unknown'));
 
-                return null;
-            }
+            return null;
+        }
 
-            File::put($filePath, $response->body());
-            $this->command?->info('Downloaded successfully.');
-        } else {
+        if ($result['cached']) {
             $this->command?->info('Using cached admin1CodesASCII.txt file.');
+        } else {
+            $this->command?->info('Downloaded successfully.');
         }
 
         return $filePath;

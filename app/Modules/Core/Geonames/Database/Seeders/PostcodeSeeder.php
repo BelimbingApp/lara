@@ -6,10 +6,10 @@
 namespace App\Modules\Core\Geonames\Database\Seeders;
 
 use App\Modules\Core\Geonames\Events\PostcodeImportProgress;
+use App\Modules\Core\Geonames\Services\GeonamesDownloader;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\Http;
 use ZipArchive;
 
 class PostcodeSeeder extends Seeder
@@ -142,8 +142,9 @@ class PostcodeSeeder extends Seeder
     /**
      * Download and extract the postcode zip file for a country.
      *
-     * Uses a cached copy when the extracted txt file exists and is less than
-     * 7 days old. Returns the path to the extracted txt file, or null on failure.
+     * Uses ETag when the server provides it (conditional GET); otherwise uses
+     * a cached copy when the extracted txt is less than 7 days old. Keeps the
+     * zip file so that ETag can be used on the next run.
      *
      * @param  string  $iso  Country ISO code
      */
@@ -157,37 +158,35 @@ class PostcodeSeeder extends Seeder
             File::makeDirectory($downloadPath, 0755, true);
         }
 
-        if (
-            File::exists($txtPath)
-            && File::lastModified($txtPath) >= now()->subDays(7)->timestamp
-        ) {
+        $url = 'https://download.geonames.org/export/zip/'.$iso.'.zip';
+        $downloader = app(GeonamesDownloader::class);
+        $result = $downloader->download($url, $zipPath);
+
+        if (! $result['success']) {
+            $this->command?->error("Failed to download {$iso}.zip: ".($result['status'] ?? 'unknown'));
+
+            return null;
+        }
+
+        if ($result['cached'] && File::exists($txtPath)) {
             $this->command?->info("Using cached {$iso}.txt file.");
 
             return $txtPath;
         }
 
-        $url = 'https://download.geonames.org/export/zip/'.$iso.'.zip';
-        $this->command?->info("Downloading {$iso}.zip...");
-
-        $response = Http::timeout(300)->get($url);
-
-        if (! $response->successful()) {
-            $this->command?->error("Failed to download {$iso}.zip: ".$response->status());
-
-            return null;
+        if ($result['cached']) {
+            $this->command?->info("Using cached {$iso}.zip, extracting...");
+        } else {
+            $this->command?->info("Downloaded {$iso}.zip successfully.");
         }
 
-        File::put($zipPath, $response->body());
-
         $extracted = $this->extractZip($zipPath, $downloadPath, $iso);
-
-        File::delete($zipPath);
 
         if (! $extracted) {
             return null;
         }
 
-        $this->command?->info("Downloaded and extracted {$iso}.txt successfully.");
+        $this->command?->info("Extracted {$iso}.txt successfully.");
 
         return $txtPath;
     }
