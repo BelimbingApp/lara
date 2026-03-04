@@ -1164,7 +1164,7 @@ new class extends Component
                             @click="categoryOpen = !categoryOpen"
                             class="inline-flex items-center gap-1.5 px-3 py-input-y text-sm border border-border-input rounded-2xl bg-surface-card text-ink hover:bg-surface-subtle/50 transition-colors whitespace-nowrap"
                         >
-                            <x-icon name="heroicon-m-funnel" class="w-4 h-4 text-muted" />
+                            <x-icon name="heroicon-o-funnel" class="w-4 h-4 text-muted" />
                             {{ __('Category') }}
                             <template x-if="selectedCategories.length > 0">
                                 <span class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-accent text-on-accent" x-text="selectedCategories.length"></span>
@@ -1202,7 +1202,7 @@ new class extends Component
                             @click="regionOpen = !regionOpen"
                             class="inline-flex items-center gap-1.5 px-3 py-input-y text-sm border border-border-input rounded-2xl bg-surface-card text-ink hover:bg-surface-subtle/50 transition-colors whitespace-nowrap"
                         >
-                            <x-icon name="heroicon-m-globe-alt" class="w-4 h-4 text-muted" />
+                            <x-icon name="heroicon-o-globe-alt" class="w-4 h-4 text-muted" />
                             {{ __('Region') }}
                             <template x-if="selectedRegions.length > 0">
                                 <span class="inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold rounded-full bg-accent text-on-accent" x-text="selectedRegions.length"></span>
@@ -1276,13 +1276,10 @@ new class extends Component
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
                                         <div class="flex items-center gap-1">
                                             <span>{{ $entry['display_name'] }}</span>
-                                            <button
+                                            <x-ui.help
                                                 wire:click.stop="openProviderHelp('{{ $entry['key'] }}', '{{ $entry['auth_type'] ?? 'api_key' }}')"
-                                                class="text-accent hover:text-accent/80 p-0.5 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
                                                 title="{{ __('Setup & troubleshooting') }}"
-                                            >
-                                                <x-icon name="heroicon-o-question-mark-circle" class="w-4 h-4" />
-                                            </button>
+                                            />
                                         </div>
                                     </td>
                                     <td class="hidden md:table-cell px-table-cell-x py-table-cell-y text-sm text-muted">{{ $entry['description'] }}</td>
@@ -1727,7 +1724,15 @@ new class extends Component
                                             class="w-4 h-4 text-muted"
                                         />
                                     </td>
-                                    <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">{{ $provider->name }}</td>
+                                    <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
+                                        <div class="flex items-center gap-1">
+                                            <span>{{ $provider->name }}</span>
+                                            <x-ui.help
+                                                wire:click.stop="openProviderHelp('{{ $provider->name }}', '{{ $provider->auth_type ?? 'api_key' }}')"
+                                                title="{{ __('Setup & troubleshooting') }}"
+                                            />
+                                        </div>
+                                    </td>
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $provider->display_name }}</td>
                                     <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted font-mono text-xs truncate max-w-[200px]">{{ $provider->base_url }}</td>
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $provider->models_count }}</td>
@@ -1745,13 +1750,6 @@ new class extends Component
                                     </td>
                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                         <div class="flex items-center justify-end gap-1">
-                                            <button
-                                                wire:click.stop="openProviderHelp('{{ $provider->name }}', '{{ $provider->auth_type ?? 'api_key' }}')"
-                                                class="text-accent hover:text-accent/80 hover:bg-accent/5 p-1 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                                                title="{{ __('Setup & troubleshooting') }}"
-                                            >
-                                                <x-icon name="heroicon-o-question-mark-circle" class="w-4.5 h-4.5" />
-                                            </button>
                                             @if($provider->priority > 0)
                                                 <button
                                                     wire:click.stop="deprioritizeProvider({{ $provider->id }})"
