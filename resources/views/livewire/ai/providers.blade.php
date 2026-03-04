@@ -838,6 +838,8 @@ new class extends Component
             $model = AiProviderModel::query()->find($this->editingModelId);
 
             if ($model) {
+                // Model ID is immutable after creation
+                unset($data['model_id']);
                 $model->update($data);
             }
         } else {
@@ -1646,7 +1648,7 @@ new class extends Component
         {{-- MANAGEMENT VIEW (existing providers)       --}}
         {{-- ========================================== --}}
         <div class="space-y-section-gap">
-            <x-ui.page-header :title="__('LLM Providers')" :subtitle="__('Manage AI providers and their models')">
+            <x-ui.page-header :title="__('LLM Providers')" :subtitle="__('Manage AI providers, their models, and priority order. Higher-priority providers are tried first.')">
                 <x-slot name="help">
                     <div class="space-y-3">
                         <p>{{ __('This page shows the LLM providers and models your organization has connected. Digital Workers use these models to think, reason, and respond — at least one active provider with one active model is required.') }}</p>
@@ -1658,7 +1660,25 @@ new class extends Component
                                 <li>{{ __('"Browse Providers" opens the catalog to connect additional providers.') }}</li>
                                 <li>{{ __('"Manual Add" lets you enter a custom provider not in the catalog (e.g. a private deployment).') }}</li>
                                 <li>{{ __('Use "Update Models" to fetch the latest model list from the provider\'s API.') }}</li>
-                                <li>{{ __('Click the star icon to set a default provider or model — used as the fallback for unconfigured Digital Workers.') }}</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p class="font-medium text-ink">{{ __('Priority') }}</p>
+                            <ul class="list-disc list-inside space-y-1 text-muted mt-1">
+                                <li>{{ __('The Priority column shows the order in which providers are tried when a Digital Worker needs a model.') }}</li>
+                                <li>{{ __('Lower numbers mean higher priority — provider #1 is tried first.') }}</li>
+                                <li>{{ __('Click the ↑ arrow to move a provider up one position.') }}</li>
+                                <li>{{ __('If the top-priority provider fails or is unavailable, the system automatically falls back to the next one.') }}</li>
+                            </ul>
+                        </div>
+
+                        <div>
+                            <p class="font-medium text-ink">{{ __('Default model') }}</p>
+                            <ul class="list-disc list-inside space-y-1 text-muted mt-1">
+                                <li>{{ __('Each provider can have one default model, marked with a ★ star icon.') }}</li>
+                                <li>{{ __('The default model is used as the fallback when a Digital Worker does not specify a particular model.') }}</li>
+                                <li>{{ __('Click the star icon next to any model to set or unset it as the default.') }}</li>
                             </ul>
                         </div>
 
@@ -2090,6 +2110,7 @@ new class extends Component
                     label="{{ __('Model ID') }}"
                     required
                     placeholder="{{ __('e.g. gpt-4o') }}"
+                    :disabled="$isEditingModel"
                     :error="$errors->first('modelModelName')"
                 />
 
