@@ -648,9 +648,9 @@ new class extends Component
     }
 
     /**
-     * Toggle default status for a model.
+     * Set a model as the default for its provider.
      */
-    public function toggleDefaultModel(int $modelId): void
+    public function setDefaultModel(int $modelId): void
     {
         $model = AiProviderModel::query()->find($modelId);
 
@@ -658,11 +658,7 @@ new class extends Component
             return;
         }
 
-        if ($model->is_default) {
-            $model->unsetDefault();
-        } else {
-            $model->setAsDefault();
-        }
+        $model->setAsDefault();
     }
 
     public function openEditProvider(int $providerId): void
@@ -1678,7 +1674,7 @@ new class extends Component
                             <ul class="list-disc list-inside space-y-1 text-muted mt-1">
                                 <li>{{ __('Each provider can have one default model, marked with a ★ star icon.') }}</li>
                                 <li>{{ __('The default model is used as the fallback when a Digital Worker does not specify a particular model.') }}</li>
-                                <li>{{ __('Click the star icon next to any model to set or unset it as the default.') }}</li>
+                                <li>{{ __('Click the ☆ next to a model to set it as the default. The current default is marked with ★.') }}</li>
                             </ul>
                         </div>
 
@@ -1941,14 +1937,16 @@ new class extends Component
                                                             @foreach($expandedModels as $model)
                                                                 <tr wire:key="model-{{ $model->id }}" class="hover:bg-surface-subtle/50 transition-colors">
                                                                     <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink font-mono">
-                                                                        <div class="flex items-center gap-1">
-                                                                            <button
-                                                                                wire:click="toggleDefaultModel({{ $model->id }})"
-                                                                                class="{{ $model->is_default ? 'text-accent' : 'text-muted hover:text-accent' }} p-0.5 rounded transition-colors"
-                                                                                title="{{ $model->is_default ? __('Unset default') : __('Set as default') }}"
-                                                                            >
-                                                                                <x-icon :name="$model->is_default ? 'heroicon-s-star' : 'heroicon-o-star'" class="w-3.5 h-3.5" />
-                                                                            </button>
+                                                                        <div class="flex items-center gap-1.5">
+                                                                            @if($model->is_default)
+                                                                                <span class="text-accent" title="{{ __('Default model') }}">★</span>
+                                                                            @else
+                                                                                <button
+                                                                                    wire:click="setDefaultModel({{ $model->id }})"
+                                                                                    class="text-muted hover:text-accent transition-colors"
+                                                                                    title="{{ __('Set as default') }}"
+                                                                                >☆</button>
+                                                                            @endif
                                                                             <span>{{ $model->model_id }}</span>
                                                                         </div>
                                                                     </td>
