@@ -1,0 +1,1058 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+use App\Base\AI\Providers\Help\ProviderHelpRegistry;
+use App\Base\AI\Services\ModelCatalogService;
+use App\Modules\Core\AI\Models\AiProvider;
+use App\Modules\Core\AI\Models\AiProviderModel;
+use App\Modules\Core\AI\Services\ModelDiscoveryService;
+use Livewire\Attributes\On;
+use Livewire\Volt\Component;
+
+new class extends Component
+{
+    public string $search = '';
+
+    public ?int $expandedProviderId = null;
+
+    // --- Provider form (manual CRUD) ---
+
+    public bool $showProviderForm = false;
+
+    public bool $isEditingProvider = false;
+
+    public ?int $editingProviderId = null;
+
+    public string $providerName = '';
+
+    public string $providerDisplayName = '';
+
+    public string $providerBaseUrl = '';
+
+    public string $providerApiKey = '';
+
+    public bool $providerIsActive = true;
+
+    public string $selectedTemplate = '';
+
+    // Provider delete
+    public bool $showDeleteProvider = false;
+
+    public ?int $deletingProviderId = null;
+
+    public string $deletingProviderName = '';
+
+    // Model form
+    public bool $showModelForm = false;
+
+    public bool $isEditingModel = false;
+
+    public ?int $editingModelId = null;
+
+    public ?int $modelProviderId = null;
+
+    public string $modelModelName = '';
+
+    public bool $modelIsActive = true;
+
+    public string $modelCostInput = '0.000000';
+
+    public string $modelCostOutput = '0.000000';
+
+    public string $modelCostCacheRead = '0.000000';
+
+    public string $modelCostCacheWrite = '0.000000';
+
+    // Sync result flash
+    public ?string $syncMessage = null;
+
+    /** Persistent sync error (connection failures — not auto-dismissed) */
+    public ?string $syncError = null;
+
+    /** Provider ID the current syncError belongs to */
+    public ?int $syncErrorProviderId = null;
+
+    // Help modal
+    public ?string $helpProviderKey = null;
+
+    public ?string $helpProviderAuthType = null;
+
+    // Model delete
+    public bool $showDeleteModel = false;
+
+    public ?int $deletingModelId = null;
+
+    public string $deletingModelName = '';
+
+    /**
+     * Re-render after wizard completes to show newly connected providers.
+     */
+    #[On('wizard-completed')]
+    public function onWizardCompleted(): void
+    {
+        // Triggers re-render
+    }
+
+    public function toggleProvider(int $providerId): void
+    {
+        $this->expandedProviderId = $this->expandedProviderId === $providerId ? null : $providerId;
+    }
+
+    /**
+     * Navigate to the provider catalog (dispatches to parent orchestrator).
+     */
+    public function openCatalog(): void
+    {
+        $this->dispatch('wizard-open-catalog');
+    }
+
+    // --- Provider CRUD ---
+
+    public function openCreateProvider(): void
+    {
+        $this->resetProviderForm();
+        $this->isEditingProvider = false;
+        $this->showProviderForm = true;
+    }
+
+    /**
+     * Apply a provider template, pre-filling form fields from config.
+     */
+    public function applyTemplate(string $templateKey): void
+    {
+        $this->selectedTemplate = $templateKey;
+
+        if ($templateKey === '') {
+            return;
+        }
+
+        $template = app(ModelCatalogService::class)->getProvider($templateKey);
+
+        if ($template === null) {
+            return;
+        }
+
+        $this->providerName = $templateKey;
+        $this->providerDisplayName = $template['display_name'] ?? '';
+        $this->providerBaseUrl = $template['base_url'] ?? '';
+    }
+
+    /**
+     * Sync models for a provider from its live API, with template fallback.
+     */
+    public function syncProviderModels(int $providerId): void
+    {
+        $provider = AiProvider::query()->find($providerId);
+
+        if (! $provider) {
+            return;
+        }
+
+        // Clear any prior error for this provider before retrying
+        if ($this->syncErrorProviderId === $providerId) {
+            $this->syncError = null;
+            $this->syncErrorProviderId = null;
+        }
+
+        try {
+            $discovery = app(ModelDiscoveryService::class);
+            $result = $discovery->syncModels($provider);
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            $this->syncError = __('Could not connect to :url — is the server running?', [
+                'url' => $provider->base_url,
+            ]);
+            $this->syncErrorProviderId = $providerId;
+
+            \Illuminate\Support\Facades\Log::warning('Model sync failed', [
+                'provider' => $provider->name,
+                'base_url' => $provider->base_url,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        } catch (\Exception $e) {
+            $this->syncError = __('Sync failed: :message', ['message' => $e->getMessage()]);
+            $this->syncErrorProviderId = $providerId;
+
+            \Illuminate\Support\Facades\Log::warning('Model sync failed', [
+                'provider' => $provider->name,
+                'error' => $e->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if ($result['added'] > 0 && $result['updated'] > 0) {
+            $this->syncMessage = __('Added :added, updated :updated models.', [
+                'added' => $result['added'],
+                'updated' => $result['updated'],
+            ]);
+        } elseif ($result['added'] > 0) {
+            $this->syncMessage = __('Added :count new models.', ['count' => $result['added']]);
+        } elseif ($result['updated'] > 0) {
+            $this->syncMessage = __('Updated :count models.', ['count' => $result['updated']]);
+        } else {
+            $this->syncMessage = __('Models are up to date.');
+        }
+    }
+
+    /**
+     * Dismiss the persistent sync error.
+     */
+    public function clearSyncError(): void
+    {
+        $this->syncError = null;
+        $this->syncErrorProviderId = null;
+    }
+
+    /**
+     * Open the provider help panel (toggle behavior).
+     */
+    public function openProviderHelp(string $providerKey, string $authType = 'api_key'): void
+    {
+        if ($this->helpProviderKey === $providerKey) {
+            $this->helpProviderKey = null;
+            $this->helpProviderAuthType = null;
+
+            return;
+        }
+
+        $this->helpProviderKey = $providerKey;
+        $this->helpProviderAuthType = $authType;
+    }
+
+    /**
+     * Close the provider help panel.
+     */
+    public function closeProviderHelp(): void
+    {
+        $this->helpProviderKey = null;
+        $this->helpProviderAuthType = null;
+    }
+
+    /**
+     * Return structured help content for the currently open help panel.
+     *
+     * @return array{setup_steps: list<string>, troubleshooting_tips: list<string>, documentation_url: string|null, connection_error_advice: string}|null
+     */
+    public function activeProviderHelp(): ?array
+    {
+        if ($this->helpProviderKey === null) {
+            return null;
+        }
+
+        $registry = app(ProviderHelpRegistry::class);
+        $help = $registry->get($this->helpProviderKey, $this->helpProviderAuthType);
+
+        return [
+            'setup_steps'             => $help->setupSteps(),
+            'troubleshooting_tips'    => $help->troubleshootingTips(),
+            'documentation_url'       => $help->documentationUrl(),
+            'connection_error_advice' => $help->connectionErrorAdvice(),
+        ];
+    }
+
+    /**
+     * Move a provider up one position in priority (lower number = higher priority).
+     */
+    public function movePriorityUp(int $providerId): void
+    {
+        $provider = AiProvider::query()->find($providerId);
+
+        if (! $provider || $provider->priority <= 1) {
+            return;
+        }
+
+        $above = AiProvider::query()
+            ->where('company_id', $provider->company_id)
+            ->where('priority', $provider->priority - 1)
+            ->first();
+
+        if ($above) {
+            $provider->swapPriority($above);
+        }
+    }
+
+    /**
+     * Set a model as the default for its provider.
+     */
+    public function setDefaultModel(int $modelId): void
+    {
+        $model = AiProviderModel::query()->find($modelId);
+
+        if (! $model) {
+            return;
+        }
+
+        $model->setAsDefault();
+    }
+
+    public function openEditProvider(int $providerId): void
+    {
+        $provider = AiProvider::query()->find($providerId);
+
+        if (! $provider) {
+            return;
+        }
+
+        $this->resetProviderForm();
+        $this->isEditingProvider = true;
+        $this->editingProviderId = $providerId;
+        $this->providerName = $provider->name;
+        $this->providerDisplayName = $provider->display_name ?? '';
+        $this->providerBaseUrl = $provider->base_url;
+        $this->providerIsActive = $provider->is_active;
+        $this->showProviderForm = true;
+    }
+
+    public function saveProvider(): void
+    {
+        $companyId = $this->getCompanyId();
+
+        if ($companyId === null) {
+            return;
+        }
+
+        $rules = [
+            'providerName' => ['required', 'string', 'max:255'],
+            'providerDisplayName' => ['nullable', 'string', 'max:255'],
+            'providerBaseUrl' => ['required', 'string', 'max:2048'],
+            'providerIsActive' => ['boolean'],
+        ];
+
+        if ($this->isEditingProvider) {
+            $rules['providerApiKey'] = ['nullable', 'string', 'max:2048'];
+        } else {
+            $rules['providerApiKey'] = ['required', 'string', 'max:2048'];
+        }
+
+        $this->validate($rules);
+
+        $data = [
+            'company_id' => $companyId,
+            'name' => $this->providerName,
+            'display_name' => $this->providerDisplayName ?: $this->providerName,
+            'base_url' => $this->providerBaseUrl,
+            'is_active' => $this->providerIsActive,
+        ];
+
+        if ($this->isEditingProvider && $this->editingProviderId) {
+            $provider = AiProvider::query()->find($this->editingProviderId);
+
+            if ($provider) {
+                // Name is immutable after creation — omit from update data
+                unset($data['name']);
+
+                if ($this->providerApiKey !== '') {
+                    $data['api_key'] = $this->providerApiKey;
+                }
+
+                $provider->update($data);
+            }
+        } else {
+            $data['api_key'] = $this->providerApiKey;
+            $data['created_by'] = auth()->user()->employee?->id;
+            AiProvider::query()->create($data);
+        }
+
+        $this->showProviderForm = false;
+        $this->resetProviderForm();
+    }
+
+    public function confirmDeleteProvider(int $providerId): void
+    {
+        $provider = AiProvider::query()->find($providerId);
+
+        if (! $provider) {
+            return;
+        }
+
+        $this->deletingProviderId = $providerId;
+        $this->deletingProviderName = $provider->display_name ?? $provider->name;
+        $this->showDeleteProvider = true;
+    }
+
+    public function deleteProvider(): void
+    {
+        if ($this->deletingProviderId === null) {
+            return;
+        }
+
+        $provider = AiProvider::query()->find($this->deletingProviderId);
+
+        if ($provider) {
+            $provider->models()->delete();
+            $provider->delete();
+        }
+
+        if ($this->expandedProviderId === $this->deletingProviderId) {
+            $this->expandedProviderId = null;
+        }
+
+        $this->showDeleteProvider = false;
+        $this->deletingProviderId = null;
+        $this->deletingProviderName = '';
+    }
+
+    // --- Model CRUD ---
+
+    public function openCreateModel(int $providerId): void
+    {
+        $this->resetModelForm();
+        $this->isEditingModel = false;
+        $this->modelProviderId = $providerId;
+        $this->showModelForm = true;
+    }
+
+    public function openEditModel(int $modelId): void
+    {
+        $model = AiProviderModel::query()->find($modelId);
+
+        if (! $model) {
+            return;
+        }
+
+        $this->resetModelForm();
+        $this->isEditingModel = true;
+        $this->editingModelId = $modelId;
+        $this->modelProviderId = $model->ai_provider_id;
+        $this->modelModelName = $model->model_id;
+        $this->modelIsActive = $model->is_active;
+        $cost = $model->cost_override ?? [];
+        $this->modelCostInput = $cost['input'] ?? '0.000000';
+        $this->modelCostOutput = $cost['output'] ?? '0.000000';
+        $this->modelCostCacheRead = $cost['cache_read'] ?? '0.000000';
+        $this->modelCostCacheWrite = $cost['cache_write'] ?? '0.000000';
+        $this->showModelForm = true;
+    }
+
+    public function saveModel(): void
+    {
+        if ($this->modelProviderId === null) {
+            return;
+        }
+
+        $this->validate([
+            'modelModelName' => ['required', 'string', 'max:255'],
+            'modelIsActive' => ['boolean'],
+            'modelCostInput' => ['nullable', 'numeric', 'min:0'],
+            'modelCostOutput' => ['nullable', 'numeric', 'min:0'],
+            'modelCostCacheRead' => ['nullable', 'numeric', 'min:0'],
+            'modelCostCacheWrite' => ['nullable', 'numeric', 'min:0'],
+        ]);
+
+        $costOverride = [
+            'input' => $this->modelCostInput ?: null,
+            'output' => $this->modelCostOutput ?: null,
+            'cache_read' => $this->modelCostCacheRead ?: null,
+            'cache_write' => $this->modelCostCacheWrite ?: null,
+        ];
+        $hasAnyCost = array_filter($costOverride, fn ($v) => $v !== null && $v !== '') !== [];
+
+        $data = [
+            'ai_provider_id' => $this->modelProviderId,
+            'model_id' => $this->modelModelName,
+            'is_active' => $this->modelIsActive,
+            'cost_override' => $hasAnyCost ? $costOverride : null,
+        ];
+
+        if ($this->isEditingModel && $this->editingModelId) {
+            $model = AiProviderModel::query()->find($this->editingModelId);
+
+            if ($model) {
+                // Model ID is immutable after creation
+                unset($data['model_id']);
+                $model->update($data);
+            }
+        } else {
+            AiProviderModel::query()->create($data);
+        }
+
+        $this->showModelForm = false;
+        $this->resetModelForm();
+    }
+
+    public function confirmDeleteModel(int $modelId): void
+    {
+        $model = AiProviderModel::query()->find($modelId);
+
+        if (! $model) {
+            return;
+        }
+
+        $this->deletingModelId = $modelId;
+        $this->deletingModelName = $model->model_id;
+        $this->showDeleteModel = true;
+    }
+
+    public function deleteModel(): void
+    {
+        if ($this->deletingModelId === null) {
+            return;
+        }
+
+        AiProviderModel::query()->where('id', $this->deletingModelId)->delete();
+
+        $this->showDeleteModel = false;
+        $this->deletingModelId = null;
+        $this->deletingModelName = '';
+    }
+
+    /**
+     * Format a cost value for display (2 decimal places).
+     */
+    public function formatCost(?string $cost): string
+    {
+        if ($cost === null || $cost === '') {
+            return '—';
+        }
+
+        return '$'.number_format((float) $cost, 2);
+    }
+
+    public function with(): array
+    {
+        $companyId = $this->getCompanyId();
+        $providers = collect();
+        $expandedModels = collect();
+
+        if ($companyId !== null) {
+            $query = AiProvider::query()
+                ->forCompany($companyId)
+                ->withCount('models');
+
+            if ($this->search !== '') {
+                $search = $this->search;
+                $query->where(function ($q) use ($search): void {
+                    $q->where('name', 'like', '%'.$search.'%')
+                        ->orWhere('display_name', 'like', '%'.$search.'%');
+                });
+            }
+
+            $providers = $query->orderBy('priority')->orderBy('display_name')->get();
+
+            if ($this->expandedProviderId !== null) {
+                $expandedModels = AiProviderModel::query()
+                    ->where('ai_provider_id', $this->expandedProviderId)
+                    ->orderBy('model_id')
+                    ->get();
+            }
+        }
+
+        $catalogService = app(ModelCatalogService::class);
+        $allProviders = $catalogService->getProviders();
+
+        $templates = collect($allProviders)
+            ->map(fn ($t, $key) => ['value' => $key, 'label' => $t['display_name'] ?? $key])
+            ->values()
+            ->all();
+
+        return [
+            'providers' => $providers,
+            'expandedModels' => $expandedModels,
+            'templateOptions' => $templates,
+        ];
+    }
+
+    private function getCompanyId(): ?int
+    {
+        $user = auth()->user();
+
+        return $user?->employee?->company_id ? (int) $user->employee->company_id : null;
+    }
+
+    private function resetProviderForm(): void
+    {
+        $this->editingProviderId = null;
+        $this->providerName = '';
+        $this->providerDisplayName = '';
+        $this->providerBaseUrl = '';
+        $this->providerApiKey = '';
+        $this->providerIsActive = true;
+        $this->selectedTemplate = '';
+        $this->resetValidation();
+    }
+
+    private function resetModelForm(): void
+    {
+        $this->editingModelId = null;
+        $this->modelProviderId = null;
+        $this->modelModelName = '';
+        $this->modelIsActive = true;
+        $this->modelCostInput = '0.000000';
+        $this->modelCostOutput = '0.000000';
+        $this->modelCostCacheRead = '0.000000';
+        $this->modelCostCacheWrite = '0.000000';
+        $this->resetValidation();
+    }
+}; ?>
+
+<div>
+    <div class="space-y-section-gap">
+        <x-ui.page-header :title="__('LLM Providers')" :subtitle="__('Manage AI providers, their models, and priority order. Higher-priority providers are tried first.')">
+            <x-slot name="help">
+                <div class="space-y-3">
+                    <p>{{ __('This page shows the LLM providers and models your organization has connected. Digital Workers use these models to think, reason, and respond — at least one active provider with one active model is required.') }}</p>
+
+                    <div>
+                        <p class="font-medium text-ink">{{ __('Priority') }}</p>
+                        <ul class="list-disc list-inside space-y-1 text-muted mt-1">
+                            <li>{{ __('The Priority column shows the order in which providers are tried when a Digital Worker needs a model.') }}</li>
+                            <li>{{ __('Lower numbers mean higher priority — provider #1 is tried first.') }}</li>
+                            <li>{{ __('Click the ↑ arrow to move a provider up one position.') }}</li>
+                            <li>{{ __('If the top-priority provider fails or is unavailable, the system automatically falls back to the next one.') }}</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="font-medium text-ink">{{ __('Default model') }}</p>
+                        <ul class="list-disc list-inside space-y-1 text-muted mt-1">
+                            <li>{{ __('Each provider has a default model, marked with a') }} <span class="text-accent">★</span> {{ __('star icon.') }}</li>
+                            <li>{{ __('The default model is used as the fallback when a Digital Worker does not specify a particular model.') }}</li>
+                            <li>{{ __('Click the ☆ next to a model to set it as the default. The current default is marked with') }} <span class="text-accent">★</span>.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <p class="font-medium text-ink">{{ __('Costs & billing') }}</p>
+                        <ul class="list-disc list-inside space-y-1 text-muted mt-1">
+                            <li>{{ __('API providers (OpenAI, Anthropic, etc.) bill per token used — costs are shown per 1M tokens.') }}</li>
+                            <li>{{ __('Subscription providers (GitHub Copilot) are included in your subscription at no extra per-token cost.') }}</li>
+                            <li>{{ __('Local providers (Ollama, vLLM) run on your own hardware and have no API fees.') }}</li>
+                        </ul>
+                    </div>
+
+                    <p>{!! __('Once providers and models are set up here, assign them to Digital Workers from the :link.', ['link' => '<a href="' . route('admin.ai.playground') . '" class="text-accent hover:underline">' . e(__('AI Playground')) . '</a>']) !!}</p>
+                </div>
+            </x-slot>
+            <x-slot name="actions">
+                <x-ui.button variant="ghost" wire:click="openCreateProvider">
+                    <x-icon name="heroicon-m-plus" class="w-4 h-4" />
+                    {{ __('Manual Add') }}
+                </x-ui.button>
+                <x-ui.button variant="primary" wire:click="openCatalog">
+                    <x-icon name="heroicon-m-rectangle-stack" class="w-4 h-4" />
+                    {{ __('Browse Providers') }}
+                </x-ui.button>
+            </x-slot>
+        </x-ui.page-header>
+
+        <x-ui.card>
+            <div class="mb-2">
+                <x-ui.search-input
+                    wire:model.live.debounce.300ms="search"
+                    placeholder="{{ __('Search by name...') }}"
+                />
+            </div>
+
+            <div class="overflow-x-auto -mx-card-inner px-card-inner">
+                <table class="min-w-full divide-y divide-border-default text-sm">
+                    <thead class="bg-surface-subtle/80">
+                        <tr>
+                            <th class="px-table-cell-x py-table-header-y w-8"></th>
+                            <th class="hidden md:table-cell px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Name') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Display Name') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Priority') }}</th>
+                            <th class="hidden md:table-cell px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Base URL') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Models') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Status') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Actions') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-surface-card divide-y divide-border-default">
+                        @forelse($providers as $provider)
+                            <tr
+                                wire:key="provider-{{ $provider->id }}"
+                                wire:click="toggleProvider({{ $provider->id }})"
+                                class="hover:bg-surface-subtle/50 transition-colors cursor-pointer"
+                            >
+                                <td class="px-table-cell-x py-table-cell-y">
+                                    <x-icon
+                                        :name="$expandedProviderId === $provider->id ? 'heroicon-m-chevron-down' : 'heroicon-m-chevron-right'"
+                                        class="w-4 h-4 text-muted"
+                                    />
+                                </td>
+                                <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink">
+                                    <div class="flex items-center gap-1">
+                                        <span>{{ $provider->name }}</span>
+                                        <x-ui.help
+                                            wire:click.stop="openProviderHelp('{{ $provider->name }}', '{{ $provider->auth_type ?? 'api_key' }}')"
+                                            title="{{ __('Setup & troubleshooting') }}"
+                                        />
+                                    </div>
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $provider->display_name }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-left" @click.stop>
+                                    <div class="inline-flex items-center gap-1">
+                                        <span class="text-xs text-muted tabular-nums">{{ $provider->priority }}</span>
+                                        @if($provider->priority > 1)
+                                            <button
+                                                wire:click="movePriorityUp({{ $provider->id }})"
+                                                class="text-muted hover:text-ink hover:bg-surface-subtle p-0.5 rounded transition-colors"
+                                                title="{{ __('Move up') }}"
+                                            >
+                                                <x-icon name="heroicon-m-arrow-up" class="w-3.5 h-3.5" />
+                                            </button>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="hidden md:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted font-mono text-xs truncate max-w-[200px]">{{ $provider->base_url }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $provider->models_count }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
+                                    <div class="flex items-center gap-1.5">
+                                        @if($provider->is_active)
+                                            <x-ui.badge variant="success">{{ __('Active') }}</x-ui.badge>
+                                        @else
+                                            <x-ui.badge variant="default">{{ __('Inactive') }}</x-ui.badge>
+                                        @endif
+                                    </div>
+                                </td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <button
+                                            wire:click.stop="openEditProvider({{ $provider->id }})"
+                                            class="text-accent hover:bg-surface-subtle p-1 rounded"
+                                            title="{{ __('Edit') }}"
+                                        >
+                                            <x-icon name="heroicon-o-pencil" class="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            wire:click.stop="confirmDeleteProvider({{ $provider->id }})"
+                                            class="text-accent hover:bg-surface-subtle p-1 rounded"
+                                            title="{{ __('Delete') }}"
+                                        >
+                                            <x-icon name="heroicon-o-trash" class="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            {{-- Provider help panel --}}
+                            @if($helpProviderKey === $provider->name)
+                                <x-ai.provider-help-panel
+                                    wire:key="provider-{{ $provider->id }}-help"
+                                    :provider-name="$provider->display_name"
+                                    :help="$this->activeProviderHelp()"
+                                    :colspan="8"
+                                />
+                            @endif
+
+                            {{-- Expanded models sub-table --}}
+                            @if($expandedProviderId === $provider->id)
+                                <tr wire:key="provider-{{ $provider->id }}-models">
+                                    <td colspan="8" class="p-0">
+                                        <div class="bg-surface-subtle/30 border-t border-border-default px-8 py-3">
+                                           <div class="flex items-center justify-between mb-2">
+                                                <span class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Models') }}</span>
+                                                <div class="flex items-center gap-1">
+                                                    <x-ui.button variant="ghost" size="sm" wire:click.stop="syncProviderModels({{ $provider->id }})">
+                                                        <x-icon name="heroicon-o-arrow-path" class="w-3.5 h-3.5" />
+                                                        {{ __('Update Models') }}
+                                                    </x-ui.button>
+                                                    <x-ui.button variant="ghost" size="sm" wire:click.stop="openCreateModel({{ $provider->id }})">
+                                                        <x-icon name="heroicon-o-plus" class="w-3.5 h-3.5" />
+                                                        {{ __('Add Model') }}
+                                                    </x-ui.button>
+                                                </div>
+                                            </div>
+
+                                           @if($syncMessage)
+                                                <div
+                                                    class="mb-2 px-3 py-1.5 bg-surface-subtle rounded text-sm text-muted"
+                                                    x-data="{ show: true }"
+                                                    x-init="setTimeout(() => { show = false; $wire.set('syncMessage', null) }, 4000)"
+                                                    x-show="show"
+                                                    x-transition.opacity
+                                                >
+                                                    {{ $syncMessage }}
+                                                </div>
+                                            @endif
+
+                                            @if($syncError && $syncErrorProviderId === $provider->id)
+                                                @php $helpAdvice = app(\App\Base\AI\Providers\Help\ProviderHelpRegistry::class)->get($provider->name, $provider->auth_type ?? 'api_key')->connectionErrorAdvice(); @endphp
+                                                <div class="mb-3 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 p-3">
+                                                    <div class="flex items-start justify-between gap-2">
+                                                        <div class="flex items-start gap-2 min-w-0">
+                                                            <x-icon name="heroicon-o-exclamation-circle" class="w-4 h-4 text-red-500 dark:text-red-400 mt-0.5 shrink-0" />
+                                                            <div class="min-w-0">
+                                                                <p class="text-sm text-red-700 dark:text-red-300 font-medium">{{ $syncError }}</p>
+                                                                <p class="text-xs text-red-600 dark:text-red-400 mt-0.5">{{ $helpAdvice }}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div class="flex items-center gap-1 shrink-0">
+                                                            <button
+                                                                wire:click.stop="openProviderHelp('{{ $provider->name }}', '{{ $provider->auth_type ?? 'api_key' }}')"
+                                                                class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline whitespace-nowrap"
+                                                            >
+                                                                {{ __('Get help') }}
+                                                            </button>
+                                                            <button
+                                                                wire:click.stop="clearSyncError"
+                                                                class="p-0.5 rounded text-red-400 hover:text-red-600 dark:hover:text-red-200 hover:bg-red-100 dark:hover:bg-red-800/50"
+                                                                title="{{ __('Dismiss') }}"
+                                                            >
+                                                                <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            @if($expandedModels->count() > 0)
+                                                <table class="min-w-full divide-y divide-border-default text-sm">
+                                                     <thead class="bg-surface-subtle/80">
+                                                        <tr>
+                                                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Model ID') }}</th>
+                                                            <th class="hidden lg:table-cell px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Cost Override Input $/1M') }}</th>
+                                                            <th class="hidden lg:table-cell px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Cost Override Output $/1M') }}</th>
+                                                            <th class="hidden lg:table-cell px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Cache Read $/1M') }}</th>
+                                                            <th class="hidden lg:table-cell px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Cache Write $/1M') }}</th>
+                                                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Status') }}</th>
+                                                            <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Actions') }}</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody class="bg-surface-card divide-y divide-border-default">
+                                                        @foreach($expandedModels as $model)
+                                                            <tr wire:key="model-{{ $model->id }}" class="hover:bg-surface-subtle/50 transition-colors">
+                                                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink font-mono">
+                                                                    <div class="flex items-center gap-1.5">
+                                                                        @if($model->is_default)
+                                                                            <span class="text-accent" title="{{ __('Default model') }}">★</span>
+                                                                        @else
+                                                                            <button
+                                                                                wire:click="setDefaultModel({{ $model->id }})"
+                                                                                class="text-muted hover:text-accent transition-colors"
+                                                                                title="{{ __('Set as default') }}"
+                                                                            >☆</button>
+                                                                        @endif
+                                                                        <span>{{ $model->model_id }}</span>
+                                                                    </div>
+                                                                </td>
+                                                                @php $cost = $model->cost_override ?? []; @endphp
+                                                                <td class="hidden lg:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums text-right">{{ $this->formatCost($cost['input'] ?? null) }}</td>
+                                                                <td class="hidden lg:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums text-right">{{ $this->formatCost($cost['output'] ?? null) }}</td>
+                                                                <td class="hidden lg:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums text-right">{{ $this->formatCost($cost['cache_read'] ?? null) }}</td>
+                                                                <td class="hidden lg:table-cell px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums text-right">{{ $this->formatCost($cost['cache_write'] ?? null) }}</td>
+                                                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap">
+                                                                    @if($model->is_active)
+                                                                        <x-ui.badge variant="success">{{ __('Active') }}</x-ui.badge>
+                                                                    @else
+                                                                        <x-ui.badge variant="default">{{ __('Inactive') }}</x-ui.badge>
+                                                                    @endif
+                                                                </td>
+                                                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
+                                                                    <div class="flex items-center justify-end gap-1">
+                                                                        <button wire:click="openEditModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" title="{{ __('Edit') }}">
+                                                                            <x-icon name="heroicon-o-pencil" class="w-4 h-4" />
+                                                                        </button>
+                                                                        <button wire:click="confirmDeleteModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" title="{{ __('Delete') }}">
+                                                                            <x-icon name="heroicon-o-trash" class="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            @else
+                                                <p class="text-sm text-muted py-4 text-center">{{ __('No models registered for this provider.') }}</p>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                            @endif
+                        @empty
+                            <tr>
+                                <td colspan="8" class="px-table-cell-x py-8 text-center">
+                                    <div class="space-y-2">
+                                        <p class="text-sm text-muted">{{ __('No providers connected yet.') }}</p>
+                                        <x-ui.button variant="primary" wire:click="openCatalog">
+                                            <x-icon name="heroicon-o-rectangle-stack" class="w-4 h-4" />
+                                            {{ __('Browse Provider Catalog') }}
+                                        </x-ui.button>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </x-ui.card>
+    </div>
+
+    {{-- Provider Create/Edit Modal (manual add) --}}
+    <x-ui.modal wire:model="showProviderForm" class="max-w-lg">
+        <div class="p-card-inner">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium tracking-tight text-ink">
+                    {{ $isEditingProvider ? __('Edit Provider') : __('Add Provider') }}
+                </h3>
+                <button wire:click="$set('showProviderForm', false)" class="text-muted hover:text-ink">
+                    <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <form wire:submit="saveProvider" class="space-y-4">
+                @unless($isEditingProvider)
+                    <x-ui.select wire:change="applyTemplate($event.target.value)" label="{{ __('Template') }}">
+                        <option value="">{{ __('Other provider') }}</option>
+                        @foreach($templateOptions as $tpl)
+                            <option value="{{ $tpl['value'] }}" @selected($selectedTemplate === $tpl['value'])>{{ $tpl['label'] }}</option>
+                        @endforeach
+                    </x-ui.select>
+                @endunless
+
+                <x-ui.input
+                    wire:model="providerName"
+                    label="{{ __('Name') }}"
+                    required
+                    placeholder="{{ __('e.g. openai') }}"
+                    :disabled="$isEditingProvider"
+                    :error="$errors->first('providerName')"
+                />
+
+                <x-ui.input
+                    wire:model="providerDisplayName"
+                    label="{{ __('Display Name') }}"
+                    placeholder="{{ __('e.g. OpenAI') }}"
+                    :error="$errors->first('providerDisplayName')"
+                />
+
+                <x-ui.input
+                    wire:model="providerBaseUrl"
+                    label="{{ __('Base URL') }}"
+                    required
+                    placeholder="{{ __('e.g. https://api.openai.com/v1') }}"
+                    :error="$errors->first('providerBaseUrl')"
+                />
+
+                <x-ui.input
+                    wire:model="providerApiKey"
+                    type="password"
+                    label="{{ __('API Key') }}"
+                    :required="!$isEditingProvider"
+                    :placeholder="$isEditingProvider ? __('Leave blank to keep current key') : ''"
+                    :error="$errors->first('providerApiKey')"
+                />
+
+                <x-ui.checkbox wire:model="providerIsActive" label="{{ __('Active') }}" />
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" wire:click="$set('showProviderForm', false)">{{ __('Cancel') }}</x-ui.button>
+                    <x-ui.button type="submit" variant="primary">{{ $isEditingProvider ? __('Update') : __('Create') }}</x-ui.button>
+                </div>
+            </form>
+        </div>
+    </x-ui.modal>
+
+    {{-- Provider Delete Confirmation --}}
+    <x-ui.modal wire:model="showDeleteProvider" class="max-w-sm">
+        <div class="p-card-inner">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium tracking-tight text-ink">{{ __('Delete Provider') }}</h3>
+                <button wire:click="$set('showDeleteProvider', false)" class="text-muted hover:text-ink">
+                    <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <p class="text-sm text-muted mb-4">
+                {{ __('Are you sure you want to delete :name? All associated models will also be removed.', ['name' => $deletingProviderName]) }}
+            </p>
+
+            <div class="flex justify-end gap-2">
+                <x-ui.button variant="ghost" wire:click="$set('showDeleteProvider', false)">{{ __('Cancel') }}</x-ui.button>
+                <x-ui.button variant="danger" wire:click="deleteProvider">{{ __('Delete') }}</x-ui.button>
+            </div>
+        </div>
+    </x-ui.modal>
+
+    {{-- Model Create/Edit Modal --}}
+    <x-ui.modal wire:model="showModelForm" class="max-w-lg">
+        <div class="p-card-inner">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium tracking-tight text-ink">
+                    {{ $isEditingModel ? __('Edit Model') : __('Add Model') }}
+                </h3>
+                <button wire:click="$set('showModelForm', false)" class="text-muted hover:text-ink">
+                    <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <form wire:submit="saveModel" class="space-y-4">
+                <x-ui.input
+                    wire:model="modelModelName"
+                    label="{{ __('Model ID') }}"
+                    required
+                    placeholder="{{ __('e.g. gpt-4o') }}"
+                    :disabled="$isEditingModel"
+                    :error="$errors->first('modelModelName')"
+                />
+
+                <div class="grid grid-cols-2 gap-4">
+                    <x-ui.input
+                        wire:model="modelCostInput"
+                        type="number"
+                        step="0.000001"
+                        min="0"
+                        label="{{ __('Input Cost / 1M tokens') }}"
+                        :error="$errors->first('modelCostInput')"
+                    />
+                    <x-ui.input
+                        wire:model="modelCostOutput"
+                        type="number"
+                        step="0.000001"
+                        min="0"
+                        label="{{ __('Output Cost / 1M tokens') }}"
+                        :error="$errors->first('modelCostOutput')"
+                    />
+                    <x-ui.input
+                        wire:model="modelCostCacheRead"
+                        type="number"
+                        step="0.000001"
+                        min="0"
+                        label="{{ __('Cache Read Cost / 1M tokens') }}"
+                        :error="$errors->first('modelCostCacheRead')"
+                    />
+                    <x-ui.input
+                        wire:model="modelCostCacheWrite"
+                        type="number"
+                        step="0.000001"
+                        min="0"
+                        label="{{ __('Cache Write Cost / 1M tokens') }}"
+                        :error="$errors->first('modelCostCacheWrite')"
+                    />
+                </div>
+
+                <x-ui.checkbox wire:model="modelIsActive" label="{{ __('Active') }}" />
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-ui.button variant="ghost" wire:click="$set('showModelForm', false)">{{ __('Cancel') }}</x-ui.button>
+                    <x-ui.button type="submit" variant="primary">{{ $isEditingModel ? __('Update') : __('Create') }}</x-ui.button>
+                </div>
+            </form>
+        </div>
+    </x-ui.modal>
+
+    {{-- Model Delete Confirmation --}}
+    <x-ui.modal wire:model="showDeleteModel" class="max-w-sm">
+        <div class="p-card-inner">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium tracking-tight text-ink">{{ __('Delete Model') }}</h3>
+                <button wire:click="$set('showDeleteModel', false)" class="text-muted hover:text-ink">
+                    <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
+                </button>
+            </div>
+
+            <p class="text-sm text-muted mb-4">
+                {{ __('Are you sure you want to delete :name?', ['name' => $deletingModelName]) }}
+            </p>
+
+            <div class="flex justify-end gap-2">
+                <x-ui.button variant="ghost" wire:click="$set('showDeleteModel', false)">{{ __('Cancel') }}</x-ui.button>
+                <x-ui.button variant="danger" wire:click="deleteModel">{{ __('Delete') }}</x-ui.button>
+            </div>
+        </div>
+    </x-ui.modal>
+</div>
