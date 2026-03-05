@@ -24,9 +24,42 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+source "$SCRIPT_DIR/shared/colors.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/shared/config.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/shared/validation.sh" 2>/dev/null || true
 source "$SCRIPT_DIR/shared/runtime.sh" 2>/dev/null || true
+source "$SCRIPT_DIR/shared/caddy.sh" 2>/dev/null || true
 
-echo -e "${YELLOW}Stopping ${1:-local} environment services...${NC}"
-stop_dev_services "${1:-local}"
+APP_ENV="${1:-local}"
+PORTS_FILE="$PROJECT_ROOT/storage/app/.devops/ports.env"
+
+# Read runtime ports written by start-app; fall back to .env or defaults
+if [ -f "$PORTS_FILE" ]; then
+    APP_PORT=$(grep -E "^APP_PORT=" "$PORTS_FILE" 2>/dev/null | cut -d= -f2 || echo "")
+    VITE_PORT=$(grep -E "^VITE_PORT=" "$PORTS_FILE" 2>/dev/null | cut -d= -f2 || echo "")
+else
+    APP_PORT=$(get_env_var "APP_PORT" "")
+    VITE_PORT=$(get_env_var "VITE_PORT" "")
+fi
+APP_PORT="${APP_PORT:-8000}"
+VITE_PORT="${VITE_PORT:-5173}"
+
+FRONTEND_DOMAIN=$(get_env_var "FRONTEND_DOMAIN" "")
+
+echo -e "${YELLOW}Stopping ${APP_ENV} environment services (Laravel ${APP_PORT}, Vite ${VITE_PORT})...${NC}"
+stop_dev_services "$APP_ENV" "$APP_PORT" "$VITE_PORT"
+
+# Deregister from shared Caddy
+if [ -n "$FRONTEND_DOMAIN" ]; then
+    echo -e "${CYAN}Removing Caddy site fragment for ${FRONTEND_DOMAIN}...${NC}"
+    remove_site_fragment "$FRONTEND_DOMAIN"
+    if pgrep -x "caddy" > /dev/null; then
+        caddy reload --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null || true
+    fi
+    maybe_stop_shared_caddy
+fi
+
+rm -f "$PORTS_FILE"
 echo -e "\n${GREEN}✓ Services stopped.${NC}"
 

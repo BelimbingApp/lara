@@ -42,6 +42,8 @@ declare -a PASSED=()
 declare -a WARNINGS=()
 declare -a FAILED=()
 
+DB_CONNECTION=$(get_db_connection)
+
 # Check OS version
 check_os() {
     local os_type
@@ -392,7 +394,9 @@ main() {
     echo -e "${CYAN}Checking required ports...${NC}"
     check_port 80 "HTTP"
     check_port 443 "HTTPS"
-    check_port 5432 "PostgreSQL"
+    if [ "$DB_CONNECTION" = "pgsql" ]; then
+        check_port 5432 "PostgreSQL"
+    fi
     check_port 6379 "Redis"
 
     echo ""
@@ -404,7 +408,9 @@ main() {
 
     echo ""
     echo -e "${CYAN}Checking database services...${NC}"
-    check_postgresql
+    if [ "$DB_CONNECTION" = "pgsql" ]; then
+        check_postgresql
+    fi
     check_redis
 
     echo ""

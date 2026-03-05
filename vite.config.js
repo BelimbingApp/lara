@@ -6,29 +6,21 @@ import tailwindcss from "@tailwindcss/vite";
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-// Read APP_ENV from environment, .env file, or default to 'local'
-let appEnv = process.env.APP_ENV || 'local';
-let httpsPort = process.env.HTTPS_PORT || '443';
-if (!process.env.APP_ENV || !process.env.HTTPS_PORT) {
+// Read FRONTEND_DOMAIN from env or .env file.
+// Each instance (main, worktree) has its own domain; don't derive from APP_ENV.
+let frontendDomain = process.env.FRONTEND_DOMAIN || '';
+if (!frontendDomain) {
     try {
         const envFile = readFileSync(resolve(__dirname, '.env'), 'utf8');
-        if (!process.env.APP_ENV) {
-            const envMatch = envFile.match(/^APP_ENV=(.+)$/m);
-            if (envMatch) {
-                appEnv = envMatch[1].trim();
-            }
-        }
-        if (!process.env.HTTPS_PORT) {
-            const portMatch = envFile.match(/^HTTPS_PORT=(.+)$/m);
-            if (portMatch) {
-                httpsPort = portMatch[1].trim();
-            }
+        const match = envFile.match(/^FRONTEND_DOMAIN=(.+)$/m);
+        if (match) {
+            frontendDomain = match[1].trim().replace(/^["']|["']$/g, '');
         }
     } catch (e) {
-        // .env file not found or unreadable, use defaults
+        // .env file not found or unreadable
     }
 }
-const domain = `${appEnv}.blb.lara`;
+frontendDomain = frontendDomain || 'local.blb.lara';
 
 export default defineConfig({
     plugins: [
@@ -46,10 +38,11 @@ export default defineConfig({
         host: '127.0.0.1',
         port: parseInt(process.env.VITE_PORT || '5173'),
         strictPort: true,
+        origin: `https://${frontendDomain}`,
         hmr: {
-            host: domain,
+            host: frontendDomain,
             protocol: 'wss',
-            clientPort: parseInt(httpsPort),
+            clientPort: 443,
         },
         cors: true,
     },

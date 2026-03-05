@@ -260,11 +260,11 @@ verify_postgresql_connection() {
     # If credentials not provided, try to read from .env
     if [ -z "$db_name" ] || [ -z "$db_user" ] || [ -z "$db_password" ]; then
         if [ -f "$PROJECT_ROOT/.env" ]; then
-            db_host=$(grep -E "^DB_HOST=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "127.0.0.1")
-            db_port=$(grep -E "^DB_PORT=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "5432")
-            db_name=$(grep -E "^DB_DATABASE=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
-            db_user=$(grep -E "^DB_USERNAME=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
-            db_password=$(grep -E "^DB_PASSWORD=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
+            db_host=$(get_env_var "DB_HOST" "127.0.0.1")
+            db_port=$(get_env_var "DB_PORT" "5432")
+            db_name=$(get_env_var "DB_DATABASE" "")
+            db_user=$(get_env_var "DB_USERNAME" "")
+            db_password=$(get_env_var "DB_PASSWORD" "")
         fi
     fi
 
@@ -284,8 +284,10 @@ verify_postgresql_connection() {
 
 # Create PostgreSQL database and user
 setup_postgresql_database() {
-    local db_name="blb"
-    local db_user="belimbing_app"
+    local db_name
+    local db_user
+    db_name=$(get_env_var "DB_DATABASE" "blb")
+    db_user=$(get_env_var "DB_USERNAME" "belimbing_app")
     local db_password
     db_password=$(generate_password)
 
@@ -307,45 +309,12 @@ setup_postgresql_database() {
 
         # Save to .env
         if [ -f "$PROJECT_ROOT/.env" ]; then
-            # Update or add database configuration
-            if grep -q "^DB_CONNECTION=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_CONNECTION=.*|DB_CONNECTION=pgsql|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_CONNECTION=pgsql" >> "$PROJECT_ROOT/.env"
-            fi
-
-            if grep -q "^DB_HOST=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_HOST=.*|DB_HOST=127.0.0.1|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_HOST=127.0.0.1" >> "$PROJECT_ROOT/.env"
-            fi
-
-            if grep -q "^DB_PORT=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_PORT=.*|DB_PORT=5432|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_PORT=5432" >> "$PROJECT_ROOT/.env"
-            fi
-
-            if grep -q "^DB_DATABASE=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_DATABASE=.*|DB_DATABASE=$db_name|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_DATABASE=$db_name" >> "$PROJECT_ROOT/.env"
-            fi
-
-            if grep -q "^DB_USERNAME=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_USERNAME=.*|DB_USERNAME=$db_user|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_USERNAME=$db_user" >> "$PROJECT_ROOT/.env"
-            fi
-
-            if grep -q "^DB_PASSWORD=" "$PROJECT_ROOT/.env"; then
-                sed -i.bak "s|^DB_PASSWORD=.*|DB_PASSWORD=$db_password|" "$PROJECT_ROOT/.env"
-            else
-                echo "DB_PASSWORD=$db_password" >> "$PROJECT_ROOT/.env"
-            fi
-
-            # Clean up backup files
-            rm -f "$PROJECT_ROOT/.env.bak"
+            update_env_file "DB_CONNECTION" "pgsql"
+            update_env_file "DB_HOST" "127.0.0.1"
+            update_env_file "DB_PORT" "5432"
+            update_env_file "DB_DATABASE" "$db_name"
+            update_env_file "DB_USERNAME" "$db_user"
+            update_env_file "DB_PASSWORD" "$db_password"
 
             echo -e "${GREEN}✓${NC} Database credentials saved to .env"
 
@@ -377,6 +346,66 @@ check_redis() {
         fi
     fi
     return 1
+}
+
+# Ensure .env and filesystem are ready for SQLite (no server install)
+setup_sqlite() {
+    local db_file="${1:-database/database.sqlite}"
+
+    echo -e "${CYAN}Configuring SQLite...${NC}"
+
+    # Ensure .env has DB_CONNECTION=sqlite and DB_DATABASE
+    if [ -f "$PROJECT_ROOT/.env" ]; then
+        update_env_file "DB_CONNECTION" "sqlite"
+        update_env_file_if_missing "DB_DATABASE" "$db_file"
+        db_file=$(get_env_var "DB_DATABASE" "$db_file")
+    else
+        echo -e "${YELLOW}⚠${NC} .env not found; create it and set DB_CONNECTION=sqlite, DB_DATABASE=$db_file"
+        return 0
+    fi
+
+    # Skip filesystem setup for in-memory
+    if [ "$db_file" = ":memory:" ]; then
+        echo -e "${GREEN}✓${NC} SQLite configured (in-memory)"
+        return 0
+    fi
+
+    local full_path
+    case "$db_file" in
+        /*) full_path="$db_file" ;;
+        *)  full_path="$PROJECT_ROOT/$db_file" ;;
+    esac
+    local dir_path
+    dir_path=$(dirname "$full_path")
+
+    if [ ! -d "$dir_path" ]; then
+        mkdir -p "$dir_path"
+        echo -e "${GREEN}✓${NC} Created directory $dir_path"
+    fi
+
+    if [ ! -f "$full_path" ]; then
+        touch "$full_path"
+        echo -e "${GREEN}✓${NC} Created database file $db_file"
+    else
+        echo -e "${GREEN}✓${NC} Database file $db_file exists"
+    fi
+
+    if [ -w "$full_path" ] && [ -w "$dir_path" ]; then
+        echo -e "${GREEN}✓${NC} SQLite path is writable"
+    else
+        echo -e "${YELLOW}⚠${NC} Ensure $dir_path and $db_file are writable by the app" >&2
+    fi
+
+    # Optional: check PHP has pdo_sqlite
+    if command_exists php; then
+        if php -r "exit(extension_loaded('pdo_sqlite') ? 0 : 1);" 2>/dev/null; then
+            echo -e "${GREEN}✓${NC} PHP pdo_sqlite extension is loaded"
+        else
+            echo -e "${YELLOW}⚠${NC} PHP pdo_sqlite extension not loaded; install php-sqlite3 or enable pdo_sqlite in php.ini" >&2
+        fi
+    fi
+
+    echo -e "${GREEN}✓${NC} SQLite setup complete"
 }
 
 # Install Redis
@@ -456,6 +485,136 @@ install_redis() {
     return 1
 }
 
+# PostgreSQL is running: create database if missing, otherwise verify connection.
+ensure_postgresql_database() {
+    echo -e "${GREEN}✓${NC} PostgreSQL is installed and running"
+
+    local db_name
+    db_name=$(get_env_var "DB_DATABASE" "")
+    if [ -z "$db_name" ]; then
+        echo -e "${CYAN}Creating database and user...${NC}"
+        setup_postgresql_database
+    else
+        echo -e "${GREEN}✓${NC} Database configuration found in .env"
+        echo -e "${CYAN}Verifying database connection...${NC}"
+        if verify_postgresql_connection; then
+            echo -e "${GREEN}✓${NC} Database connection verified successfully"
+        else
+            echo -e "${YELLOW}⚠${NC} Could not verify database connection" >&2
+            echo -e "  ${YELLOW}Note:${NC} Please check database credentials in .env" >&2
+        fi
+    fi
+}
+
+# PostgreSQL is installed but not running: start service then create/verify database.
+start_postgresql_service_then_setup() {
+    echo -e "${YELLOW}⚠${NC} PostgreSQL installed but not running"
+    echo -e "${CYAN}Starting PostgreSQL service...${NC}"
+    local os_type
+    os_type=$(detect_os)
+    local postgresql_brew_version
+    postgresql_brew_version=$(get_postgresql_brew_version)
+
+    case "$os_type" in
+        linux|wsl2)
+            sudo systemctl start postgresql 2>/dev/null || sudo service postgresql start
+            sleep 2
+            ;;
+        macos)
+            brew services start "$postgresql_brew_version" 2>/dev/null || brew services start postgresql
+            sleep 2
+            ;;
+    esac
+
+    if check_postgresql; then
+        setup_postgresql_database
+    else
+        echo -e "${RED}✗${NC} Failed to start PostgreSQL" >&2
+        exit 1
+    fi
+}
+
+# PostgreSQL not installed: prompt (interactive) or install (non-interactive), then setup.
+install_postgresql_if_needed() {
+    echo -e "${YELLOW}ℹ${NC} PostgreSQL not found"
+
+    if [ -t 0 ]; then
+        if ask_yes_no "Install PostgreSQL?" "y"; then
+            if install_postgresql; then
+                setup_postgresql_database
+            else
+                echo -e "${RED}✗${NC} PostgreSQL installation failed"
+                echo ""
+                echo -e "${YELLOW}Please install PostgreSQL manually:${NC}"
+                echo -e "  • macOS: ${CYAN}brew install postgresql${NC}"
+                echo -e "  • Linux: ${CYAN}sudo apt-get install postgresql${NC}"
+                echo -e "  • Manual: ${CYAN}https://www.postgresql.org/download/${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}Skipping PostgreSQL installation${NC}"
+            exit 1
+        fi
+    else
+        if install_postgresql; then
+            setup_postgresql_database
+        else
+            exit 1
+        fi
+    fi
+}
+
+# Redis is installed but not running: start service then verify.
+start_redis_service_then_check() {
+    echo -e "${YELLOW}⚠${NC} Redis installed but not running"
+    echo -e "${CYAN}Starting Redis service...${NC}"
+    local os_type
+    os_type=$(detect_os)
+    case "$os_type" in
+        linux|wsl2)
+            sudo systemctl start redis-server 2>/dev/null || sudo service redis-server start
+            sleep 1
+            ;;
+        macos)
+            brew services start redis
+            sleep 1
+            ;;
+    esac
+
+    if check_redis; then
+        echo -e "${GREEN}✓${NC} Redis is now running"
+    else
+        echo -e "${RED}✗${NC} Failed to start Redis" >&2
+        exit 1
+    fi
+}
+
+# Redis not installed: prompt (interactive) or install (non-interactive).
+install_redis_if_needed() {
+    echo -e "${YELLOW}ℹ${NC} Redis not found"
+
+    if [ -t 0 ]; then
+        if ask_yes_no "Install Redis?" "y"; then
+            if ! install_redis; then
+                echo -e "${RED}✗${NC} Redis installation failed"
+                echo ""
+                echo -e "${YELLOW}Please install Redis manually:${NC}"
+                echo -e "  • macOS: ${CYAN}brew install redis${NC}"
+                echo -e "  • Linux: ${CYAN}sudo apt-get install redis-server${NC}"
+                echo -e "  • Manual: ${CYAN}https://redis.io/download${NC}"
+                exit 1
+            fi
+        else
+            echo -e "${YELLOW}Skipping Redis installation${NC}"
+            exit 1
+        fi
+    else
+        if ! install_redis; then
+            exit 1
+        fi
+    fi
+}
+
 # Main setup function
 main() {
     print_section_banner "Database & Redis Setup - Belimbing ($APP_ENV)"
@@ -463,86 +622,22 @@ main() {
     # Load existing configuration
     load_setup_state
 
-    # PostgreSQL Setup
-    print_subsection_header "PostgreSQL"
-    if check_postgresql; then
-        echo -e "${GREEN}✓${NC} PostgreSQL is installed and running"
+    local db_connection
+    db_connection=$(get_db_connection)
 
-        # Check if database needs to be created
-        if [ -f "$PROJECT_ROOT/.env" ]; then
-            local db_name
-            db_name=$(grep -E "^DB_DATABASE=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]' || echo "")
-            if [ -z "$db_name" ]; then
-                echo -e "${CYAN}Creating database and user...${NC}"
-                setup_postgresql_database
-            else
-                echo -e "${GREEN}✓${NC} Database configuration found in .env"
-                echo -e "${CYAN}Verifying database connection...${NC}"
-                if verify_postgresql_connection; then
-                    echo -e "${GREEN}✓${NC} Database connection verified successfully"
-                else
-                    echo -e "${YELLOW}⚠${NC} Could not verify database connection" >&2
-                    echo -e "  ${YELLOW}Note:${NC} Please check database credentials in .env" >&2
-                fi
-            fi
-        else
-            echo -e "${CYAN}Creating database and user...${NC}"
-            setup_postgresql_database
-        fi
+    if [ "$db_connection" = "sqlite" ]; then
+        # SQLite: no server install, just .env and file path
+        print_subsection_header "SQLite"
+        setup_sqlite "database/database.sqlite"
     else
-        if command_exists psql; then
-            echo -e "${YELLOW}⚠${NC} PostgreSQL installed but not running"
-            echo -e "${CYAN}Starting PostgreSQL service...${NC}"
-            local os_type
-            os_type=$(detect_os)
-            local postgresql_brew_version
-            postgresql_brew_version=$(get_postgresql_brew_version)
-
-            case "$os_type" in
-                linux|wsl2)
-                    sudo systemctl start postgresql 2>/dev/null || sudo service postgresql start
-                    sleep 2
-                    ;;
-                macos)
-                    brew services start "$postgresql_brew_version" 2>/dev/null || brew services start postgresql
-                    sleep 2
-                    ;;
-            esac
-
-            if check_postgresql; then
-                setup_postgresql_database
-            else
-                echo -e "${RED}✗${NC} Failed to start PostgreSQL" >&2
-                exit 1
-            fi
+        # PostgreSQL Setup
+        print_subsection_header "PostgreSQL"
+        if check_postgresql; then
+            ensure_postgresql_database
+        elif command_exists psql; then
+            start_postgresql_service_then_setup
         else
-            echo -e "${YELLOW}ℹ${NC} PostgreSQL not found"
-
-            if [ -t 0 ]; then
-                if ask_yes_no "Install PostgreSQL?" "y"; then
-                    if install_postgresql; then
-                        setup_postgresql_database
-                    else
-                        echo -e "${RED}✗${NC} PostgreSQL installation failed"
-                        echo ""
-                        echo -e "${YELLOW}Please install PostgreSQL manually:${NC}"
-                        echo -e "  • macOS: ${CYAN}brew install postgresql${NC}"
-                        echo -e "  • Linux: ${CYAN}sudo apt-get install postgresql${NC}"
-                        echo -e "  • Manual: ${CYAN}https://www.postgresql.org/download/${NC}"
-                        exit 1
-                    fi
-                else
-                    echo -e "${YELLOW}Skipping PostgreSQL installation${NC}"
-                    exit 1
-                fi
-            else
-                # Non-interactive mode
-                if install_postgresql; then
-                    setup_postgresql_database
-                else
-                    exit 1
-                fi
-            fi
+            install_postgresql_if_needed
         fi
     fi
 
@@ -552,61 +647,19 @@ main() {
     print_subsection_header "Redis"
     if check_redis; then
         echo -e "${GREEN}✓${NC} Redis is installed and running"
+    elif command_exists redis-cli; then
+        start_redis_service_then_check
     else
-        if command_exists redis-cli; then
-            echo -e "${YELLOW}⚠${NC} Redis installed but not running"
-            echo -e "${CYAN}Starting Redis service...${NC}"
-            local os_type
-            os_type=$(detect_os)
-            case "$os_type" in
-                linux|wsl2)
-                    sudo systemctl start redis-server 2>/dev/null || sudo service redis-server start
-                    sleep 1
-                    ;;
-                macos)
-                    brew services start redis
-                    sleep 1
-                    ;;
-            esac
-
-            if check_redis; then
-                echo -e "${GREEN}✓${NC} Redis is now running"
-            else
-                echo -e "${RED}✗${NC} Failed to start Redis" >&2
-                exit 1
-            fi
-        else
-            echo -e "${YELLOW}ℹ${NC} Redis not found"
-
-            if [ -t 0 ]; then
-                if ask_yes_no "Install Redis?" "y"; then
-                    if ! install_redis; then
-                        echo -e "${RED}✗${NC} Redis installation failed"
-                        echo ""
-                        echo -e "${YELLOW}Please install Redis manually:${NC}"
-                        echo -e "  • macOS: ${CYAN}brew install redis${NC}"
-                        echo -e "  • Linux: ${CYAN}sudo apt-get install redis-server${NC}"
-                        echo -e "  • Manual: ${CYAN}https://redis.io/download${NC}"
-                        exit 1
-                    fi
-                else
-                    echo -e "${YELLOW}Skipping Redis installation${NC}"
-                    exit 1
-                fi
-            else
-                # Non-interactive mode
-                if ! install_redis; then
-                    exit 1
-                fi
-            fi
-        fi
+        install_redis_if_needed
     fi
 
     echo ""
 
     # Save state
-    save_to_setup_state "POSTGRESQL_INSTALLED" "true"
     save_to_setup_state "REDIS_INSTALLED" "true"
+    if [ "$db_connection" = "pgsql" ]; then
+        save_to_setup_state "POSTGRESQL_INSTALLED" "true"
+    fi
 
     print_divider
     echo ""

@@ -1,16 +1,15 @@
-{$APP_DOMAIN:local.blb.lara}:{$HTTPS_PORT:443} {
-	# TLS Configuration
-	# Local: "internal"
-	# Prod:  email address or "internal" if behind another proxy (though usually real email)
+# Caddyfile template — resolved by start-app and written to ~/.blb/caddy/sites/ as a fragment.
+# {$VAR:default} placeholders are substituted at start time; the shared Caddy imports fragments.
+
+{$APP_DOMAIN:local.blb.lara} {
 	tls {$TLS_MODE:internal}
 
-	# Logging
 	log {
-		output file .caddy/logs/access.log
+		output file {$CADDY_LOG_DIR:.caddy/logs}/access.log
 		format console
 	}
 
-	# Reverb WebSocket (Laravel Echo) - proxy wss to Reverb's ws
+	# Reverb WebSocket (Laravel Echo)
 	@reverb_ws {
 		path /app/*
 		expression `header({'Connection':'*Upgrade*','Upgrade':'websocket'}) || header({':protocol':'websocket'})`
@@ -19,7 +18,7 @@
 		reverse_proxy 127.0.0.1:8080
 	}
 
-	# Vite HMR WebSocket (path / ; HTTP/1.1 uses Connection+Upgrade, HTTP/2 uses :protocol)
+	# Vite HMR WebSocket
 	@vite_ws {
 		path /
 		expression `header({'Connection':'*Upgrade*','Upgrade':'websocket'}) || header({':protocol':'websocket'})`
@@ -28,21 +27,20 @@
 		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT:5173}
 	}
 
-	# Vite / Frontend Config (dev mode paths + production builds)
-	# Try Vite first for dev assets, fallback to Laravel for built assets
+	# Vite dev assets
 	@vite_dev path /@vite/* /@fs/* /node_modules/* /resources/*
 	handle @vite_dev {
 		reverse_proxy {$VITE_HOST:127.0.0.1}:{$VITE_PORT:5173}
 	}
 
-	# Built assets (CSS/JS from public/build) - serve from Laravel
+	# Built assets (public/build)
 	@built_assets path /build/* /assets/*
 	handle @built_assets {
 		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT:8000} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
-			header_up X-Forwarded-Port {$HTTPS_PORT:443}
+			header_up X-Forwarded-Port 443
 		}
 	}
 
@@ -52,33 +50,26 @@
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
-			# Pass the external HTTPS port (defaults to 443, but may be different if port conflict)
-			header_up X-Forwarded-Port {$HTTPS_PORT:443}
+			header_up X-Forwarded-Port 443
 			header_up X-Real-IP {remote_host}
 		}
 	}
 }
 
-{$BACKEND_DOMAIN:local.api.blb.lara}:{$HTTPS_PORT:443} {
-	# TLS Configuration
-	# Local: "internal"
-	# Prod:  email address or "internal" if behind another proxy (though usually real email)
+{$BACKEND_DOMAIN:local.api.blb.lara} {
 	tls {$TLS_MODE:internal}
 
-	# Logging
 	log {
-		output file .caddy/logs/access.log
+		output file {$CADDY_LOG_DIR:.caddy/logs}/access.log
 		format console
 	}
 
-	# API / Backend (Laravel)
 	handle {
 		reverse_proxy {$APP_HOST:127.0.0.1}:{$APP_PORT:8000} {
 			header_up Host {host}
 			header_up X-Forwarded-Proto {scheme}
 			header_up X-Forwarded-Host {host}
-			# Pass the external HTTPS port (defaults to 443, but may be different if port conflict)
-			header_up X-Forwarded-Port {$HTTPS_PORT:443}
+			header_up X-Forwarded-Port 443
 			header_up X-Real-IP {remote_host}
 		}
 	}

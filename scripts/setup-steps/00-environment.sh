@@ -133,43 +133,35 @@ create_env_file() {
 
     # Set APP_NAME
     if [ -n "$app_name" ]; then
-        update_env_file "$PROJECT_ROOT/.env" "APP_NAME" "$app_name"
+        update_env_file "APP_NAME" "$app_name"
         echo -e "  ${GREEN}✓${NC} APP_NAME: $app_name (from git repository)"
     fi
 
     # Set APP_ENV
-    update_env_file "$PROJECT_ROOT/.env" "APP_ENV" "$APP_ENV"
+    update_env_file "APP_ENV" "$APP_ENV"
     echo -e "  ${GREEN}✓${NC} APP_ENV: $APP_ENV"
 
     # Set APP_URL
-    update_env_file "$PROJECT_ROOT/.env" "APP_URL" "$app_url"
+    update_env_file "APP_URL" "$app_url"
     echo -e "  ${GREEN}✓${NC} APP_URL: $app_url (based on environment)"
 
     # Set APP_DEBUG based on environment
     if [ "$APP_ENV" = "production" ]; then
-        update_env_file "$PROJECT_ROOT/.env" "APP_DEBUG" "false"
+        update_env_file "APP_DEBUG" "false"
         echo -e "  ${GREEN}✓${NC} APP_DEBUG: false (production)"
     else
-        update_env_file "$PROJECT_ROOT/.env" "APP_DEBUG" "true"
+        update_env_file "APP_DEBUG" "true"
         echo -e "  ${GREEN}✓${NC} APP_DEBUG: true (development)"
     fi
 
     # Pre-populate database settings (will be updated by 40-database.sh if needed)
     # But set sensible defaults
-    if ! grep -q "^DB_HOST=" "$PROJECT_ROOT/.env" || grep -q "^DB_HOST=$" "$PROJECT_ROOT/.env"; then
-        update_env_file "$PROJECT_ROOT/.env" "DB_HOST" "127.0.0.1"
-    fi
-    if ! grep -q "^DB_PORT=" "$PROJECT_ROOT/.env" || grep -q "^DB_PORT=$" "$PROJECT_ROOT/.env"; then
-        update_env_file "$PROJECT_ROOT/.env" "DB_PORT" "5432"
-    fi
+    update_env_file_if_missing "DB_HOST" "127.0.0.1"
+    update_env_file_if_missing "DB_PORT" "5432"
 
     # Pre-populate Redis settings
-    if ! grep -q "^REDIS_HOST=" "$PROJECT_ROOT/.env" || grep -q "^REDIS_HOST=$" "$PROJECT_ROOT/.env"; then
-        update_env_file "$PROJECT_ROOT/.env" "REDIS_HOST" "127.0.0.1"
-    fi
-    if ! grep -q "^REDIS_PORT=" "$PROJECT_ROOT/.env" || grep -q "^REDIS_PORT=$" "$PROJECT_ROOT/.env"; then
-        update_env_file "$PROJECT_ROOT/.env" "REDIS_PORT" "6379"
-    fi
+    update_env_file_if_missing "REDIS_HOST" "127.0.0.1"
+    update_env_file_if_missing "REDIS_PORT" "6379"
 
     # Interactive prompts for critical settings (only if not detected and interactive)
     echo ""

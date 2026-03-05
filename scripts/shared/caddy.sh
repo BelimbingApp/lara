@@ -14,6 +14,151 @@ if ! command -v command_exists &> /dev/null; then
     source "$CADDY_SCRIPT_DIR/validation.sh"
 fi
 
+# ── Shared Caddy ──────────────────────────────────────────────────────────
+# All BLB instances share one Caddy process on :443 via host-based routing.
+# Each instance writes a resolved site fragment to BLB_CADDY_HOME/sites/.
+# start-app adds its fragment and reloads; stop-app removes it and reloads.
+BLB_CADDY_HOME="${BLB_CADDY_HOME:-$HOME/.blb/caddy}"
+BLB_CADDY_SITES="$BLB_CADDY_HOME/sites"
+BLB_CADDY_MAIN="$BLB_CADDY_HOME/Caddyfile"
+BLB_CADDY_ADMIN_SOCK="/tmp/caddy-blb-admin.sock"
+
+ensure_blb_caddy_dirs() {
+    mkdir -p "$BLB_CADDY_SITES"
+}
+
+# Create the main Caddyfile that imports all site fragments.
+create_main_caddyfile() {
+    ensure_blb_caddy_dirs
+    if [ ! -f "$BLB_CADDY_MAIN" ]; then
+        cat > "$BLB_CADDY_MAIN" <<EOF
+{
+	admin unix/$BLB_CADDY_ADMIN_SOCK
+}
+
+import $BLB_CADDY_SITES/*.caddy
+EOF
+    fi
+}
+
+# Resolve Caddy {$VAR:default} placeholders using exported env vars.
+# Reads a Caddyfile template and writes the resolved result to stdout.
+# Uses pure bash string ops to avoid sed escaping issues with {$...} syntax.
+resolve_caddyfile_vars() {
+    local input_file=$1
+    local vars=(APP_DOMAIN BACKEND_DOMAIN APP_HOST APP_PORT VITE_HOST VITE_PORT HTTPS_PORT TLS_MODE CADDY_LOG_DIR)
+    local content
+    content=$(<"$input_file")
+
+    for var in "${vars[@]}"; do
+        local val="${!var:-}"
+        local token_prefix='{$'"${var}"':'
+        local token_bare='{$'"${var}"'}'
+
+        if [ -n "$val" ]; then
+            # {$VAR:default} → val
+            while [[ "$content" == *"${token_prefix}"* ]]; do
+                local before="${content%%"${token_prefix}"*}"
+                local rest="${content#*"${token_prefix}"}"
+                rest="${rest#*\}}"
+                content="${before}${val}${rest}"
+            done
+            # {$VAR} → val
+            content="${content//"${token_bare}"/"${val}"}"
+        else
+            # {$VAR:default} → default
+            while [[ "$content" == *"${token_prefix}"* ]]; do
+                local before="${content%%"${token_prefix}"*}"
+                local rest="${content#*"${token_prefix}"}"
+                local default_val="${rest%%\}*}"
+                rest="${rest#*\}}"
+                content="${before}${default_val}${rest}"
+            done
+            # {$VAR} → empty
+            content="${content//"${token_bare}"/}"
+        fi
+    done
+
+    printf '%s\n' "$content"
+}
+
+# Derive a slug from FRONTEND_DOMAIN (safe for filenames).
+site_fragment_slug() {
+    local domain="${1:-${FRONTEND_DOMAIN:-blb}}"
+    echo "$domain" | tr '.' '-'
+}
+
+# Write resolved site fragment for this instance.
+# Uses the project Caddyfile as template, resolves vars, writes to shared sites dir.
+write_site_fragment() {
+    local project_root=$1
+    local slug
+    slug=$(site_fragment_slug "$FRONTEND_DOMAIN")
+    local fragment_file="$BLB_CADDY_SITES/${slug}.caddy"
+
+    ensure_blb_caddy_dirs
+
+    if [ ! -f "$project_root/Caddyfile" ]; then
+        echo -e "${RED}✗${NC} No Caddyfile template found in project root" >&2
+        return 1
+    fi
+
+    resolve_caddyfile_vars "$project_root/Caddyfile" > "$fragment_file"
+    echo "$fragment_file"
+}
+
+# Remove this instance's site fragment.
+remove_site_fragment() {
+    local slug
+    slug=$(site_fragment_slug "${FRONTEND_DOMAIN:-${1:-}}")
+    local fragment_file="$BLB_CADDY_SITES/${slug}.caddy"
+    rm -f "$fragment_file"
+}
+
+# Start the shared Caddy if not running, or reload if already running.
+ensure_shared_caddy() {
+    create_main_caddyfile
+
+    if ! command_exists caddy; then
+        install_caddy || return 1
+    fi
+
+    ensure_caddy_privileges || return 1
+
+    if pgrep -x "caddy" > /dev/null; then
+        caddy reload --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null
+        local rc=$?
+        if [ $rc -eq 0 ]; then
+            echo -e "${GREEN}✓${NC} Caddy reloaded with updated sites"
+        else
+            echo -e "${YELLOW}⚠${NC} Caddy reload failed (rc=$rc); attempting restart..." >&2
+            caddy stop 2>/dev/null || true
+            sleep 1
+            caddy start --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null
+        fi
+    else
+        echo -e "${GREEN}Starting shared Caddy on :443...${NC}"
+        caddy start --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null
+        local rc=$?
+        if [ $rc -eq 0 ]; then
+            echo -e "${GREEN}✓${NC} Caddy started"
+        else
+            echo -e "${RED}✗${NC} Failed to start Caddy (rc=$rc)" >&2
+            return 1
+        fi
+    fi
+}
+
+# Stop the shared Caddy only if no site fragments remain.
+maybe_stop_shared_caddy() {
+    local remaining
+    remaining=$(find "$BLB_CADDY_SITES" -name '*.caddy' 2>/dev/null | wc -l)
+    if [ "$remaining" -eq 0 ] && pgrep -x "caddy" > /dev/null; then
+        echo -e "${CYAN}No BLB sites remaining; stopping Caddy...${NC}"
+        caddy stop 2>/dev/null || true
+    fi
+}
+
 # Install Caddy if needed
 install_caddy() {
     echo -e "${YELLOW}${INFO_MARK} Installing Caddy...${NC}"
@@ -57,48 +202,6 @@ install_caddy() {
     return 0
 }
 
-# Check for proxy conflicts before starting Caddy
-# Automatically finds available port if default is in use
-# Returns available port via stdout, returns 1 if no ports available
-check_proxy_conflicts() {
-    local preferred_https_port=$1
-    local existing_proxy
-    existing_proxy=$(detect_proxy)
-
-    # Check if preferred port is available
-    if is_port_available "$preferred_https_port"; then
-        echo "$preferred_https_port"
-        return 0
-    fi
-
-    # Port is in use - find alternative
-    if [ "$existing_proxy" != "none" ]; then
-        echo -e "${CYAN}ℹ${NC} Port $preferred_https_port is in use by ${CYAN}$existing_proxy${NC}"
-    else
-        echo -e "${CYAN}ℹ${NC} Port $preferred_https_port is in use"
-    fi
-
-    # Try to find alternative port
-    local alternative_port
-    alternative_port=$preferred_https_port
-    local attempts=0
-    while [ $attempts -lt 10 ] && ! is_port_available "$alternative_port"; do
-        ((alternative_port++))
-        ((attempts++))
-    done
-
-    if is_port_available "$alternative_port"; then
-        echo -e "${CYAN}ℹ${NC} Using alternative port: ${CYAN}$alternative_port${NC}"
-        echo "$alternative_port"
-        return 0
-    fi
-
-    # No ports available
-    echo -e "${YELLOW}${WARNING_MARK} No available ports found in range [$preferred_https_port-$alternative_port]${NC}"
-    echo "$preferred_https_port"  # Return preferred anyway for error handling
-    return 1
-}
-
 # Ensure Caddy binary can bind to privileged ports (e.g., 443)
 ensure_caddy_privileges() {
     if ! command -v caddy >/dev/null 2>&1; then
@@ -128,149 +231,11 @@ ensure_caddy_privileges() {
     return 1
 }
 
-# Create Caddyfile for environment
-create_caddyfile() {
-    local project_root=$1
-    local app_env=$2
-    local frontend_domain=$3
-    local backend_domain=$4
-    local frontend_port=$5
-    local backend_port=$6
-    local https_port=$7
-
-    local caddy_file="$project_root/Caddyfile.$app_env"
-    local admin_socket="unix//tmp/caddy-blb-$app_env-$$.sock"
-
-    local frontend_addr backend_addr
-    if [ "$https_port" = "443" ]; then
-        frontend_addr="https://$frontend_domain"
-        backend_addr="https://$backend_domain"
-    else
-        frontend_addr="https://$frontend_domain:$https_port"
-        backend_addr="https://$backend_domain:$https_port"
-    fi
-
-    cat > "$caddy_file" << EOF
-{
-    auto_https off
-    admin $admin_socket
-}
-
-$frontend_addr {
-    tls certs/$frontend_domain.pem certs/$frontend_domain-key.pem
-    @vite_assets path /build/* /assets/*
-    handle @vite_assets {
-        reverse_proxy 127.0.0.1:$frontend_port
-    }
-    handle {
-        reverse_proxy 127.0.0.1:$backend_port
-    }
-}
-
-$backend_addr {
-    tls certs/$frontend_domain.pem certs/$frontend_domain-key.pem
-    reverse_proxy 127.0.0.1:$backend_port
-}
-EOF
-
-    echo "$caddy_file"
-}
-
-# Clean up Caddy temporary files and sockets
-cleanup_caddy_artifacts() {
-    local app_env=$1
-
-    # Clean up temporary Caddyfile
-    [ -f "Caddyfile.$app_env" ] && rm -f "Caddyfile.$app_env"
-
-    # Clean up Caddy admin sockets
-    rm -f /tmp/caddy-blb-$app_env-*.sock 2>/dev/null || true
-}
-
-# Check if Caddy proxy is enabled
-# Usage: is_caddy_enabled "skip_caddy_value" "proxy_type_value"
+# Check if Caddy proxy is enabled (PROXY_TYPE=caddy). Start-app uses this to decide start/skip from runtime state.
+# Usage: is_caddy_enabled ["proxy_type_value"]
 is_caddy_enabled() {
-    local skip_caddy=${1:-"$SKIP_CADDY"}
-    local proxy_type=${2:-"$PROXY_TYPE"}
-    [ "$skip_caddy" != "true" ] && [ "$proxy_type" = "caddy" ]
-}
-
-# Start Caddy reverse proxy
-start_caddy_proxy() {
-    local project_root=$1
-    local app_env=$2
-    local frontend_domain=$3
-    local backend_domain=$4
-    local frontend_port=$5
-    local backend_port=$6
-    local https_port=$7
-    local logs_dir=$8
-
-    # Install Caddy if needed
-    if ! command_exists caddy; then
-        install_caddy || return 1
-    fi
-
-    ensure_caddy_privileges || return 1
-
-    local caddy_file
-    caddy_file=$(create_caddyfile \
-        "$project_root" \
-        "$app_env" \
-        "$frontend_domain" \
-        "$backend_domain" \
-        "$frontend_port" \
-        "$backend_port" \
-        "$https_port")
-
-    caddy run --config "$caddy_file" > "$logs_dir/caddy.log" 2>&1 &
-    echo $!
-}
-
-# Start Caddy with conflict checking and return PID
-# This is the main entry point for starting Caddy from start-app.sh
-# Automatically handles port conflicts by finding available ports
-# Returns PID on success, returns 1 on failure
-start_caddy_with_checks() {
-    local project_root=$1
-    local app_env=$2
-    local frontend_domain=$3
-    local backend_domain=$4
-    local frontend_port=$5
-    local backend_port=$6
-    local preferred_https_port=$7
-    local logs_dir=$8
-
-    echo -e "${BLUE}${ARROW} HTTPS Proxy (Caddy)${NC}"
-
-    # Check for conflicts and get available port (may be different from preferred)
-    local actual_https_port
-    actual_https_port=$(check_proxy_conflicts "$preferred_https_port") || {
-        echo -e "${YELLOW}${WARNING_MARK}${NC} Could not find available HTTPS port"
-        echo -e "  Skipping Caddy. App will run without HTTPS proxy."
-        return 1
-    }
-
-    # Use the actual available port (may differ from preferred)
-    local caddy_pid
-    caddy_pid=$(start_caddy_proxy \
-        "$project_root" \
-        "$app_env" \
-        "$frontend_domain" \
-        "$backend_domain" \
-        "$frontend_port" \
-        "$backend_port" \
-        "$actual_https_port" \
-        "$logs_dir") || return 1
-
-    echo -e "   ${GREEN}${CHECK_MARK}${NC} Started (PID: $caddy_pid)"
-    echo -e "   ${CYAN}${ARROW}${NC} Port $actual_https_port"
-    if [ "$actual_https_port" != "$preferred_https_port" ]; then
-        echo -e "   ${CYAN}ℹ${NC} Using port $actual_https_port (preferred $preferred_https_port was in use)"
-    fi
-    echo ""
-
-    echo "$caddy_pid"
+    local proxy_type=${1:-"${PROXY_TYPE:-}"}
+    [ "$proxy_type" = "caddy" ]
 }
 
 # Setup SSL certificate trust for self-signed certificates (TLS_MODE=internal)

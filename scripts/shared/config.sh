@@ -11,8 +11,8 @@
 # - DATABASE_URL: PostgreSQL connection string
 # - JWT_SECRET, JWT_EXPIRATION_HOURS, JWT_REFRESH_EXPIRATION_DAYS
 # - FRONTEND_DOMAIN, BACKEND_DOMAIN
-# - BACKEND_PORT, FRONTEND_PORT, HTTPS_PORT
-# - SKIP_CADDY, PROXY_TYPE
+# - BACKEND_PORT, FRONTEND_PORT
+# - PROXY_TYPE
 # - BACKEND_URL
 
 # Source version constants (must be sourced before using version-related functions)
@@ -33,29 +33,13 @@ DEFAULT_DB_USER="belimbing_app"
 DEFAULT_DB_PASSWORD="v3ryL0ngP@55w0rd"
 DEFAULT_DB_PORT="5432"
 DEFAULT_PROXY_TYPE="caddy"
-DEFAULT_SKIP_CADDY="false"
 
-# Get default ports for an environment
-# Returns: FRONTEND_PORT|BACKEND_PORT|HTTPS_PORT
+# Default preferred ports (VITE_PORT|APP_PORT).
+# Only a starting hint — start-app auto-assigns free ports via next_free_port at runtime,
+# so multiple instances (main + worktrees) never collide.
+# HTTPS is always 443 (shared Caddy with host-based routing).
 get_default_ports() {
-    local env=$1
-    case "$env" in
-        local)
-            echo "5173|8000|443"
-            ;;
-        staging)
-            echo "5174|8001|444"
-            ;;
-        production)
-            echo "5175|8002|445"
-            ;;
-        testing)
-            echo "5176|8003|446"
-            ;;
-        *)
-            echo "5173|8000|443"
-            ;;
-    esac
+    echo "5173|8000"
 }
 
 # Get backend port for environment (reads from .env or uses default)
@@ -64,9 +48,9 @@ get_backend_port() {
     local project_root=${2:-$PROJECT_ROOT}
 
     # Try to read from .env file
-    if [ -f "$project_root/.env" ]; then
+    if [ -n "$project_root" ]; then
         local port
-        port=$(grep -E "^APP_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
+        port=$(get_env_var "APP_PORT" "" "$project_root/.env")
         if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
             echo "$port"
             return 0
@@ -85,9 +69,9 @@ get_frontend_port() {
     local project_root=${2:-$PROJECT_ROOT}
 
     # Try to read from .env file
-    if [ -f "$project_root/.env" ]; then
+    if [ -n "$project_root" ]; then
         local port
-        port=$(grep -E "^VITE_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
+        port=$(get_env_var "VITE_PORT" "" "$project_root/.env")
         if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
             echo "$port"
             return 0
@@ -100,26 +84,6 @@ get_frontend_port() {
     echo "$defaults" | cut -d'|' -f1
 }
 
-# Get HTTPS port for environment (reads from .env or uses default)
-get_https_port() {
-    local env=$1
-    local project_root=${2:-$PROJECT_ROOT}
-
-    # Try to read from .env file
-    if [ -f "$project_root/.env" ]; then
-        local port
-        port=$(grep -E "^HTTPS_PORT=" "$project_root/.env" | cut -d '=' -f2 | tr -d '[:space:]' 2>/dev/null || echo "")
-        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
-            echo "$port"
-            return 0
-        fi
-    fi
-
-    # Use default based on environment
-    local defaults
-    defaults=$(get_default_ports "$env")
-    echo "$defaults" | cut -d'|' -f3
-}
 
 # Get default domains for an environment
 # Returns: frontend_domain|backend_domain
@@ -145,6 +109,18 @@ get_default_jwt_expiration() {
 get_default_database_name() {
     local env=$1
     echo "belimbing_${env}"
+}
+
+# Get DB_CONNECTION from .env (pgsql, sqlite, mysql, etc.)
+# Uses PROJECT_ROOT; defaults to pgsql if unset or .env missing.
+get_db_connection() {
+    if [ -z "${PROJECT_ROOT:-}" ]; then
+        echo "pgsql"
+        return 0
+    fi
+    local val
+    val=$(get_env_var "DB_CONNECTION" "pgsql")
+    echo "$val"
 }
 
 # === Environment Validation ===
@@ -264,12 +240,44 @@ escape_sed_replacement() {
     printf '%s' "$value"
 }
 
-# Update or add a variable to the .env file
-# Usage: update_env_file "/path/to/.env" "VARIABLE_NAME" "value"
+# Read a single variable from .env.
+# Usage: get_env_var KEY [default]
+# - KEY: variable name (literal, no regex).
+# - default: value if KEY missing or empty (default: "").
+# Reads from $PROJECT_ROOT/.env. Optional third arg env_file overrides path (used internally by port getters).
+# Output: value with leading/trailing space and surrounding quotes stripped.
+# Values containing = are supported (everything after first =).
+get_env_var() {
+    local key="$1"
+    local default="${2:-}"
+    local env_file="${3:-${PROJECT_ROOT:-}/.env}"
+
+    [ -f "$env_file" ] || { echo "$default"; return 0; }
+    [ -n "$key" ] || { echo "$default"; return 0; }
+
+    local key_escaped
+    key_escaped=$(printf '%s' "$key" | sed 's/[.[\*^$()+?{|]/\\&/g')
+    local line
+    line=$(grep -E "^[[:space:]]*${key_escaped}[[:space:]]*=" "$env_file" 2>/dev/null | head -1)
+    [ -n "$line" ] || { echo "$default"; return 0; }
+
+    local val="${line#*=}"
+    val=$(echo "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+    val=$(echo "$val" | tr -d '"' | tr -d "'")
+    if [ -n "$val" ]; then
+        echo "$val"
+    else
+        echo "$default"
+    fi
+}
+
+# Update or add a variable to the .env file.
+# Usage: update_env_file "VARIABLE_NAME" "value" [env_file]
+# - env_file defaults to $PROJECT_ROOT/.env when omitted.
 update_env_file() {
-    local env_file=$1
-    local var_name=$2
-    local var_value=$3
+    local var_name=$1
+    local var_value=$2
+    local env_file="${3:-${PROJECT_ROOT:-}/.env}"
 
     if [ ! -f "$env_file" ]; then
         echo "$var_name=\"$var_value\"" > "$env_file"
@@ -311,5 +319,20 @@ update_env_file() {
     else
         # Append new variable
         echo "$var_name=\"$var_value\"" >> "$env_file"
+    fi
+}
+
+# Set a variable in .env only when it is missing or empty (upsert-if-missing).
+# Usage: update_env_file_if_missing "VARIABLE_NAME" "default_value" [env_file]
+# - env_file defaults to $PROJECT_ROOT/.env when omitted.
+update_env_file_if_missing() {
+    local var_name=$1
+    local default_value=$2
+    local env_file="${3:-${PROJECT_ROOT:-}/.env}"
+
+    local current
+    current=$(get_env_var "$var_name" "" "$env_file")
+    if [ -z "$current" ]; then
+        update_env_file "$var_name" "$default_value" "$env_file"
     fi
 }

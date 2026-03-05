@@ -381,19 +381,21 @@ create_admin_if_needed() {
     echo -e "${CYAN}Setting up admin user...${NC}"
 
     if [ -t 0 ]; then
-        # Interactive mode - let the artisan command handle everything
-        # It will prompt for credentials if no users exist, or skip if users already exist
-        docker exec -it "$container_name" php artisan belimbing:create-admin
-        return $?
-    else
-        # Non-interactive mode - run silently, artisan command will report status
-        if ! docker exec -T "$container_name" php artisan belimbing:create-admin 2>/dev/null; then
-            echo -e "${YELLOW}⚠${NC} No admin user (non-interactive mode)" >&2
-            echo -e "  To log in to Belimbing, create an admin account:" >&2
-            echo -e "  ${CYAN}docker exec -it $container_name php artisan belimbing:create-admin${NC}" >&2
+        # Interactive mode: prompt for email, then run create-user (command will prompt for password)
+        echo -e "${CYAN}Create admin user (email required; password will be prompted by the command).${NC}"
+        read -r -p "Admin email: " admin_email
+        if [ -z "$admin_email" ]; then
+            echo -e "${YELLOW}⚠${NC} No email provided, skipping"
             return 1
         fi
-        return 0
+        docker exec -it "$container_name" php artisan blb:user:create "$admin_email" --role=core_admin
+        return $?
+    else
+        # Non-interactive mode: cannot create without email/password
+        echo -e "${YELLOW}⚠${NC} No admin user (non-interactive mode)" >&2
+        echo -e "  To create an admin account, run interactively:" >&2
+        echo -e "  ${CYAN}docker exec -it $container_name php artisan blb:user:create <email> --role=core_admin${NC}" >&2
+        return 1
     fi
 }
 

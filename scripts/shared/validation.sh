@@ -29,6 +29,25 @@ is_port_available() {
     ! nc -z 127.0.0.1 "$port" 2>/dev/null
 }
 
+# Find next available port starting from given port (increments until free or max 100 attempts).
+# Used by start-app and start-docker to assign ports when .env has none set.
+next_free_port() {
+    local port=$1
+    local max_attempts=100
+    local attempt=0
+
+    while [ $attempt -lt $max_attempts ]; do
+        if is_port_available "$port"; then
+            echo "$port"
+            return 0
+        fi
+        port=$((port + 1))
+        attempt=$((attempt + 1))
+    done
+    echo "$1"
+    return 1
+}
+
 # Check if a port is valid (1-65535)
 is_valid_port() {
     local port=$1
@@ -401,7 +420,6 @@ validate_env_file() {
         "BACKEND_DOMAIN"
         "BACKEND_PORT"
         "FRONTEND_PORT"
-        "HTTPS_PORT"
     )
 
     local missing=()
@@ -649,7 +667,7 @@ add_domains_to_windows_hosts() {
 
 # Check and prompt to add domains to /etc/hosts (and Windows hosts if WSL2)
 # Usage: ensure_domains_in_hosts "frontend_domain" "backend_domain"
-# Returns: 0 if domains are ready, 1 if user action needed
+# Returns: 0 if Linux hosts are ready; Windows hosts failure on WSL2 is non-fatal (instructions shown).
 ensure_domains_in_hosts() {
     local frontend_domain=$1
     local backend_domain=$2
@@ -665,15 +683,15 @@ ensure_domains_in_hosts() {
         domains_to_add+=("$backend_domain")
     fi
 
-    # Add to Linux /etc/hosts if needed
+    # Add to Linux /etc/hosts if needed (failure is fatal)
     if [ ${#domains_to_add[@]} -gt 0 ]; then
         add_domains_to_hosts "${domains_to_add[@]}" || result=1
     fi
 
-    # If running in WSL2, also handle Windows hosts file
+    # If running in WSL2, also try Windows hosts file (best-effort; permission denied is common)
     if is_wsl2; then
         echo ""
-        add_domains_to_windows_hosts "$frontend_domain" "$backend_domain" || result=1
+        add_domains_to_windows_hosts "$frontend_domain" "$backend_domain" || true
     fi
 
     return $result

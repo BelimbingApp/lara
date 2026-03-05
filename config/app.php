@@ -50,9 +50,15 @@ return [
     | the Artisan command line tool. You should set this to the root of
     | the application so that it's available within Artisan commands.
     |
+    | When not set, derived from APP_SCHEME and FRONTEND_DOMAIN.
+    | All instances share Caddy on :443, so the port is always standard.
+    |
     */
 
-    'url' => env('APP_URL', 'http://localhost'),
+    'url' => env('APP_URL') ?: (
+        (env('APP_SCHEME') ?: 'https').'://'.
+        (env('FRONTEND_DOMAIN') ?: 'local.blb.lara')
+    ),
 
     /*
     |--------------------------------------------------------------------------

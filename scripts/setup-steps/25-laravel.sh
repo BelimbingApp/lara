@@ -71,17 +71,12 @@ install_dependencies() {
 
 # Generate Laravel APP_KEY
 generate_app_key() {
-    # Check if APP_KEY is already set and not empty
-    if [ -f "$PROJECT_ROOT/.env" ]; then
-        local app_key
-        app_key=$(grep -E "^APP_KEY=" "$PROJECT_ROOT/.env" | cut -d '=' -f2- | tr -d '[:space:]' || echo "")
-        if [ -n "$app_key" ] && [ "$app_key" != "base64:"* ]; then
-            # Check if it's a valid base64 key
-            if [[ "$app_key" =~ ^base64:[A-Za-z0-9+/=]+$ ]]; then
-                echo -e "${GREEN}✓${NC} APP_KEY already set"
-                return 0
-            fi
-        fi
+    # Check if APP_KEY is already set and valid
+    local app_key
+    app_key=$(get_env_var "APP_KEY" "")
+    if [ -n "$app_key" ] && [[ "$app_key" =~ ^base64:[A-Za-z0-9+/=]+$ ]]; then
+        echo -e "${GREEN}✓${NC} APP_KEY already set"
+        return 0
     fi
 
     # Check prerequisites
@@ -159,12 +154,10 @@ main() {
     echo ""
 
     # Save state
-    if [ -f "$PROJECT_ROOT/.env" ]; then
-        local app_key
-        app_key=$(grep -E "^APP_KEY=" "$PROJECT_ROOT/.env" | cut -d '=' -f2- | tr -d '[:space:]' || echo "")
-        if [ -n "$app_key" ]; then
-            save_to_setup_state "APP_KEY_GENERATED" "true"
-        fi
+    local app_key
+    app_key=$(get_env_var "APP_KEY" "")
+    if [ -n "$app_key" ]; then
+        save_to_setup_state "APP_KEY_GENERATED" "true"
     fi
     save_to_setup_state "LARAVEL_CONFIGURED" "true"
 

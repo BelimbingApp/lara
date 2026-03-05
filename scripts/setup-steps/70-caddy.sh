@@ -9,7 +9,7 @@
 # - Detects existing reverse proxies
 # - Installs Caddy if selected
 # - Configures Caddyfile
-# - Sets PROXY_TYPE and SKIP_CADDY variables
+# - Sets PROXY_TYPE variable
 
 set -euo pipefail
 
@@ -37,6 +37,7 @@ APP_ENV="${1:-local}"
 
 # Prompt user for custom domains with defaults
 # Returns: frontend_domain|backend_domain (only this goes to stdout)
+# Defaults: from .env (FRONTEND_DOMAIN, BACKEND_DOMAIN) if set, else from get_default_domains.
 prompt_for_domains() {
     local default_domains
     default_domains=$(get_default_domains "$APP_ENV")
@@ -44,6 +45,10 @@ prompt_for_domains() {
     local default_backend
     default_frontend=$(echo "$default_domains" | cut -d'|' -f1)
     default_backend=$(echo "$default_domains" | cut -d'|' -f2)
+
+    # Prefer .env / setup state if present
+    default_frontend=$(get_env_var "FRONTEND_DOMAIN" "$default_frontend")
+    default_backend=$(get_env_var "BACKEND_DOMAIN" "$default_backend")
 
     if [ -t 0 ]; then
         # All informational output goes to stderr so only the result goes to stdout
@@ -74,26 +79,6 @@ prompt_for_domains() {
         # Non-interactive: use defaults
         echo "${default_frontend}|${default_backend}"
     fi
-}
-
-# Find available HTTPS port, starting from preferred port
-# Returns first available port in range [preferred, preferred+10]
-find_available_https_port() {
-    local preferred_port=$1
-    local max_port=$((preferred_port + 10))
-    local port=$preferred_port
-
-    while [ $port -le $max_port ]; do
-        if is_port_available "$port"; then
-            echo "$port"
-            return 0
-        fi
-        ((port++))
-    done
-
-    # If no port found, return preferred anyway (caller will handle error)
-    echo "$preferred_port"
-    return 1
 }
 
 # Extract domains from existing Belimbing config in Caddyfile
@@ -295,18 +280,10 @@ main() {
                     echo -e "${GREEN}✓${NC} Keeping your choice: ${CYAN}$PROXY_TYPE${NC}"
 
                     # Even when keeping the previous choice, ensure hosts are configured
-                    local frontend_domain backend_domain
-                    if [ -f "$PROJECT_ROOT/.env" ]; then
-                        frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
-                        backend_domain=$(grep -E "^BACKEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
-                    fi
-                    # Use defaults if not set
-                    if [ -z "$frontend_domain" ]; then
-                        frontend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f1)
-                    fi
-                    if [ -z "$backend_domain" ]; then
-                        backend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f2)
-                    fi
+                    local defaults frontend_domain backend_domain
+                    defaults=$(get_default_domains "$APP_ENV")
+                    frontend_domain=$(get_env_var "FRONTEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f1)")
+                    backend_domain=$(get_env_var "BACKEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f2)")
 
                     # Add hosts entries if missing
                     if [ "$PROXY_TYPE" != "none" ]; then
@@ -323,18 +300,10 @@ main() {
                 echo -e "${GREEN}✓${NC} Using your previous choice: ${CYAN}$PROXY_TYPE${NC}"
 
                 # Even when keeping the previous choice, ensure hosts are configured
-                local frontend_domain backend_domain
-                if [ -f "$PROJECT_ROOT/.env" ]; then
-                    frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
-                    backend_domain=$(grep -E "^BACKEND_DOMAIN=" "$PROJECT_ROOT/.env" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
-                fi
-                # Use defaults if not set
-                if [ -z "$frontend_domain" ]; then
-                    frontend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f1)
-                fi
-                if [ -z "$backend_domain" ]; then
-                    backend_domain=$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f2)
-                fi
+                local defaults frontend_domain backend_domain
+                defaults=$(get_default_domains "$APP_ENV")
+                frontend_domain=$(get_env_var "FRONTEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f1)")
+                backend_domain=$(get_env_var "BACKEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f2)")
 
                 # Add hosts entries if missing
                 if [ "$PROXY_TYPE" != "none" ]; then
@@ -358,7 +327,6 @@ main() {
         if [ "$existing_proxy" = "caddy" ]; then
             echo -e "${GREEN}✓${NC} Caddy detected - will auto-configure for Belimbing"
             echo ""
-            SKIP_CADDY="true"
             PROXY_TYPE="caddy"
 
             # Prompt for domains (or use defaults)
@@ -372,29 +340,20 @@ main() {
             # Save domains to setup state and .env
             save_to_setup_state "FRONTEND_DOMAIN" "$frontend_domain"
             save_to_setup_state "BACKEND_DOMAIN" "$backend_domain"
-            update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$frontend_domain"
-            update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$backend_domain"
+            update_env_file "FRONTEND_DOMAIN" "$frontend_domain"
+            update_env_file "BACKEND_DOMAIN" "$backend_domain"
 
             # Add domains to /etc/hosts if missing
             echo ""
             ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
 
-            # Get default ports
             local default_ports
             default_ports=$(get_default_ports "$APP_ENV")
-            local frontend_port backend_port https_port
+            local frontend_port backend_port
             frontend_port=$(echo "$default_ports" | cut -d'|' -f1)
             backend_port=$(echo "$default_ports" | cut -d'|' -f2)
-            https_port=$(echo "$default_ports" | cut -d'|' -f3)
 
-            # Find available HTTPS port if default is taken
-            if ! is_port_available "$https_port"; then
-                echo -e "${YELLOW}⚠${NC} Port $https_port is in use, finding alternative..."
-                https_port=$(find_available_https_port "$https_port")
-                echo -e "${CYAN}ℹ${NC} Using port: ${CYAN}$https_port${NC}"
-            fi
-
-            configure_existing_caddy "$frontend_domain" "$backend_domain" "$frontend_port" "$backend_port" "$https_port"
+            configure_existing_caddy "$frontend_domain" "$backend_domain" "$frontend_port" "$backend_port" "443"
 
         else
             # Non-Caddy proxy detected - show options since user needs to choose
@@ -438,7 +397,6 @@ EOF
                     case "$choice" in
                         1)
                             # Use Caddy anyway - auto-handle conflicts
-                            SKIP_CADDY="false"
                             PROXY_TYPE="caddy"
 
                             # Prompt for domains
@@ -451,28 +409,17 @@ EOF
                             # Save domains to setup state and .env
                             save_to_setup_state "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
                             save_to_setup_state "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
-                            update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
-                            update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
+                            update_env_file "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
+                            update_env_file "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
 
                             # Add domains to /etc/hosts if missing
                             echo ""
                             ensure_domains_in_hosts "$FRONTEND_DOMAIN" "$BACKEND_DOMAIN"
 
-                            # Find available HTTPS port
-                            local default_ports
-                            default_ports=$(get_default_ports "$APP_ENV")
-                            local https_port
-                            https_port=$(echo "$default_ports" | cut -d'|' -f3)
-
-                            if ! is_port_available "$https_port"; then
-                                echo -e "${CYAN}ℹ${NC} Port $https_port is in use, finding alternative..."
-                                https_port=$(find_available_https_port "$https_port")
-                                echo -e "${CYAN}ℹ${NC} Caddy will use port: ${CYAN}$https_port${NC}"
-                            fi
+                            echo -e "${CYAN}ℹ${NC} Caddy will use shared instance on port 443"
                             break
                             ;;
                         2)
-                            SKIP_CADDY="true"
                             PROXY_TYPE="$existing_proxy"
                             echo ""
                             echo -e "${YELLOW}ℹ${NC} Using $existing_proxy - you'll need to configure it manually"
@@ -480,7 +427,6 @@ EOF
                             break
                             ;;
                         3)
-                            SKIP_CADDY="true"
                             PROXY_TYPE="none"
                             echo ""
                             echo -e "${YELLOW}⚠${NC} Running without HTTPS"
@@ -495,7 +441,6 @@ EOF
                 done
             else
                 # Non-interactive: default to Caddy with auto-conflict handling
-                SKIP_CADDY="false"
                 PROXY_TYPE="caddy"
             fi
         fi
@@ -504,7 +449,6 @@ EOF
         echo -e "${GREEN}✓${NC} No existing reverse proxy detected"
         echo -e "${CYAN}→${NC} Automatically choosing Caddy for HTTPS support"
         echo ""
-        SKIP_CADDY="false"
         PROXY_TYPE="caddy"
     fi
 
@@ -526,8 +470,8 @@ EOF
             # Save domains to setup state and .env
             save_to_setup_state "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
             save_to_setup_state "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
-            update_env_file "$PROJECT_ROOT/.env" "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
-            update_env_file "$PROJECT_ROOT/.env" "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
+            update_env_file "FRONTEND_DOMAIN" "$FRONTEND_DOMAIN"
+            update_env_file "BACKEND_DOMAIN" "$BACKEND_DOMAIN"
         fi
 
         # Always ensure domains are in hosts file (even if domains were already set)
@@ -577,12 +521,10 @@ EOF
 
     # Save state
     save_to_setup_state "PROXY_TYPE" "$PROXY_TYPE" "$PROJECT_ROOT"
-    save_to_setup_state "SKIP_CADDY" "$SKIP_CADDY" "$PROJECT_ROOT"
 
     # Update .env file with proxy configuration
     echo -n "Updating .env file with proxy settings... "
-    update_env_file "$PROJECT_ROOT/.env" "PROXY_TYPE" "$PROXY_TYPE"
-    update_env_file "$PROJECT_ROOT/.env" "SKIP_CADDY" "$SKIP_CADDY"
+    update_env_file "PROXY_TYPE" "$PROXY_TYPE"
     echo -e "${GREEN}✓${NC}"
 
     echo ""
