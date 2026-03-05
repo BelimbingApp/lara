@@ -6,7 +6,9 @@
 namespace App\Modules\Core\AI\Services;
 
 use App\Modules\Core\AI\DTO\Session;
+use App\Modules\Core\Employee\Models\Employee;
 use DateTimeImmutable;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Str;
 
 class SessionManager
@@ -189,6 +191,8 @@ class SessionManager
      */
     public function sessionsPath(int $employeeId): string
     {
+        $this->assertCanAccessDigitalWorker($employeeId);
+
         return $this->basePath.'/'.$employeeId.'/sessions';
     }
 
@@ -206,5 +210,32 @@ class SessionManager
     public function transcriptPath(int $employeeId, string $sessionId): string
     {
         return $this->sessionsPath($employeeId).'/'.$sessionId.'.jsonl';
+    }
+
+    /**
+     * Ensure the current authenticated user can access the Digital Worker's sessions.
+     *
+     * Access is limited to Digital Workers directly supervised by the user's employee.
+     *
+     * @throws AuthorizationException
+     */
+    private function assertCanAccessDigitalWorker(int $employeeId): void
+    {
+        $user = auth()->user();
+        $actorEmployeeId = $user?->employee?->id ? (int) $user->employee->id : null;
+
+        if ($actorEmployeeId === null) {
+            throw new AuthorizationException(__('Unauthorized Digital Worker session access.'));
+        }
+
+        $authorized = Employee::query()
+            ->digitalWorker()
+            ->whereKey($employeeId)
+            ->where('supervisor_id', $actorEmployeeId)
+            ->exists();
+
+        if (! $authorized) {
+            throw new AuthorizationException(__('Unauthorized Digital Worker session access.'));
+        }
     }
 }
