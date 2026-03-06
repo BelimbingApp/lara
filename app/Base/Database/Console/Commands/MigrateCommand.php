@@ -9,6 +9,7 @@ use App\Base\Database\Concerns\InteractsWithModuleMigrations;
 use App\Base\Database\Models\SeederRegistry;
 use App\Base\Database\Seeders\DevSeeder;
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Employee\Models\Employee;
 use Illuminate\Database\Console\Migrations\MigrateCommand as IlluminateMigrateCommand;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Input\InputOption;
@@ -74,7 +75,12 @@ class MigrateCommand extends IlluminateMigrateCommand
     /**
      * Run the pending migrations.
      *
-     * Overrides parent to handle module-aware seeding.
+     * Overrides parent to handle module-aware seeding and framework primitives.
+     *
+     * Ordering: migrations → production seeders → framework primitives → dev seeders.
+     * Framework primitives (Licensee, Lara) run after production seeders so that
+     * any seeder-created dependencies exist, and before dev seeders so that dev
+     * data can reference them.
      */
     protected function runMigrations(): void
     {
@@ -93,13 +99,21 @@ class MigrateCommand extends IlluminateMigrateCommand
                         'step' => $this->option('step'),
                     ]);
 
+                if ($this->option('pretend')) {
+                    return;
+                }
+
                 // Handle seeding with module-aware auto-discovery
-                if ($this->option('seed') && ! $this->option('pretend')) {
+                if ($this->option('seed')) {
                     $this->runModuleSeeders();
                 }
 
+                // Ensure framework primitives exist (Licensee company, Lara DW).
+                // Runs after production seeders, before dev seeders, in all environments.
+                $this->ensureFrameworkPrimitives();
+
                 // Handle dev seeders (--dev flag)
-                if ($this->option('dev') && ! $this->option('pretend')) {
+                if ($this->option('dev')) {
                     $this->runDevSeeders();
                 }
             },
@@ -161,11 +175,10 @@ class MigrateCommand extends IlluminateMigrateCommand
     /**
      * Run dev seeders for local development.
      *
-     * Creates the licensee company (required by dev seeders), then runs
-     * all dev seeders in dependency order.
-     *
      * Only allowed when APP_ENV=local — DevSeeder base class enforces
      * this guard, but we also check here for a clear early error.
+     * Framework primitives (Licensee, Lara) are already ensured by
+     * ensureFrameworkPrimitives() before this method is called.
      */
     protected function runDevSeeders(): void
     {
@@ -176,9 +189,6 @@ class MigrateCommand extends IlluminateMigrateCommand
         }
 
         $this->info('Running dev seeders…');
-
-        // Ensure licensee company exists (dev seeders reference Company::LICENSEE_ID)
-        $this->ensureLicenseeCompanyExists();
 
         $seeders = $this->discoverDevSeeders();
 
@@ -196,35 +206,25 @@ class MigrateCommand extends IlluminateMigrateCommand
     }
 
     /**
-     * Ensure the licensee company (id=1) exists.
+     * Ensure framework primitives exist: Licensee company (id=1) and Lara (employee id=1).
      *
-     * DevUserSeeder and others reference Company::LICENSEE_ID.
-     * After migrate:fresh the table is empty, so we create it here.
+     * Both are idempotent — safe to call on every migrate. Ordering matters:
+     * Licensee must exist before Lara (Lara belongs to the Licensee company).
+     *
+     * Delegates to each model's canonical provisioning method so setup scripts,
+     * the admin UI, and this command all share the same logic.
      */
-    private function ensureLicenseeCompanyExists(): void
+    private function ensureFrameworkPrimitives(): void
     {
-        if (Company::query()->where('id', Company::LICENSEE_ID)->exists()) {
-            return;
+        $name = env('LICENSEE_COMPANY_NAME', 'My Company');
+
+        if (Company::provisionLicensee($name)) {
+            $this->line("  Created licensee company: {$name}");
         }
 
-        $name = env('DEV_LICENSEE_COMPANY_NAME', 'My Company');
-
-        Company::unguarded(fn () => Company::query()->create([
-            'id' => Company::LICENSEE_ID,
-            'name' => $name,
-            'status' => 'active',
-        ]));
-
-        // PostgreSQL sequences don't advance on explicit-ID inserts — reset to
-        // avoid unique-constraint violations when dev seeders auto-increment.
-        $connection = Company::resolveConnection();
-        if ($connection->getDriverName() === 'pgsql') {
-            $connection->statement(
-                "SELECT setval(pg_get_serial_sequence('companies', 'id'), (SELECT COALESCE(MAX(id), 0) FROM companies))"
-            );
+        if (Employee::provisionLara()) {
+            $this->line('  Created Lara (system Digital Worker)');
         }
-
-        $this->line("  Created licensee company: {$name}");
     }
 
     /**

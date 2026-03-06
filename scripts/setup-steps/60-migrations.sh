@@ -52,18 +52,9 @@ run_migrations() {
     fi
 }
 
-# Create licensee company (id=1) via artisan tinker
+# Create licensee company (id=1) via Company::provisionLicensee()
 create_licensee_company() {
     echo -e "${CYAN}Creating licensee company...${NC}"
-
-    # Check if company id=1 already exists
-    local exists
-    exists=$(php artisan tinker --execute="echo App\Modules\Core\Company\Models\Company::find(1) ? 'true' : 'false';" 2>/dev/null | tail -1)
-
-    if [ "$exists" = "true" ]; then
-        echo -e "${GREEN}✓${NC} Licensee company already exists (id=1)"
-        return 0
-    fi
 
     local company_name
     if [ -t 0 ]; then
@@ -72,11 +63,15 @@ create_licensee_company() {
         company_name="${LICENSEE_COMPANY_NAME:-My Company}"
     fi
 
-    if php artisan tinker --execute="App\Modules\Core\Company\Models\Company::create(['name' => '$company_name', 'status' => 'active']);" >/dev/null 2>&1; then
+    local result
+    result=$(php artisan tinker --execute="echo App\Modules\Core\Company\Models\Company::provisionLicensee('$company_name') ? 'created' : 'exists';" 2>/dev/null | tail -1)
+
+    if [ "$result" = "created" ]; then
         echo -e "${GREEN}✓${NC} Licensee company created: ${CYAN}$company_name${NC} (id=1)"
+    elif [ "$result" = "exists" ]; then
+        echo -e "${GREEN}✓${NC} Licensee company already exists (id=1)"
     else
-        echo -e "${RED}✗${NC} Failed to create licensee company" >&2
-        return 1
+        echo -e "${YELLOW}⚠${NC} Failed to create licensee company — it can be set up later via the admin panel"
     fi
 }
 
@@ -168,6 +163,23 @@ rebuild_caches() {
     fi
 }
 
+# Create Lara — BLB's system Digital Worker (employee id=1)
+# Delegates to Employee::provisionLara() — single source of truth.
+create_lara() {
+    echo -e "${CYAN}Creating Lara (system Digital Worker)...${NC}"
+
+    local result
+    result=$(php artisan tinker --execute="echo App\Modules\Core\Employee\Models\Employee::provisionLara() ? 'created' : 'exists';" 2>/dev/null | tail -1)
+
+    if [ "$result" = "created" ]; then
+        echo -e "${GREEN}✓${NC} Lara created (employee id=1)"
+    elif [ "$result" = "exists" ]; then
+        echo -e "${GREEN}✓${NC} Lara already exists (employee id=1)"
+    else
+        echo -e "${YELLOW}⚠${NC} Failed to create Lara — she can be provisioned later via the admin panel"
+    fi
+}
+
 # Main setup function
 main() {
     print_section_banner "Database Migrations - Belimbing ($APP_ENV)"
@@ -211,6 +223,11 @@ main() {
     # Create licensee company
     print_subsection_header "Licensee Company"
     create_licensee_company
+    echo ""
+
+    # Create Lara (system Digital Worker)
+    print_subsection_header "Lara (System Digital Worker)"
+    create_lara
     echo ""
 
     # Create admin user

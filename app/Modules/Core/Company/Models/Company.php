@@ -306,6 +306,40 @@ class Company extends Model
     }
 
     /**
+     * Ensure the licensee company (id=1) exists.
+     *
+     * Idempotent — safe to call from migrations, setup scripts, and UI.
+     * Resets the PostgreSQL sequence after explicit-ID insert to avoid
+     * auto-increment collisions.
+     *
+     * @param  string  $name  Display name for the licensee company
+     * @return bool Whether the licensee was created (false if already existed).
+     */
+    public static function provisionLicensee(string $name = 'My Company'): bool
+    {
+        if (static::query()->where('id', self::LICENSEE_ID)->exists()) {
+            return false;
+        }
+
+        static::unguarded(fn () => static::query()->create([
+            'id' => self::LICENSEE_ID,
+            'name' => $name,
+            'status' => 'active',
+        ]));
+
+        // PostgreSQL sequences don't advance on explicit-ID inserts — reset to
+        // avoid unique-constraint violations when subsequent inserts auto-increment.
+        $connection = static::resolveConnection();
+        if ($connection->getDriverName() === 'pgsql') {
+            $connection->statement(
+                "SELECT setval(pg_get_serial_sequence('companies', 'id'), (SELECT COALESCE(MAX(id), 0) FROM companies))"
+            );
+        }
+
+        return true;
+    }
+
+    /**
      * Activate the company.
      */
     public function activate(): bool

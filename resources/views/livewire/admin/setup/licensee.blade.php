@@ -91,6 +91,9 @@ new class extends Component
 
     /**
      * Create a new company as the licensee with id=1.
+     *
+     * Delegates bootstrap to Company::provisionLicensee(), then updates
+     * additional fields collected from the form.
      */
     public function createLicensee(): void
     {
@@ -105,13 +108,13 @@ new class extends Component
             'website' => ['nullable', 'string', 'max:255'],
         ]);
 
-        DB::table('companies')->insert(array_merge($validated, [
-            'id' => Company::LICENSEE_ID,
-            'slug' => \Illuminate\Support\Str::slug($validated['name']),
-            'status' => 'active',
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]));
+        Company::provisionLicensee($validated['name']);
+
+        // Update additional fields beyond what provisionLicensee() sets
+        $extra = collect($validated)->except('name')->filter()->all();
+        if ($extra) {
+            Company::query()->where('id', Company::LICENSEE_ID)->update($extra);
+        }
 
         Session::flash('success', __('Licensee company created successfully.'));
         $this->redirect(route('admin.companies.show', Company::LICENSEE_ID), navigate: true);
