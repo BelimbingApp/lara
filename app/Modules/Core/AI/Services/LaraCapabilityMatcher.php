@@ -5,6 +5,8 @@
 
 namespace App\Modules\Core\AI\Services;
 
+use App\Base\Foundation\Enums\BlbErrorCode;
+use App\Base\Foundation\Exceptions\BlbDataContractException;
 use App\Modules\Core\Employee\Models\Employee;
 use App\Modules\Core\User\Models\User;
 
@@ -129,7 +131,11 @@ class LaraCapabilityMatcher
     private function employeeId(Employee $employee): int
     {
         if (! is_int($employee->id)) {
-            throw new \RuntimeException('Invalid Digital Worker identifier type.');
+            throw new BlbDataContractException(
+                'Invalid Digital Worker identifier type.',
+                BlbErrorCode::LARA_DIGITAL_WORKER_ID_TYPE_INVALID,
+                ['employee_id' => $employee->id]
+            );
         }
 
         return $employee->id;

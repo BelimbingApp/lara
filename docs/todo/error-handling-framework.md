@@ -1,6 +1,6 @@
 # BLB Framework Error Handling — TODO
 
-**Status:** Planning  
+**Status:** In Progress  
 **Priority:** Strategic  
 **Context:** BLB currently mixes `RuntimeException`, `LogicException`, and `AuthorizationException` across modules. A recent example is `LaraCapabilityMatcher` throwing a generic `RuntimeException` for identifier type mismatch.
 
@@ -39,6 +39,24 @@ Framework-level errors are not yet expressed through a consistent BLB contract, 
 - New framework exceptions exist with clear semantics and documentation.
 - At least Core AI and Base Database critical paths stop using generic `RuntimeException` for known domain/config/invariant failures.
 - Error rendering and logging behavior are deterministic and tested.
+
+## Progress
+- ✅ Added framework exception taxonomy in `app/Base/Foundation`:
+  - `BlbException`
+  - `BlbConfigurationException`
+  - `BlbInvariantViolationException`
+  - `BlbDataContractException`
+  - `BlbIntegrationException`
+  - `BlbErrorCode` enum for machine-readable reason codes
+- ✅ Migrated priority call sites:
+  - `DevSeederProductionEnvironmentException` → `BlbConfigurationException`
+  - `CircularSeederDependencyException` → `BlbInvariantViolationException`
+  - `LaraCapabilityMatcher` invalid ID path → `BlbDataContractException`
+  - `LaraPromptFactory` prompt/config failures → BLB exception types with reason codes
+- ✅ Added error-contract tests:
+  - `tests/Unit/Base/Foundation/Exceptions/BlbExceptionContractsTest.php`
+  - `tests/Unit/Base/Database/Exceptions/DatabaseExceptionContractsTest.php`
+  - `tests/Unit/Modules/Core/AI/Services/LaraPromptFactoryExceptionTest.php`
 
 ## Open questions
 - Should all framework exceptions carry a required reason code, or only selected modules?

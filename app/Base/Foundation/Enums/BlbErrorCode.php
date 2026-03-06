@@ -1,0 +1,22 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Base\Foundation\Enums;
+
+enum BlbErrorCode: string
+{
+    case BLB_CONFIGURATION = 'blb_configuration';
+    case BLB_INVARIANT_VIOLATION = 'blb_invariant_violation';
+    case BLB_DATA_CONTRACT = 'blb_data_contract';
+    case BLB_INTEGRATION = 'blb_integration';
+
+    case DEV_SEEDER_NON_LOCAL_ENV = 'dev_seeder_non_local_env';
+    case CIRCULAR_SEEDER_DEPENDENCY = 'circular_seeder_dependency';
+
+    case LARA_DIGITAL_WORKER_ID_TYPE_INVALID = 'lara_digital_worker_id_type_invalid';
+    case LARA_PROMPT_CONTEXT_ENCODE_FAILED = 'lara_prompt_context_encode_failed';
+    case LARA_PROMPT_RESOURCE_MISSING = 'lara_prompt_resource_missing';
+    case LARA_PROMPT_RESOURCE_UNREADABLE = 'lara_prompt_resource_unreadable';
+}
