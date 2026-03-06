@@ -19,4 +19,10 @@ enum BlbErrorCode: string
     case LARA_PROMPT_CONTEXT_ENCODE_FAILED = 'lara_prompt_context_encode_failed';
     case LARA_PROMPT_RESOURCE_MISSING = 'lara_prompt_resource_missing';
     case LARA_PROMPT_RESOURCE_UNREADABLE = 'lara_prompt_resource_unreadable';
+
+    case AUTHZ_DENIED = 'authz_denied';
+    case AUTHZ_UNKNOWN_CAPABILITY = 'authz_unknown_capability';
+
+    case LICENSEE_COMPANY_DELETION_FORBIDDEN = 'licensee_company_deletion_forbidden';
+    case SYSTEM_EMPLOYEE_DELETION_FORBIDDEN = 'system_employee_deletion_forbidden';
 }

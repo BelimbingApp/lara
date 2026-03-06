@@ -45,9 +45,13 @@ return Application::configure(basePath: dirname(__DIR__))
 
             $status = match ($exception->reasonCode) {
                 BlbErrorCode::BLB_DATA_CONTRACT,
-                BlbErrorCode::LARA_DIGITAL_WORKER_ID_TYPE_INVALID => 422,
+                BlbErrorCode::LARA_DIGITAL_WORKER_ID_TYPE_INVALID,
+                BlbErrorCode::AUTHZ_UNKNOWN_CAPABILITY => 422,
+                BlbErrorCode::AUTHZ_DENIED => 403,
                 BlbErrorCode::BLB_INVARIANT_VIOLATION,
-                BlbErrorCode::CIRCULAR_SEEDER_DEPENDENCY => 409,
+                BlbErrorCode::CIRCULAR_SEEDER_DEPENDENCY,
+                BlbErrorCode::LICENSEE_COMPANY_DELETION_FORBIDDEN,
+                BlbErrorCode::SYSTEM_EMPLOYEE_DELETION_FORBIDDEN => 409,
                 default => 500,
             };
 

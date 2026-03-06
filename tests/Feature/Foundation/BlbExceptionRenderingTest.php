@@ -1,5 +1,9 @@
 <?php
 
+use App\Base\Authz\DTO\AuthorizationDecision;
+use App\Base\Authz\Enums\AuthorizationReasonCode;
+use App\Base\Authz\Exceptions\AuthorizationDeniedException;
+use App\Base\Authz\Exceptions\UnknownCapabilityException;
 use App\Base\Foundation\Enums\BlbErrorCode;
 use App\Base\Foundation\Exceptions\BlbConfigurationException;
 use App\Base\Foundation\Exceptions\BlbDataContractException;
@@ -69,4 +73,35 @@ it('reports BLB exceptions with structured log metadata', function (): void {
         })
         ->atLeast()
         ->once();
+});
+
+it('renders authz denial exceptions as structured 403 JSON', function (): void {
+    config()->set('app.debug', true);
+
+    Route::get('/_test/blb-exception/authz-denied', function (): void {
+        throw new AuthorizationDeniedException(
+            AuthorizationDecision::deny(
+                AuthorizationReasonCode::DENIED_MISSING_CAPABILITY,
+                ['capability-policy']
+            )
+        );
+    });
+
+    $response = $this->getJson('/_test/blb-exception/authz-denied');
+
+    $response->assertStatus(403)
+        ->assertJsonPath('reason_code', BlbErrorCode::AUTHZ_DENIED->value);
+});
+
+it('renders unknown capability exceptions as structured 422 JSON', function (): void {
+    config()->set('app.debug', true);
+
+    Route::get('/_test/blb-exception/authz-unknown-capability', function (): void {
+        throw UnknownCapabilityException::fromKey('core.user.manage');
+    });
+
+    $response = $this->getJson('/_test/blb-exception/authz-unknown-capability');
+
+    $response->assertStatus(422)
+        ->assertJsonPath('reason_code', BlbErrorCode::AUTHZ_UNKNOWN_CAPABILITY->value);
 });

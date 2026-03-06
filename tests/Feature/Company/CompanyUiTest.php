@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Core\Company\Exceptions\LicenseeCompanyDeletionException;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
 use Livewire\Livewire;
@@ -26,7 +27,7 @@ test('licensee company model prevents deletion', function (): void {
         ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
 
     $licensee->delete();
-})->throws(\LogicException::class, 'The licensee company (id=1) cannot be deleted.');
+})->throws(LicenseeCompanyDeletionException::class, 'The licensee company (id=1) cannot be deleted.');
 
 test('company isLicensee returns true for id 1 and false for others', function (): void {
     $licensee = Company::query()->find(Company::LICENSEE_ID)

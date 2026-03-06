@@ -1,6 +1,6 @@
 # BLB Framework Error Handling — TODO
 
-**Status:** In Progress  
+**Status:** Done  
 **Priority:** Strategic  
 **Context:** BLB currently mixes `RuntimeException`, `LogicException`, and `AuthorizationException` across modules. A recent example is `LaraCapabilityMatcher` throwing a generic `RuntimeException` for identifier type mismatch.
 
@@ -62,6 +62,11 @@ Framework-level errors are not yet expressed through a consistent BLB contract, 
   - Safe message behavior in non-debug mode
   - Structured logging (`reason_code`, exception class, context)
   - Coverage: `tests/Feature/Foundation/BlbExceptionRenderingTest.php`
+- ✅ Migrated Authz and invariant-guard exceptions to BLB taxonomy:
+  - `AuthorizationDeniedException` now extends `BlbException` with `AUTHZ_DENIED` and audit context
+  - `UnknownCapabilityException` now extends `BlbDataContractException` with `AUTHZ_UNKNOWN_CAPABILITY`
+  - `LicenseeCompanyDeletionException` and `SystemEmployeeDeletionException` now extend `BlbInvariantViolationException`
+  - Extended JSON status mapping for authz and invariant reason codes in `bootstrap/app.php`
 
 ## Open questions
 - Should all framework exceptions carry a required reason code, or only selected modules?

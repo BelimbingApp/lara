@@ -5,15 +5,20 @@
 
 namespace App\Modules\Core\Employee\Exceptions;
 
-use LogicException;
+use App\Base\Foundation\Enums\BlbErrorCode;
+use App\Base\Foundation\Exceptions\BlbInvariantViolationException;
 
 /**
  * Thrown when an attempt is made to delete the system Digital Worker (Lara).
  */
-final class SystemEmployeeDeletionException extends LogicException
+final class SystemEmployeeDeletionException extends BlbInvariantViolationException
 {
     public function __construct()
     {
-        parent::__construct('Lara (the system Digital Worker) cannot be deleted.');
+        parent::__construct(
+            'Lara (the system Digital Worker) cannot be deleted.',
+            BlbErrorCode::SYSTEM_EMPLOYEE_DELETION_FORBIDDEN,
+            ['employee_id' => 1],
+        );
     }
 }
