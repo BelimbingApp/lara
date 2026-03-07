@@ -5,6 +5,7 @@ use App\Base\Authz\Models\PrincipalRole;
 use App\Base\Authz\Models\Role;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
+use Illuminate\Support\Facades\DB;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,9 +53,30 @@ expect()->extend('toBeOne', function () {
  */
 function createAdminUser(): User
 {
+    $roleDefinition = config('authz.roles.core_admin', []);
+    $role = Role::query()->updateOrCreate(
+        ['company_id' => null, 'code' => 'core_admin'],
+        [
+            'name' => $roleDefinition['name'] ?? 'Core Administrator',
+            'description' => $roleDefinition['description'] ?? 'System role with all capabilities.',
+            'is_system' => true,
+            'grant_all' => $roleDefinition['grant_all'] ?? true,
+        ]
+    );
+
+    $now = now();
+
+    foreach ($roleDefinition['capabilities'] ?? [] as $capabilityKey) {
+        DB::table('base_authz_role_capabilities')->insertOrIgnore([
+            'role_id' => $role->id,
+            'capability_key' => strtolower($capabilityKey),
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+    }
+
     $company = Company::factory()->create();
     $user = User::factory()->create(['company_id' => $company->id]);
-    $role = Role::query()->where('code', 'core_admin')->whereNull('company_id')->firstOrFail();
 
     PrincipalRole::query()->create([
         'company_id' => $company->id,
