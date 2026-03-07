@@ -1,0 +1,183 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+use App\Base\AI\Services\GithubCopilotAuthService;
+use App\Base\AI\Services\LlmClient;
+use App\Base\Authz\Contracts\AuthorizationService;
+use App\Base\Authz\DTO\AuthorizationDecision;
+use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
+use App\Modules\Core\AI\DTO\Message;
+use App\Modules\Core\AI\Services\AgenticRuntime;
+use App\Modules\Core\AI\Services\ConfigResolver;
+use App\Modules\Core\AI\Services\DigitalWorkerToolRegistry;
+use Illuminate\Foundation\Testing\TestCase;
+
+uses(TestCase::class);
+
+function buildMockConfig(): array
+{
+    return [
+        'api_key' => 'test-key',
+        'base_url' => 'https://api.example.com/v1',
+        'model' => 'gpt-4',
+        'max_tokens' => 1024,
+        'temperature' => 0.7,
+        'timeout' => 30,
+        'provider_name' => 'test-provider',
+    ];
+}
+
+function buildTestMessage(string $content, string $role = 'user'): Message
+{
+    return new Message(
+        role: $role,
+        content: $content,
+        timestamp: new \DateTimeImmutable,
+    );
+}
+
+function buildAllowAllAuthzMock(): AuthorizationService
+{
+    $mock = Mockery::mock(AuthorizationService::class);
+    $mock->shouldReceive('can')->andReturn(AuthorizationDecision::allow());
+
+    return $mock;
+}
+
+describe('AgenticRuntime', function () {
+    it('returns direct response when LLM produces no tool calls', function () {
+        $configResolver = Mockery::mock(ConfigResolver::class);
+        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+
+        $llmClient = Mockery::mock(LlmClient::class);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => 'Hello, I am Lara!',
+            'latency_ms' => 150,
+            'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 8],
+        ]);
+
+        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
+        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+
+        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $result = $runtime->run([buildTestMessage('Hi')], 1, 'You are Lara.');
+
+        expect($result['content'])->toBe('Hello, I am Lara!');
+        expect($result['run_id'])->toStartWith('run_');
+        expect($result['meta']['model'])->toBe('gpt-4');
+        expect($result['meta']['provider_name'])->toBe('test-provider');
+        expect($result['meta'])->not->toHaveKey('tool_actions');
+    });
+
+    it('executes tool calls and feeds results back to LLM', function () {
+        $configResolver = Mockery::mock(ConfigResolver::class);
+        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+
+        $llmClient = Mockery::mock(LlmClient::class);
+
+        // First call: LLM wants to call a tool
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => null,
+            'latency_ms' => 200,
+            'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 15],
+            'tool_calls' => [
+                [
+                    'id' => 'call_001',
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'echo_tool',
+                        'arguments' => '{"input": "world"}',
+                    ],
+                ],
+            ],
+        ]);
+
+        // Second call: LLM produces final response after receiving tool result
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => 'The echo result was: executed:echo_tool:world',
+            'latency_ms' => 150,
+            'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 10],
+        ]);
+
+        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
+        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+        $registry->register(new class implements DigitalWorkerTool
+        {
+            public function name(): string
+            {
+                return 'echo_tool';
+            }
+
+            public function description(): string
+            {
+                return 'Echoes input';
+            }
+
+            public function parametersSchema(): array
+            {
+                return ['type' => 'object', 'properties' => ['input' => ['type' => 'string']]];
+            }
+
+            public function requiredCapability(): ?string
+            {
+                return null;
+            }
+
+            public function execute(array $arguments): string
+            {
+                return 'executed:echo_tool:'.($arguments['input'] ?? 'none');
+            }
+        });
+
+        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $result = $runtime->run([buildTestMessage('Echo world')], 1, 'You are Lara.');
+
+        expect($result['content'])->toContain('executed:echo_tool:world');
+        expect($result['meta']['tool_actions'])->toHaveCount(1);
+        expect($result['meta']['tool_actions'][0]['tool'])->toBe('echo_tool');
+        expect($result['meta']['tool_actions'][0]['arguments'])->toBe(['input' => 'world']);
+    });
+
+    it('returns error when no LLM configuration is available', function () {
+        // Stub resolveConfig to return null by making resolve return empty
+        // and having no employee in DB. We mock at the config resolver level.
+        $configResolver = Mockery::mock(ConfigResolver::class);
+        $configResolver->shouldReceive('resolve')->with(1)->andReturn([]);
+        $configResolver->shouldReceive('resolveDefault')->andReturn(null);
+
+        $llmClient = Mockery::mock(LlmClient::class);
+        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
+        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+
+        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+
+        // Employee ID 1 doesn't exist in test DB, so company lookup fails gracefully
+        $result = $runtime->run([buildTestMessage('Hello')], 1, 'Prompt');
+
+        expect($result['content'])->toContain('⚠');
+        expect($result['meta'])->toHaveKey('error');
+    });
+
+    it('returns error when LLM call fails', function () {
+        $configResolver = Mockery::mock(ConfigResolver::class);
+        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+
+        $llmClient = Mockery::mock(LlmClient::class);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'error' => 'Rate limit exceeded',
+            'error_type' => 'rate_limit',
+            'latency_ms' => 50,
+        ]);
+
+        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
+        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+
+        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $result = $runtime->run([buildTestMessage('Hello')], 1, 'Prompt');
+
+        expect($result['content'])->toContain('⚠');
+        expect($result['meta']['error_type'])->toBe('rate_limit');
+    });
+});

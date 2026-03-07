@@ -4,7 +4,7 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 use App\Modules\Core\AI\Services\ConfigResolver;
-use App\Modules\Core\AI\Services\DigitalWorkerRuntime;
+use App\Modules\Core\AI\Services\AgenticRuntime;
 use App\Modules\Core\AI\Services\LaraOrchestrationService;
 use App\Modules\Core\AI\Services\LaraPromptFactory;
 use App\Modules\Core\AI\Services\MessageManager;
@@ -118,9 +118,19 @@ new class extends Component
                 'meta' => $orchestration['meta'],
             ];
         } else {
-            $runtime = app(DigitalWorkerRuntime::class);
+            $runtime = app(AgenticRuntime::class);
             $systemPrompt = app(LaraPromptFactory::class)->buildForCurrentUser($content);
             $result = $runtime->run($messages, Employee::LARA_ID, $systemPrompt);
+
+            // Extract <lara-action> JS blocks from response (may come from NavigateTool or direct LLM).
+            $actionJs = $this->extractLaraAction($result['content']);
+            if ($actionJs !== null) {
+                $result['content'] = $actionJs['clean_content'];
+                $result['meta']['orchestration'] = [
+                    'status' => 'browser_action',
+                    'js' => $actionJs['js'],
+                ];
+            }
         }
 
         $messageManager->appendAssistantMessage(
@@ -138,7 +148,12 @@ new class extends Component
 
         $navigationUrl = $result['meta']['orchestration']['navigation']['url'] ?? null;
         if (is_string($navigationUrl) && str_starts_with($navigationUrl, '/')) {
-            $this->dispatch('lara-navigate', url: $navigationUrl);
+            $this->dispatch('lara-execute-js', js: "Livewire.navigate('".$navigationUrl."')");
+        }
+
+        $actionJs = $result['meta']['orchestration']['js'] ?? null;
+        if (is_string($actionJs) && $actionJs !== '') {
+            $this->dispatch('lara-execute-js', js: $actionJs);
         }
 
         $session = $sessionManager->get(Employee::LARA_ID, $this->selectedSessionId);
@@ -153,6 +168,7 @@ new class extends Component
         }
 
         $this->isLoading = false;
+        $this->dispatch('lara-response-ready');
         $this->dispatch('lara-focus-composer');
     }
 
@@ -200,6 +216,27 @@ new class extends Component
         }
 
         return $resolver->resolveDefault(Company::LICENSEE_ID) !== null;
+    }
+
+    /**
+     * Extract `<lara-action>` JS block from LLM response content.
+     *
+     * @return array{js: string, clean_content: string}|null
+     */
+    private function extractLaraAction(string $content): ?array
+    {
+        if (preg_match('/<lara-action>(.*?)<\/lara-action>/s', $content, $matches) !== 1) {
+            return null;
+        }
+
+        $js = trim($matches[1]);
+        $clean = trim(str_replace($matches[0], '', $content));
+
+        if ($js === '') {
+            return null;
+        }
+
+        return ['js' => $js, 'clean_content' => $clean ?: $js];
     }
 }; ?>
 
@@ -275,7 +312,10 @@ new class extends Component
                 </div>
             </aside>
 
-            <section class="flex-1 min-h-0 flex flex-col">
+            <section class="flex-1 min-h-0 flex flex-col"
+                x-data="{ pendingMessage: null }"
+                x-on:lara-response-ready.window="pendingMessage = null"
+            >
                 @if ($selectedSessionId)
                     <div
                         class="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-3"
@@ -285,46 +325,72 @@ new class extends Component
                     >
                         @forelse($messages as $message)
                             <div class="flex {{ $message->role === 'user' ? 'justify-end' : 'justify-start' }}">
-                                <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm
-                                    {{ $message->role === 'user' ? 'bg-accent text-accent-on' : 'bg-surface-subtle text-ink' }}"
-                                >
-                                    <div class="whitespace-pre-wrap break-words">{{ $message->content }}</div>
-                                    <div class="text-[10px] mt-1 {{ $message->role === 'user' ? 'text-accent-on/70' : 'text-muted' }} tabular-nums">
-                                        {{ $message->timestamp->format('H:i:s') }}
+                                @if ($message->role === 'assistant' && ($message->meta['orchestration']['status'] ?? null) !== null)
+                                    {{-- Lara action message (navigation, guide, models, etc.) --}}
+                                    <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-accent/10 text-ink border border-accent/20">
+                                        <div class="flex items-center gap-1.5 mb-0.5">
+                                            <x-icon name="heroicon-o-bolt" class="w-3.5 h-3.5 text-accent" />
+                                            <span class="text-[10px] font-semibold uppercase tracking-wider text-accent">{{ __('Action') }}</span>
+                                        </div>
+                                        <div class="whitespace-pre-wrap break-words">{{ $message->content }}</div>
+                                        <div class="text-[10px] mt-1 text-muted tabular-nums">
+                                            {{ $message->timestamp->format('H:i:s') }}
+                                        </div>
                                     </div>
-                                </div>
+                                @else
+                                    <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm
+                                        {{ $message->role === 'user' ? 'bg-accent text-accent-on' : 'bg-surface-subtle text-ink' }}"
+                                    >
+                                        <div class="whitespace-pre-wrap break-words">{{ $message->content }}</div>
+                                        <div class="text-[10px] mt-1 {{ $message->role === 'user' ? 'text-accent-on/70' : 'text-muted' }} tabular-nums">
+                                            {{ $message->timestamp->format('H:i:s') }}
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         @empty
-                            <div class="h-full flex items-center justify-center">
+                            <div x-show="!pendingMessage" class="h-full flex items-center justify-center">
                                 <p class="text-sm text-muted">{{ __('Send a message to start chatting with Lara.') }}</p>
                             </div>
                         @endforelse
 
-                        @if ($isLoading)
-                            <div class="flex justify-start">
-                                <div class="bg-surface-subtle rounded-2xl px-3 py-2">
-                                    <div class="flex gap-1">
-                                        <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse"></span>
-                                        <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse" style="animation-delay: 150ms"></span>
-                                        <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse" style="animation-delay: 300ms"></span>
-                                    </div>
+                        {{-- Optimistic user message shown while Livewire processes --}}
+                        <template x-if="pendingMessage">
+                            <div class="flex justify-end">
+                                <div class="max-w-[80%] rounded-2xl px-3 py-2 text-sm bg-accent text-accent-on">
+                                    <div class="whitespace-pre-wrap break-words" x-text="pendingMessage"></div>
                                 </div>
                             </div>
-                        @endif
+                        </template>
+
+                        {{-- Loading dots: shown while waiting for Livewire response --}}
+                        <div x-show="pendingMessage" x-cloak class="flex justify-start">
+                            <div class="bg-surface-subtle rounded-2xl px-3 py-2">
+                                <div class="flex gap-1">
+                                    <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse"></span>
+                                    <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse" style="animation-delay: 150ms"></span>
+                                    <span class="w-2 h-2 bg-muted/50 rounded-full animate-pulse" style="animation-delay: 300ms"></span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="border-t border-border-default px-4 py-3">
-                        <form wire:submit="sendMessage" class="flex items-end gap-2">
+                        <form
+                            wire:submit="sendMessage"
+                            x-on:submit="pendingMessage = $refs.laraComposer.value; $refs.laraComposer.value = ''; $nextTick(() => { $refs.laraScroll.scrollTop = $refs.laraScroll.scrollHeight })"
+                            class="flex items-end gap-2"
+                        >
                             <div class="flex-1 min-w-0">
                                     <x-ui.input
                                         x-ref="laraComposer"
                                         wire:model="messageInput"
                                         placeholder="{{ __('Ask Lara about BLB, use /go <target>, /models <filter>, /guide <topic>, or /delegate <task>...') }}"
                                         autocomplete="off"
-                                        :disabled="$isLoading"
+                                        x-bind:disabled="!!pendingMessage"
                                     />
                             </div>
-                            <x-ui.button type="submit" variant="primary" :disabled="$isLoading">
+                            <x-ui.button type="submit" variant="primary" x-bind:disabled="!!pendingMessage">
                                 <x-icon name="heroicon-o-paper-airplane" class="w-4 h-4" />
                             </x-ui.button>
                         </form>

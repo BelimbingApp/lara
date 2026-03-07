@@ -35,12 +35,14 @@ class LlmClient
      * @param  string  $baseUrl  Provider base URL (e.g., 'https://api.openai.com/v1')
      * @param  string  $apiKey  Bearer token / API key
      * @param  string  $model  Model ID (e.g., 'gpt-5.2')
-     * @param  list<array{role: string, content: string}>  $messages  Chat messages
+     * @param  list<array{role: string, content: string|null, tool_calls?: list<array<string, mixed>>, tool_call_id?: string}>  $messages  Chat messages
      * @param  int  $maxTokens  Maximum tokens in response
      * @param  float  $temperature  Sampling temperature
      * @param  int  $timeout  HTTP timeout in seconds
      * @param  string|null  $providerName  Provider name (used for provider-specific headers)
-     * @return array{content?: string, usage?: array<string, int|null>, latency_ms: int, error?: string, error_type?: string}
+     * @param  list<array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>}}>|null  $tools  Tool definitions (OpenAI format)
+     * @param  string|null  $toolChoice  Tool choice strategy ('auto', 'none', 'required', or specific tool)
+     * @return array{content?: string, tool_calls?: list<array{id: string, type: string, function: array{name: string, arguments: string}}>, usage?: array<string, int|null>, latency_ms: int, error?: string, error_type?: string}
      */
     public function chat(
         string $baseUrl,
@@ -51,6 +53,8 @@ class LlmClient
         float $temperature = 0.7,
         int $timeout = 60,
         ?string $providerName = null,
+        ?array $tools = null,
+        ?string $toolChoice = null,
     ): array {
         $startTime = hrtime(true);
 
@@ -62,12 +66,14 @@ class LlmClient
                 $request = $request->withHeaders(self::COPILOT_HEADERS);
             }
 
-            $response = $request->post(rtrim($baseUrl, '/').'/chat/completions', [
+            $response = $request->post(rtrim($baseUrl, '/').'/chat/completions', array_filter([
                 'model' => $model,
                 'messages' => $messages,
                 'max_tokens' => $maxTokens,
                 'temperature' => $temperature,
-            ]);
+                'tools' => $tools,
+                'tool_choice' => $toolChoice,
+            ], fn ($v) => $v !== null));
         } catch (ConnectionException $e) {
             $latencyMs = $this->latencyMs($startTime);
 
@@ -100,10 +106,12 @@ class LlmClient
         }
 
         $data = $response->json();
-        $content = $data['choices'][0]['message']['content'] ?? '';
+        $choice = $data['choices'][0]['message'] ?? [];
+        $content = $choice['content'] ?? '';
+        $toolCalls = $choice['tool_calls'] ?? null;
         $usage = $data['usage'] ?? [];
 
-        return [
+        $result = [
             'content' => $content,
             'usage' => [
                 'prompt_tokens' => $usage['prompt_tokens'] ?? null,
@@ -111,6 +119,12 @@ class LlmClient
             ],
             'latency_ms' => $latencyMs,
         ];
+
+        if (is_array($toolCalls) && count($toolCalls) > 0) {
+            $result['tool_calls'] = $toolCalls;
+        }
+
+        return $result;
     }
 
     private function latencyMs(int|float $startTime): int

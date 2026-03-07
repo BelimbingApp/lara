@@ -10,7 +10,6 @@ use App\Modules\Core\Employee\Models\Employee;
 use App\Modules\Core\User\Models\User;
 use DateTimeImmutable;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Support\Str;
 
 class SessionManager
 {
@@ -29,7 +28,7 @@ class SessionManager
      */
     public function create(int $employeeId, ?string $title = null): Session
     {
-        $id = (string) Str::uuid();
+        $id = now(env('BLB_LOCAL_TIMEZONE', config('app.timezone')))->format('Ymd-His');
         $now = new DateTimeImmutable;
 
         $session = new Session(

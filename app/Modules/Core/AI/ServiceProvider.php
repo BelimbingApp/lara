@@ -5,8 +5,10 @@
 
 namespace App\Modules\Core\AI;
 
+use App\Modules\Core\AI\Services\AgenticRuntime;
 use App\Modules\Core\AI\Services\ConfigResolver;
 use App\Modules\Core\AI\Services\DigitalWorkerRuntime;
+use App\Modules\Core\AI\Services\DigitalWorkerToolRegistry;
 use App\Modules\Core\AI\Services\LaraCapabilityMatcher;
 use App\Modules\Core\AI\Services\LaraContextProvider;
 use App\Modules\Core\AI\Services\LaraKnowledgeNavigator;
@@ -19,6 +21,9 @@ use App\Modules\Core\AI\Services\MessageManager;
 use App\Modules\Core\AI\Services\ModelDiscoveryService;
 use App\Modules\Core\AI\Services\ProviderAuthFlowService;
 use App\Modules\Core\AI\Services\SessionManager;
+use App\Modules\Core\AI\Tools\ArtisanTool;
+use App\Modules\Core\AI\Tools\BashTool;
+use App\Modules\Core\AI\Tools\NavigateTool;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceProvider extends BaseServiceProvider
@@ -45,5 +50,19 @@ class ServiceProvider extends BaseServiceProvider
         $this->app->singleton(LaraNavigationRouter::class);
         $this->app->singleton(LaraOrchestrationService::class);
         $this->app->singleton(LaraPromptFactory::class);
+
+        $this->app->singleton(DigitalWorkerToolRegistry::class, function ($app) {
+            $registry = new DigitalWorkerToolRegistry(
+                $app->make(\App\Base\Authz\Contracts\AuthorizationService::class),
+            );
+
+            $registry->register(new ArtisanTool);
+            $registry->register(new BashTool);
+            $registry->register(new NavigateTool);
+
+            return $registry;
+        });
+
+        $this->app->singleton(AgenticRuntime::class);
     }
 }

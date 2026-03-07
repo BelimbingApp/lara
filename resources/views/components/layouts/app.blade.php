@@ -41,12 +41,16 @@
                 this.$nextTick(() => window.dispatchEvent(new CustomEvent('lara-chat-opened')));
             }
         },
-        navigateLara(url) {
-            if (typeof url !== 'string' || !url.startsWith('/')) {
+        executeLaraJs(js) {
+            if (typeof js !== 'string' || js.trim() === '') {
                 return;
             }
 
-            window.location.assign(url);
+            try {
+                new Function(js)();
+            } catch (e) {
+                console.error('[Lara] Action execution failed:', e);
+            }
         }
     }"
     @toggle-sidebar.window="
@@ -59,10 +63,10 @@
     "
     @open-lara-chat.window="openLaraChat()"
     @close-lara-chat.window="laraChatOpen = false"
-    @lara-navigate.window="navigateLara($event.detail?.url ?? '')"
+    @lara-execute-js.window="executeLaraJs($event.detail?.js ?? '')"
     @keydown.ctrl.k.window.prevent="toggleLaraChat($event)"
     @keydown.meta.k.window.prevent="toggleLaraChat($event)"
-    @keydown.escape.window="sidebarOpen = false; laraChatOpen = false"
+    @keydown.escape.window="laraChatOpen = false"
     class="h-screen overflow-hidden bg-surface-page flex flex-col"
 >
     {{-- Impersonation Banner --}}
@@ -110,16 +114,7 @@
     </div>
 
     @auth
-        {{-- Global Lara chat overlay --}}
-        <div
-            x-show="laraChatOpen"
-            x-transition.opacity
-            @click="laraChatOpen = false"
-            class="fixed inset-0 z-40 bg-black/35"
-            style="display: none;"
-            aria-hidden="true"
-        ></div>
-
+        {{-- Lara chat panel (non-blocking — page remains interactive) --}}
         <div
             x-show="laraChatOpen"
             x-transition:enter="transition ease-out duration-200"
@@ -128,10 +123,10 @@
             x-transition:leave="transition ease-in duration-150"
             x-transition:leave-start="opacity-100 translate-y-0"
             x-transition:leave-end="opacity-0 translate-y-2"
-            class="fixed inset-x-3 sm:inset-x-4 bottom-8 z-50 flex justify-end"
+            class="fixed right-3 sm:right-4 bottom-8 z-50"
             style="display: none;"
         >
-            <section class="w-full max-w-5xl h-[min(80vh,46rem)] bg-surface-card border border-border-default rounded-2xl shadow-sm overflow-hidden">
+            <section class="w-[min(56rem,calc(100vw-2rem))] h-[min(80vh,46rem)] bg-surface-card border border-border-default rounded-2xl shadow-lg overflow-hidden">
                 <livewire:ai.lara-chat-overlay />
             </section>
         </div>

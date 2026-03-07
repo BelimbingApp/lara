@@ -27,6 +27,10 @@ return [
     'capabilities' => [
         'ai.digital_worker.view',
         'ai.digital_worker.execute',
+        'ai.tool_artisan.execute',
+        'ai.tool_bash.execute',
+        'ai.tool_navigate.execute',
+        'ai.tool_write_js.execute',
         'admin.user.impersonate',
         'admin.role.list',
         'admin.role.view',
@@ -125,6 +129,19 @@ return [
             'capabilities' => [
                 'ai.digital_worker.view',
                 'ai.digital_worker.execute',
+                'ai.tool_navigate.execute',
+            ],
+        ],
+        'dw_power_user' => [
+            'name' => 'DW Power User',
+            'description' => 'Full Digital Worker tool access including artisan, bash, and JS execution.',
+            'capabilities' => [
+                'ai.digital_worker.view',
+                'ai.digital_worker.execute',
+                'ai.tool_artisan.execute',
+                'ai.tool_bash.execute',
+                'ai.tool_navigate.execute',
+                'ai.tool_write_js.execute',
             ],
         ],
         'system_viewer' => [
