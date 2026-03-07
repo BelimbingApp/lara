@@ -302,7 +302,23 @@ This project uses nested AGENTS.md files for specialized guidance. Agents should
 
 **Cursor users:** `.cursor/rules/ui-architect.mdc` is a thin adapter that triggers on `*.blade.php` and references `resources/views/AGENTS.md`. The AGENTS.md file is the canonical source; do not duplicate rules in `.cursor/rules/`.
 
-## 7. Module-First Placement Guard
+## 7. Worktree Strategy
+
+BLB uses git worktrees to isolate parallel workstreams. Active worktrees:
+
+| Worktree | Branch | Path | Purpose |
+|----------|--------|------|---------|
+| Main | `main` | `blb` | Docs, architecture specs, shared contracts |
+| Amp tools | `lara-tools` | `blb-amp-tree` | Lara tool implementations (Phase 1+) |
+| Quality | `sonar-gate` | `blb-quality-tree` | Static analysis & quality gates |
+
+**Rules for worktree-based development:**
+- **Docs stay in main** — Architecture specs, blueprints, and AGENTS.md files live in `main` so all worktrees and collaborators can reference them.
+- **Rebase frequently** — Feature worktrees should rebase onto `main` regularly to pick up shared contract changes (interfaces, authz config, registry wiring).
+- **Merge when stable** — Tool implementations merge back to `main` once they pass tests and authz seeder is synced.
+- **Don't duplicate infrastructure** — Tools depend on existing interfaces (`DigitalWorkerTool`, `DigitalWorkerToolRegistry`, authz config) in `main`. If a tool requires infrastructure changes, land those in `main` first, then rebase the feature branch.
+
+## 8. Module-First Placement Guard
 
 Before creating new framework/module assets, verify placement against `docs/architecture/file-structure.md`.
 If the task touches module config, migrations, or seeders, **stop and verify placement/prefix/registration rules first** before creating or moving files.
