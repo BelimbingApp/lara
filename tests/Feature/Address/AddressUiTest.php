@@ -27,13 +27,15 @@ test('authenticated users can view address pages', function (): void {
 });
 
 test('address can be created from create page component', function (): void {
-    Country::query()->create([
-        'iso' => 'US',
-        'iso3' => 'USA',
-        'iso_numeric' => '840',
-        'country' => 'United States',
-        'continent' => 'NA',
-    ]);
+    Country::query()->updateOrCreate(
+        ['iso' => 'US'],
+        [
+            'iso3' => 'USA',
+            'iso_numeric' => '840',
+            'country' => 'United States',
+            'continent' => 'NA',
+        ]
+    );
 
     $user = User::factory()->create();
     $this->actingAs($user);
