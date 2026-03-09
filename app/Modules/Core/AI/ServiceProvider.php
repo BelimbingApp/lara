@@ -5,14 +5,13 @@
 
 namespace App\Modules\Core\AI;
 
+use App\Base\AI\Services\WebSearchService;
 use App\Modules\Core\AI\Services\AgenticRuntime;
 use App\Modules\Core\AI\Services\ConfigResolver;
 use App\Modules\Core\AI\Services\DigitalWorkerRuntime;
 use App\Modules\Core\AI\Services\DigitalWorkerToolRegistry;
 use App\Modules\Core\AI\Services\LaraCapabilityMatcher;
 use App\Modules\Core\AI\Services\LaraContextProvider;
-use App\Modules\Core\AI\Services\LaraKnowledgeNavigator;
-use App\Modules\Core\AI\Services\LaraModelCatalogQueryService;
 use App\Modules\Core\AI\Services\LaraNavigationRouter;
 use App\Modules\Core\AI\Services\LaraOrchestrationService;
 use App\Modules\Core\AI\Services\LaraPromptFactory;
@@ -26,6 +25,8 @@ use App\Modules\Core\AI\Services\Messaging\ChannelAdapterRegistry;
 use App\Modules\Core\AI\Services\ModelDiscoveryService;
 use App\Modules\Core\AI\Services\ProviderAuthFlowService;
 use App\Modules\Core\AI\Services\SessionManager;
+use App\Modules\Core\AI\Services\ToolMetadataRegistry;
+use App\Modules\Core\AI\Services\ToolReadinessService;
 use App\Modules\Core\AI\Tools\ArtisanTool;
 use App\Modules\Core\AI\Tools\BashTool;
 use App\Modules\Core\AI\Tools\BrowserTool;
@@ -46,8 +47,6 @@ use App\Modules\Core\AI\Tools\WebFetchTool;
 use App\Modules\Core\AI\Tools\WebSearchTool;
 use App\Modules\Core\AI\Tools\WorkerListTool;
 use App\Modules\Core\AI\Tools\WriteJsTool;
-use App\Modules\Core\AI\Services\ToolMetadataRegistry;
-use App\Modules\Core\AI\Services\ToolReadinessService;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceProvider extends BaseServiceProvider
@@ -67,8 +66,6 @@ class ServiceProvider extends BaseServiceProvider
         $this->app->singleton(DigitalWorkerRuntime::class);
         $this->app->singleton(ProviderAuthFlowService::class);
         $this->app->singleton(LaraContextProvider::class);
-        $this->app->singleton(LaraKnowledgeNavigator::class);
-        $this->app->singleton(LaraModelCatalogQueryService::class);
         $this->app->singleton(LaraCapabilityMatcher::class);
         $this->app->singleton(LaraTaskDispatcher::class);
         $this->app->singleton(LaraNavigationRouter::class);
@@ -106,7 +103,7 @@ class ServiceProvider extends BaseServiceProvider
             $registry->register(new QueryDataTool);
             $registry->register(new ScheduleTaskTool);
             $registry->register(new SystemInfoTool);
-            $registry->register(new WebFetchTool);
+            $registry->register($app->make(WebFetchTool::class));
             $registry->register($app->make(WorkerListTool::class));
             $registry->register(new WriteJsTool);
 
@@ -115,7 +112,9 @@ class ServiceProvider extends BaseServiceProvider
                 $registry->register($memorySearchTool);
             }
 
-            $webSearchTool = WebSearchTool::createIfConfigured();
+            $webSearchTool = WebSearchTool::createIfConfigured(
+                $app->make(WebSearchService::class)
+            );
             if ($webSearchTool !== null) {
                 $registry->register($webSearchTool);
             }

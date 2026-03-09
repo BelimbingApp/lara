@@ -9,8 +9,14 @@ use App\Base\AI\Console\Commands\AiCatalogSyncCommand;
 use App\Base\AI\Providers\Help\ProviderHelpRegistry;
 use App\Base\AI\Services\GithubCopilotAuthService;
 use App\Base\AI\Services\LlmClient;
+use App\Base\AI\Services\KnowledgeNavigator;
+use App\Base\AI\Services\ModelCatalogQueryService;
 use App\Base\AI\Services\ModelCatalogService;
 use App\Base\AI\Services\ProviderDiscoveryService;
+use App\Base\AI\Services\UrlSafetyGuard;
+use App\Base\AI\Services\VectorStoreService;
+use App\Base\AI\Services\WebFetchService;
+use App\Base\AI\Services\WebSearchService;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceProvider extends BaseServiceProvider
@@ -26,9 +32,15 @@ class ServiceProvider extends BaseServiceProvider
         $this->mergeConfigFrom(__DIR__.'/Config/ai.php', 'ai');
 
         $this->app->singleton(ModelCatalogService::class);
+        $this->app->singleton(ModelCatalogQueryService::class);
         $this->app->singleton(LlmClient::class);
+        $this->app->singleton(KnowledgeNavigator::class);
         $this->app->singleton(ProviderDiscoveryService::class);
+        $this->app->singleton(UrlSafetyGuard::class);
+        $this->app->singleton(WebFetchService::class);
+        $this->app->singleton(WebSearchService::class);
         $this->app->singleton(GithubCopilotAuthService::class);
+        $this->app->singleton(VectorStoreService::class);
         $this->app->singleton(ProviderHelpRegistry::class);
     }
 

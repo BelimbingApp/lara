@@ -3,9 +3,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-namespace App\Modules\Core\AI\Services;
+namespace App\Base\AI\Services;
 
-class LaraKnowledgeNavigator
+class KnowledgeNavigator
 {
     /**
      * Curated BLB references Lara can use to navigate the framework knowledge base.

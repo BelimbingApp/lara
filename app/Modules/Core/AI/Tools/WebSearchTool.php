@@ -5,9 +5,9 @@
 
 namespace App\Modules\Core\AI\Tools;
 
+use App\Base\AI\Services\WebSearchService;
 use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Http;
 
 /**
  * Web search tool for Digital Workers.
@@ -28,10 +28,6 @@ class WebSearchTool implements DigitalWorkerTool
 
     private const DEFAULT_CACHE_TTL_MINUTES = 15;
 
-    private const PARALLEL_ENDPOINT = 'https://api.parallel.ai/v1beta/search';
-
-    private const BRAVE_ENDPOINT = 'https://api.search.brave.com/res/v1/web/search';
-
     private const VALID_FRESHNESS = ['day', 'week', 'month'];
 
     private string $provider;
@@ -40,16 +36,23 @@ class WebSearchTool implements DigitalWorkerTool
 
     private int $cacheTtlMinutes;
 
+    private readonly WebSearchService $webSearchService;
+
     /**
      * @param  string  $provider  Search provider name ('parallel' or 'brave')
      * @param  string  $apiKey  API key for the configured provider
      * @param  int  $cacheTtlMinutes  Cache TTL in minutes for search results
      */
-    public function __construct(string $provider, string $apiKey, int $cacheTtlMinutes = self::DEFAULT_CACHE_TTL_MINUTES)
-    {
+    public function __construct(
+        string $provider,
+        string $apiKey,
+        int $cacheTtlMinutes = self::DEFAULT_CACHE_TTL_MINUTES,
+        ?WebSearchService $webSearchService = null,
+    ) {
         $this->provider = $provider;
         $this->apiKey = $apiKey;
         $this->cacheTtlMinutes = $cacheTtlMinutes;
+        $this->webSearchService = $webSearchService ?? new WebSearchService;
     }
 
     /**
@@ -58,7 +61,7 @@ class WebSearchTool implements DigitalWorkerTool
      * Returns null when no API key is available, allowing the registry
      * to skip registration of this tool.
      */
-    public static function createIfConfigured(): ?self
+    public static function createIfConfigured(?WebSearchService $webSearchService = null): ?self
     {
         $provider = config('ai.tools.web_search.provider', 'parallel');
         $apiKey = config('ai.tools.web_search.'.$provider.'.api_key');
@@ -69,7 +72,7 @@ class WebSearchTool implements DigitalWorkerTool
 
         $cacheTtl = (int) config('ai.tools.web_search.cache_ttl_minutes', self::DEFAULT_CACHE_TTL_MINUTES);
 
-        return new self($provider, $apiKey, $cacheTtl);
+        return new self($provider, $apiKey, $cacheTtl, $webSearchService);
     }
 
     public function name(): string
@@ -145,91 +148,34 @@ class WebSearchTool implements DigitalWorkerTool
      */
     private function performSearch(string $query, int $count, ?string $freshness): string
     {
-        return match ($this->provider) {
-            'brave' => $this->searchBrave($query, $count, $freshness),
-            default => $this->searchParallel($query, $count),
-        };
-    }
+        $result = $this->webSearchService->search(
+            provider: $this->provider,
+            apiKey: $this->apiKey,
+            query: $query,
+            count: $count,
+            freshness: $freshness,
+            timeoutSeconds: self::TIMEOUT_SECONDS,
+        );
 
-    /**
-     * Execute a search via the Parallel API.
-     *
-     * Parallel does not support a freshness filter; it is silently ignored.
-     */
-    private function searchParallel(string $query, int $count): string
-    {
-        try {
-            $response = Http::withHeaders([
-                'x-api-key' => $this->apiKey,
-            ])
-                ->timeout(self::TIMEOUT_SECONDS)
-                ->post(self::PARALLEL_ENDPOINT, [
-                    'query' => $query,
-                    'max_results' => $count,
-                ]);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            return 'Search failed: '.$e->getMessage();
+        if (isset($result['error'])) {
+            return 'Search failed: '.$result['error'];
         }
 
-        if ($response->failed()) {
-            return 'Search failed: HTTP '.$response->status();
-        }
+        $results = $result['results'] ?? [];
 
-        $data = $response->json();
-        $results = $data['results'] ?? [];
-
-        if (! is_array($results) || $results === []) {
+        if ($results === []) {
             return 'No results found for: '.$query;
         }
 
-        return $this->formatResults($results, 'snippet');
-    }
-
-    /**
-     * Execute a search via the Brave Search API.
-     */
-    private function searchBrave(string $query, int $count, ?string $freshness): string
-    {
-        $params = [
-            'q' => $query,
-            'count' => $count,
-        ];
-
-        if ($freshness !== null) {
-            $params['freshness'] = $freshness;
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'X-Subscription-Token' => $this->apiKey,
-            ])
-                ->timeout(self::TIMEOUT_SECONDS)
-                ->get(self::BRAVE_ENDPOINT, $params);
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            return 'Search failed: '.$e->getMessage();
-        }
-
-        if ($response->failed()) {
-            return 'Search failed: HTTP '.$response->status();
-        }
-
-        $data = $response->json();
-        $results = $data['web']['results'] ?? [];
-
-        if (! is_array($results) || $results === []) {
-            return 'No results found for: '.$query;
-        }
-
-        return $this->formatResults($results, 'description');
+        return $this->formatResults($results);
     }
 
     /**
      * Format search results as a numbered list.
      *
-     * @param  list<array<string, mixed>>  $results  Raw results from the provider
-     * @param  string  $snippetKey  Key for the snippet/description field
+     * @param  list<array{title: string, url: string, snippet: string}>  $results
      */
-    private function formatResults(array $results, string $snippetKey): string
+    private function formatResults(array $results): string
     {
         $lines = [];
 
@@ -237,7 +183,7 @@ class WebSearchTool implements DigitalWorkerTool
             $number = $index + 1;
             $title = $result['title'] ?? 'Untitled';
             $url = $result['url'] ?? '';
-            $snippet = $result[$snippetKey] ?? $result['description'] ?? $result['snippet'] ?? '';
+            $snippet = $result['snippet'] ?? '';
 
             $lines[] = $number.'. '.$title;
             $lines[] = '   '.$url;

@@ -5,8 +5,8 @@
 
 namespace App\Modules\Core\AI\Tools;
 
+use App\Base\AI\Services\KnowledgeNavigator;
 use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
-use App\Modules\Core\AI\Services\LaraKnowledgeNavigator;
 
 /**
  * BLB framework documentation guide tool for Digital Workers.
@@ -24,7 +24,7 @@ class GuideTool implements DigitalWorkerTool
     private const MAX_SECTIONS_LIMIT = 10;
 
     public function __construct(
-        private readonly LaraKnowledgeNavigator $navigator,
+        private readonly KnowledgeNavigator $navigator,
     ) {}
 
     public function name(): string

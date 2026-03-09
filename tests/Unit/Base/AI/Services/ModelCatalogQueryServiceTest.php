@@ -1,8 +1,8 @@
 <?php
 
+use App\Base\AI\Services\ModelCatalogQueryService;
 use App\Base\AI\Services\ModelCatalogService;
 use App\Base\Foundation\Exceptions\BlbDataContractException;
-use App\Modules\Core\AI\Services\LaraModelCatalogQueryService;
 use Tests\TestCase;
 
 uses(TestCase::class);
@@ -62,7 +62,7 @@ it('filters catalog models with AND/OR boolean expressions', function (): void {
         ],
     ]);
 
-    $service = new LaraModelCatalogQueryService($catalog);
+    $service = new ModelCatalogQueryService($catalog);
     $matches = $service->query('reasoning:true AND input:text AND (family:gpt OR family:claude)');
 
     expect($matches)->toHaveCount(2)
@@ -72,7 +72,7 @@ it('filters catalog models with AND/OR boolean expressions', function (): void {
 
 it('throws data contract exception for invalid filter syntax', function (): void {
     $catalog = Mockery::mock(ModelCatalogService::class);
-    $service = new LaraModelCatalogQueryService($catalog);
+    $service = new ModelCatalogQueryService($catalog);
 
     expect(fn () => $service->query('reasoning:true AND ???'))
         ->toThrow(BlbDataContractException::class);

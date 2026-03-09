@@ -3,12 +3,18 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
-namespace App\Modules\Core\AI\Services;
+namespace App\Base\AI\Services;
 
-use App\Base\AI\Services\ModelCatalogService;
 use App\Base\Foundation\Exceptions\BlbDataContractException;
 
-class LaraModelCatalogQueryService
+/**
+ * Stateless query engine for filtering model catalog records.
+ *
+ * Supports boolean expressions with AND/OR operators over normalized catalog
+ * fields, and returns flattened model entries suitable for orchestration and
+ * UI list rendering.
+ */
+class ModelCatalogQueryService
 {
     public function __construct(
         private readonly ModelCatalogService $modelCatalog,
@@ -104,7 +110,7 @@ class LaraModelCatalogQueryService
      */
     private function tokenize(string $expression): array
     {
-        preg_match_all('/\\(|\\)|\\bAND\\b|\\bOR\\b|[^\\s()]+/i', $expression, $matches);
+        preg_match_all('/\(|\)|\bAND\b|\bOR\b|[^\s()]+/i', $expression, $matches);
 
         return $matches[0] ?? [];
     }

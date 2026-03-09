@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Core\AI\Services\LaraKnowledgeNavigator;
+use App\Base\AI\Services\KnowledgeNavigator;
 use App\Modules\Core\AI\Tools\GuideTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
@@ -9,7 +9,7 @@ use Tests\Support\AssertsToolBehavior;
 uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
-    $this->tool = new GuideTool(new LaraKnowledgeNavigator);
+    $this->tool = new GuideTool(new KnowledgeNavigator);
 });
 
 describe('tool metadata', function () {
