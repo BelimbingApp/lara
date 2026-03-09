@@ -3,44 +3,33 @@
 use App\Modules\Core\AI\Tools\MemoryGetTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new MemoryGetTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('memory_get');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires memory_get capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_memory_get.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('path')
-            ->and($schema['required'])->toBe(['path']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'memory_get',
+            'ai.tool_memory_get.execute',
+            ['path'],
+            ['path'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects empty path', function () {
-        $result = $this->tool->execute(['path' => '']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '']);
     });
 
     it('rejects missing path', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+        $this->assertToolError([]);
     });
 
     it('rejects absolute paths', function () {

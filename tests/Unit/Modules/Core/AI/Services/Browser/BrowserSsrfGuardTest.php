@@ -5,6 +5,18 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
+dataset('browser ssrf blocked hostnames', [
+    ['http://localhost', 'Blocked'],
+    ['https://0.0.0.0', 'Blocked'],
+    ['https://[::1]', 'Blocked'],
+    ['https://router.local', 'Blocked'],
+]);
+
+dataset('browser ssrf private ips', [
+    'https://192.168.1.1',
+    'https://10.0.0.1',
+]);
+
 beforeEach(function (): void {
     $this->guard = new BrowserSsrfGuard;
 });
@@ -36,21 +48,9 @@ describe('url parsing', function () {
 });
 
 describe('hostname blocklist', function () {
-    it('blocks localhost', function () {
-        expect($this->guard->validate('http://localhost'))->toContain('Blocked');
-    });
-
-    it('blocks 0.0.0.0', function () {
-        expect($this->guard->validate('http://0.0.0.0'))->toContain('Blocked');
-    });
-
-    it('blocks ::1', function () {
-        expect($this->guard->validate('http://[::1]'))->toContain('Blocked');
-    });
-
-    it('blocks .local domains', function () {
-        expect($this->guard->validate('http://router.local'))->toContain('Blocked');
-    });
+    it('blocks explicit hostname targets', function (string $url, string $expectedFragment) {
+        expect($this->guard->validate($url))->toContain($expectedFragment);
+    })->with('browser ssrf blocked hostnames');
 });
 
 describe('hostname allowlist', function () {
@@ -64,18 +64,14 @@ describe('hostname allowlist', function () {
         config()->set('ai.tools.browser.ssrf_policy.hostname_allowlist', ['*.example.com']);
         config()->set('ai.tools.browser.ssrf_policy.allow_private_network', false);
 
-        expect($this->guard->validate('http://192.168.1.1'))->toContain('private or reserved');
+        expect($this->guard->validate('https://192.168.1.1'))->toContain('private or reserved');
     });
 });
 
 describe('private network blocking', function () {
-    it('blocks private IP 192.168.x.x', function () {
-        expect($this->guard->validate('http://192.168.1.1'))->toContain('private or reserved');
-    });
-
-    it('blocks private IP 10.x.x.x', function () {
-        expect($this->guard->validate('http://10.0.0.1'))->toContain('private or reserved');
-    });
+    it('blocks private IP ranges', function (string $url) {
+        expect($this->guard->validate($url))->toContain('private or reserved');
+    })->with('browser ssrf private ips');
 
     it('blocks reserved 127.x', function () {
         expect($this->guard->validate('http://127.0.0.1'))->toContain('Blocked');
@@ -86,6 +82,6 @@ describe('allow_private_network config', function () {
     it('allows private IPs when allow_private_network is true', function () {
         config()->set('ai.tools.browser.ssrf_policy.allow_private_network', true);
 
-        expect($this->guard->validate('http://192.168.1.1'))->toBe(true);
+        expect($this->guard->validate('https://192.168.1.1'))->toBe(true);
     });
 });

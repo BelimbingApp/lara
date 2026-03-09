@@ -6,6 +6,7 @@
 namespace App\Modules\Core\AI\Tools;
 
 use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
+use App\Modules\Core\AI\Tools\Concerns\FormatsProcessResult;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -23,6 +24,8 @@ use Illuminate\Support\Facades\Process;
  */
 class ArtisanTool implements DigitalWorkerTool
 {
+    use FormatsProcessResult;
+
     /**
      * Default timeout in seconds for foreground execution.
      */
@@ -123,28 +126,7 @@ class ArtisanTool implements DigitalWorkerTool
             ->path(base_path())
             ->run($fullCommand);
 
-        $output = trim($result->output());
-        $errorOutput = trim($result->errorOutput());
-
-        if (! $result->successful()) {
-            $message = 'Command failed (exit code '.$result->exitCode().').';
-
-            if ($errorOutput !== '') {
-                $message .= "\n".$errorOutput;
-            }
-
-            if ($output !== '') {
-                $message .= "\n".$output;
-            }
-
-            return $message;
-        }
-
-        if ($output === '' && $errorOutput === '') {
-            return 'Command completed successfully (no output).';
-        }
-
-        return $output !== '' ? $output : $errorOutput;
+        return $this->formatProcessResult($result);
     }
 
     /**

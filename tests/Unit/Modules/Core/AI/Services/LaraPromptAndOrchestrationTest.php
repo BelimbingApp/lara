@@ -8,47 +8,38 @@ use App\Modules\Core\Employee\Models\Employee;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\CreatesLaraFixtures;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, CreatesLaraFixtures::class);
 
-/**
- * @return array{company: Company, user: User}
- */
-function createLaraOrchestrationFixture(): array
+function createLaraOrchestrationFixture(object $testCase): array
 {
-    $company = Company::factory()->create();
+    $fixture = $testCase->createLaraFixture();
+    $company = $fixture['company'];
+    $supervisor = $fixture['employee'];
 
-    $supervisor = Employee::factory()->create([
-        'company_id' => $company->id,
-        'status' => 'active',
-    ]);
-
-    $user = User::factory()->create([
-        'company_id' => $company->id,
-        'employee_id' => $supervisor->id,
-    ]);
-
-    Employee::factory()->create([
-        'company_id' => $company->id,
-        'employee_type' => 'digital_worker',
-        'supervisor_id' => $supervisor->id,
-        'full_name' => 'Code Worker',
-        'short_name' => 'Code Worker',
-        'designation' => 'Code Engineer',
-        'job_description' => 'Builds modules and writes PHP code.',
-        'status' => 'active',
-    ]);
-
-    Employee::factory()->create([
-        'company_id' => $company->id,
-        'employee_type' => 'digital_worker',
-        'supervisor_id' => $supervisor->id,
-        'full_name' => 'Data Worker',
-        'short_name' => 'Data Worker',
-        'designation' => 'Data Specialist',
-        'job_description' => 'Handles migrations and data imports.',
-        'status' => 'active',
-    ]);
+    foreach ([
+        [
+            'full_name' => 'Code Worker',
+            'short_name' => 'Code Worker',
+            'designation' => 'Code Engineer',
+            'job_description' => 'Builds modules and writes PHP code.',
+        ],
+        [
+            'full_name' => 'Data Worker',
+            'short_name' => 'Data Worker',
+            'designation' => 'Data Specialist',
+            'job_description' => 'Handles migrations and data imports.',
+        ],
+    ] as $worker) {
+        Employee::factory()->create([
+            'company_id' => $company->id,
+            'employee_type' => 'digital_worker',
+            'supervisor_id' => $supervisor->id,
+            'status' => 'active',
+            ...$worker,
+        ]);
+    }
 
     AiProvider::query()->create([
         'company_id' => $company->id,
@@ -61,14 +52,11 @@ function createLaraOrchestrationFixture(): array
         'created_by' => $supervisor->id,
     ]);
 
-    return [
-        'company' => $company,
-        'user' => $user,
-    ];
+    return $fixture;
 }
 
 it('builds Lara prompt with runtime context and delegation metadata', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $prompt = app(LaraPromptFactory::class)->buildForCurrentUser();
@@ -85,7 +73,7 @@ it('builds Lara prompt with runtime context and delegation metadata', function (
 });
 
 it('appends configured Lara prompt extension as additive guidance', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $extensionRelativePath = 'storage/app/testing/lara_extension_test.md';
@@ -114,7 +102,7 @@ it('appends configured Lara prompt extension as additive guidance', function ():
 });
 
 it('returns null when message is not a delegation command', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -123,7 +111,7 @@ it('returns null when message is not a delegation command', function (): void {
 });
 
 it('returns BLB references when user asks for a guide command', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -136,7 +124,7 @@ it('returns BLB references when user asks for a guide command', function (): voi
 });
 
 it('returns usage guidance for empty models command', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -148,7 +136,7 @@ it('returns usage guidance for empty models command', function (): void {
 });
 
 it('returns filter error for invalid models command syntax', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -159,7 +147,7 @@ it('returns filter error for invalid models command syntax', function (): void {
 });
 
 it('returns navigation metadata for /go command', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -172,7 +160,7 @@ it('returns navigation metadata for /go command', function (): void {
 });
 
 it('returns unknown target status for unsupported /go target', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -183,7 +171,7 @@ it('returns unknown target status for unsupported /go target', function (): void
 });
 
 it('queues delegation to the best matched worker', function (): void {
-    $fixture = createLaraOrchestrationFixture();
+    $fixture = createLaraOrchestrationFixture($this);
     $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
@@ -197,18 +185,8 @@ it('queues delegation to the best matched worker', function (): void {
 });
 
 it('returns no_workers status when no delegated workers are available', function (): void {
-    $company = Company::factory()->create();
-    $supervisor = Employee::factory()->create([
-        'company_id' => $company->id,
-        'status' => 'active',
-    ]);
-
-    $user = User::factory()->create([
-        'company_id' => $company->id,
-        'employee_id' => $supervisor->id,
-    ]);
-
-    $this->actingAs($user);
+    $fixture = $this->createLaraFixture();
+    $this->actingAs($fixture['user']);
 
     $service = app(LaraOrchestrationService::class);
     $result = $service->dispatchFromMessage('/delegate create dashboard page');

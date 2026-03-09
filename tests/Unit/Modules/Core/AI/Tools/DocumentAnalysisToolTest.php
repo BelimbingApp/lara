@@ -2,44 +2,33 @@
 
 use App\Modules\Core\AI\Tools\DocumentAnalysisTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new DocumentAnalysisTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('document_analysis');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires document analysis capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_document_analysis.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['path', 'prompt', 'pages', 'model'])
-            ->and($schema['required'])->toBe(['path', 'prompt']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'document_analysis',
+            'ai.tool_document_analysis.execute',
+            ['path', 'prompt', 'pages', 'model'],
+            ['path', 'prompt'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects missing path', function () {
-        $result = $this->tool->execute(['prompt' => 'Summarize this']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['prompt' => 'Summarize this']);
     });
 
     it('rejects empty path', function () {
-        $result = $this->tool->execute(['path' => '', 'prompt' => 'Summarize this']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '', 'prompt' => 'Summarize this']);
     });
 
     it('rejects non-string path', function () {
@@ -48,13 +37,11 @@ describe('input validation', function () {
     });
 
     it('rejects missing prompt', function () {
-        $result = $this->tool->execute(['path' => '/docs/report.pdf']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '/docs/report.pdf']);
     });
 
     it('rejects empty prompt', function () {
-        $result = $this->tool->execute(['path' => '/docs/report.pdf', 'prompt' => '']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '/docs/report.pdf', 'prompt' => '']);
     });
 
     it('rejects prompt exceeding max length', function () {
@@ -112,7 +99,7 @@ describe('pages format validation', function () {
             'prompt' => 'Summarize this',
             'pages' => '1',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toBeNull()
             ->and($data['pages'])->toBe('1');
@@ -124,7 +111,7 @@ describe('pages format validation', function () {
             'prompt' => 'Summarize this',
             'pages' => '1-5',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['pages'])->toBe('1-5');
     });
@@ -135,7 +122,7 @@ describe('pages format validation', function () {
             'prompt' => 'Summarize this',
             'pages' => '1,3,7',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['pages'])->toBe('1,3,7');
     });
@@ -146,7 +133,7 @@ describe('pages format validation', function () {
             'prompt' => 'Summarize this',
             'pages' => '1-3,5,8-10',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['pages'])->toBe('1-3,5,8-10');
     });
@@ -158,7 +145,7 @@ describe('stub execution', function () {
             'path' => '/docs/report.pdf',
             'prompt' => 'Summarize this document',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toBeNull()
             ->and($data)->toHaveKeys(['action', 'path', 'prompt', 'status', 'message'])
@@ -171,7 +158,7 @@ describe('stub execution', function () {
             'path' => '/storage/docs/contract.pdf',
             'prompt' => 'Extract key dates',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['path'])->toBe('/storage/docs/contract.pdf')
             ->and($data['prompt'])->toBe('Extract key dates');
@@ -183,7 +170,7 @@ describe('stub execution', function () {
             'prompt' => 'Summarize',
             'pages' => '1-3',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->toHaveKey('pages')
             ->and($data['pages'])->toBe('1-3');
@@ -194,7 +181,7 @@ describe('stub execution', function () {
             'path' => '/docs/report.pdf',
             'prompt' => 'Summarize',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toHaveKey('pages');
     });

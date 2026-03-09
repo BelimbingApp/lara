@@ -4,44 +4,33 @@ use App\Modules\Core\AI\Services\LaraKnowledgeNavigator;
 use App\Modules\Core\AI\Tools\GuideTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new GuideTool(new LaraKnowledgeNavigator);
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('guide');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires guide capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_guide.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('topic')
-            ->and($schema['required'])->toBe(['topic']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'guide',
+            'ai.tool_guide.execute',
+            ['topic'],
+            ['topic'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects empty topic', function () {
-        $result = $this->tool->execute(['topic' => '']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['topic' => '']);
     });
 
     it('rejects missing topic', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+        $this->assertToolError([]);
     });
 });
 

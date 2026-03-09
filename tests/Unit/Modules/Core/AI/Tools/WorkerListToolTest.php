@@ -3,8 +3,9 @@
 use App\Modules\Core\AI\Services\LaraCapabilityMatcher;
 use App\Modules\Core\AI\Tools\WorkerListTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->matcher = Mockery::mock(LaraCapabilityMatcher::class);
@@ -12,24 +13,13 @@ beforeEach(function () {
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('worker_list');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires worker_list capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_worker_list.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('capability_filter')
-            ->and($schema['required'])->toBe([]);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'worker_list',
+            'ai.tool_worker_list.execute',
+            ['capability_filter'],
+        );
     });
 });
 

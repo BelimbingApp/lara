@@ -182,18 +182,18 @@ class MessageTool implements DigitalWorkerTool
     {
         $target = $arguments['target'] ?? '';
 
-        if (! is_string($target) || trim($target) === '') {
-            return 'Error: "target" is required for the send action.';
+        if ($error = $this->requireStringArgument($target, 'target', 'send')) {
+            return $error;
         }
 
         $text = $arguments['text'] ?? '';
 
-        if (! is_string($text) || trim($text) === '') {
-            return 'Error: "text" is required for the send action.';
+        if ($error = $this->requireStringArgument($text, 'text', 'send')) {
+            return $error;
         }
 
-        if (mb_strlen($text) > self::MAX_TEXT_LENGTH) {
-            return 'Error: "text" must not exceed '.self::MAX_TEXT_LENGTH.' characters.';
+        if ($error = $this->validateTextLength($text)) {
+            return $error;
         }
 
         $adapter = $this->adapterRegistry->resolve($channel);
@@ -230,18 +230,18 @@ class MessageTool implements DigitalWorkerTool
     {
         $messageId = $arguments['message_id'] ?? '';
 
-        if (! is_string($messageId) || trim($messageId) === '') {
-            return 'Error: "message_id" is required for the reply action.';
+        if ($error = $this->requireStringArgument($messageId, 'message_id', 'reply')) {
+            return $error;
         }
 
         $text = $arguments['text'] ?? '';
 
-        if (! is_string($text) || trim($text) === '') {
-            return 'Error: "text" is required for the reply action.';
+        if ($error = $this->requireStringArgument($text, 'text', 'reply')) {
+            return $error;
         }
 
-        if (mb_strlen($text) > self::MAX_TEXT_LENGTH) {
-            return 'Error: "text" must not exceed '.self::MAX_TEXT_LENGTH.' characters.';
+        if ($error = $this->validateTextLength($text)) {
+            return $error;
         }
 
         return json_encode([
@@ -272,14 +272,14 @@ class MessageTool implements DigitalWorkerTool
 
         $messageId = $arguments['message_id'] ?? '';
 
-        if (! is_string($messageId) || trim($messageId) === '') {
-            return 'Error: "message_id" is required for the react action.';
+        if ($error = $this->requireStringArgument($messageId, 'message_id', 'react')) {
+            return $error;
         }
 
         $emoji = $arguments['emoji'] ?? '';
 
-        if (! is_string($emoji) || trim($emoji) === '') {
-            return 'Error: "emoji" is required for the react action.';
+        if ($error = $this->requireStringArgument($emoji, 'emoji', 'react')) {
+            return $error;
         }
 
         return json_encode([
@@ -310,18 +310,18 @@ class MessageTool implements DigitalWorkerTool
 
         $messageId = $arguments['message_id'] ?? '';
 
-        if (! is_string($messageId) || trim($messageId) === '') {
-            return 'Error: "message_id" is required for the edit action.';
+        if ($error = $this->requireStringArgument($messageId, 'message_id', 'edit')) {
+            return $error;
         }
 
         $text = $arguments['text'] ?? '';
 
-        if (! is_string($text) || trim($text) === '') {
-            return 'Error: "text" is required for the edit action.';
+        if ($error = $this->requireStringArgument($text, 'text', 'edit')) {
+            return $error;
         }
 
-        if (mb_strlen($text) > self::MAX_TEXT_LENGTH) {
-            return 'Error: "text" must not exceed '.self::MAX_TEXT_LENGTH.' characters.';
+        if ($error = $this->validateTextLength($text)) {
+            return $error;
         }
 
         return json_encode([
@@ -352,8 +352,8 @@ class MessageTool implements DigitalWorkerTool
 
         $messageId = $arguments['message_id'] ?? '';
 
-        if (! is_string($messageId) || trim($messageId) === '') {
-            return 'Error: "message_id" is required for the delete action.';
+        if ($error = $this->requireStringArgument($messageId, 'message_id', 'delete')) {
+            return $error;
         }
 
         return json_encode([
@@ -383,14 +383,14 @@ class MessageTool implements DigitalWorkerTool
 
         $target = $arguments['target'] ?? '';
 
-        if (! is_string($target) || trim($target) === '') {
-            return 'Error: "target" is required for the poll action.';
+        if ($error = $this->requireStringArgument($target, 'target', 'poll')) {
+            return $error;
         }
 
         $question = $arguments['question'] ?? '';
 
-        if (! is_string($question) || trim($question) === '') {
-            return 'Error: "question" is required for the poll action.';
+        if ($error = $this->requireStringArgument($question, 'question', 'poll')) {
+            return $error;
         }
 
         $options = $arguments['options'] ?? [];
@@ -430,10 +430,7 @@ class MessageTool implements DigitalWorkerTool
      */
     private function handleListConversations(string $channel, array $arguments): string
     {
-        $limit = 10;
-        if (isset($arguments['limit']) && is_int($arguments['limit'])) {
-            $limit = max(1, min(50, $arguments['limit']));
-        }
+        $limit = $this->resolveLimit($arguments);
 
         return json_encode([
             'action' => 'list_conversations',
@@ -463,14 +460,11 @@ class MessageTool implements DigitalWorkerTool
 
         $query = $arguments['query'] ?? '';
 
-        if (! is_string($query) || trim($query) === '') {
-            return 'Error: "query" is required for the search action.';
+        if ($error = $this->requireStringArgument($query, 'query', 'search')) {
+            return $error;
         }
 
-        $limit = 10;
-        if (isset($arguments['limit']) && is_int($arguments['limit'])) {
-            $limit = max(1, min(50, $arguments['limit']));
-        }
+        $limit = $this->resolveLimit($arguments);
 
         return json_encode([
             'action' => 'search',
@@ -481,5 +475,31 @@ class MessageTool implements DigitalWorkerTool
             'status' => 'searched',
             'message' => 'Search completed (stub). Channel adapter integration pending.',
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+    }
+
+    private function requireStringArgument(mixed $value, string $name, string $action): ?string
+    {
+        if (! is_string($value) || trim($value) === '') {
+            return 'Error: "'.$name.'" is required for the '.$action.' action.';
+        }
+
+        return null;
+    }
+
+    private function validateTextLength(string $text): ?string
+    {
+        return mb_strlen($text) > self::MAX_TEXT_LENGTH
+            ? 'Error: "text" must not exceed '.self::MAX_TEXT_LENGTH.' characters.'
+            : null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     */
+    private function resolveLimit(array $arguments): int
+    {
+        $limit = $arguments['limit'] ?? 10;
+
+        return is_int($limit) ? max(1, min(50, $limit)) : 10;
     }
 }

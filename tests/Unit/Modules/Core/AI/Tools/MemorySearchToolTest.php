@@ -3,32 +3,23 @@
 use App\Modules\Core\AI\Tools\MemorySearchTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new MemorySearchTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('memory_search');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires memory_search capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_memory_search.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('query')
-            ->and($schema['required'])->toBe(['query']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'memory_search',
+            'ai.tool_memory_search.execute',
+            ['query'],
+            ['query'],
+        );
     });
 });
 
@@ -40,13 +31,11 @@ describe('factory method', function () {
 
 describe('input validation', function () {
     it('rejects empty query', function () {
-        $result = $this->tool->execute(['query' => '']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['query' => '']);
     });
 
     it('rejects missing query', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+        $this->assertToolError([]);
     });
 });
 

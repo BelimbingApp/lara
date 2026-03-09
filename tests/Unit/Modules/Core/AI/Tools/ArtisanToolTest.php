@@ -3,33 +3,25 @@
 use App\Modules\Core\AI\Tools\ArtisanTool;
 use Illuminate\Support\Facades\Process;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new ArtisanTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('artisan');
-    });
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'artisan',
+            'ai.tool_artisan.execute',
+            ['command', 'timeout', 'background'],
+            ['command'],
+        );
 
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty()
-            ->and($this->tool->description())->toContain('background');
-    });
-
-    it('requires artisan capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_artisan.execute');
-    });
-
-    it('has valid parameter schema with v2 params', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['command', 'timeout', 'background'])
-            ->and($schema['required'])->toBe(['command']);
+        expect($this->tool->description())->toContain('background');
     });
 
     it('declares timeout as integer type', function () {
@@ -44,14 +36,8 @@ describe('tool metadata', function () {
 });
 
 describe('input validation', function () {
-    it('rejects missing command', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects empty command', function () {
-        $result = $this->tool->execute(['command' => '']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty command', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('command');
     });
 
     it('rejects non-string command', function () {

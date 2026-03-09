@@ -34,6 +34,24 @@ function makeConfig(string $provider, string $model, string $apiKey = 'sk-test',
     ];
 }
 
+function makeSuccessResponse(string $content, int $latencyMs = 200): array
+{
+    return [
+        'content' => $content,
+        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
+        'latency_ms' => $latencyMs,
+    ];
+}
+
+function makeErrorResponse(string $error, string $errorType, int $latencyMs): array
+{
+    return [
+        'error' => $error,
+        'error_type' => $errorType,
+        'latency_ms' => $latencyMs,
+    ];
+}
+
 function makeMessage(string $role, string $content): Message
 {
     return new Message(
@@ -43,6 +61,21 @@ function makeMessage(string $role, string $content): Message
     );
 }
 
+function assertFallbackAttempt(
+    array $attempt,
+    string $provider,
+    string $model,
+    string $errorFragment,
+    string $errorType,
+    int $latencyMs,
+): void {
+    expect($attempt['provider'])->toBe($provider)
+        ->and($attempt['model'])->toBe($model)
+        ->and($attempt['error'])->toContain($errorFragment)
+        ->and($attempt['error_type'])->toBe($errorType)
+        ->and($attempt['latency_ms'])->toBe($latencyMs);
+}
+
 it('returns empty fallback_attempts on first model success', function (): void {
     $configResolver = Mockery::mock(ConfigResolver::class);
     $configResolver->shouldReceive('resolve')->with(1)->andReturn([
@@ -50,11 +83,7 @@ it('returns empty fallback_attempts on first model success', function (): void {
     ]);
 
     $llmClient = Mockery::mock(LlmClient::class);
-    $llmClient->shouldReceive('chat')->once()->andReturn([
-        'content' => 'Hello!',
-        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
-        'latency_ms' => 200,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->andReturn(makeSuccessResponse('Hello!'));
 
     $runtime = makeRuntime($configResolver, $llmClient);
     $result = $runtime->run([makeMessage('user', 'Hi')], 1);
@@ -77,23 +106,17 @@ it('collects fallback attempt entries on transient failures before success', fun
 
     $llmClient = Mockery::mock(LlmClient::class);
     // First call: server error (fallback-worthy)
-    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn([
-        'error' => 'HTTP 500: Internal Server Error',
-        'error_type' => 'server_error',
-        'latency_ms' => 150,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn(
+        makeErrorResponse('HTTP 500: Internal Server Error', 'server_error', 150)
+    );
     // Second call: rate limit (fallback-worthy)
-    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn([
-        'error' => 'HTTP 429: Too Many Requests',
-        'error_type' => 'rate_limit',
-        'latency_ms' => 50,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn(
+        makeErrorResponse('HTTP 429: Too Many Requests', 'rate_limit', 50)
+    );
     // Third call: success
-    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn([
-        'content' => 'Finally worked!',
-        'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
-        'latency_ms' => 300,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn(
+        makeSuccessResponse('Finally worked!', 300)
+    );
 
     $runtime = makeRuntime($configResolver, $llmClient);
     $result = $runtime->run([makeMessage('user', 'Hi')], 1);
@@ -102,19 +125,8 @@ it('collects fallback attempt entries on transient failures before success', fun
         ->and($result['meta']['model'])->toBe('model-c')
         ->and($result['meta']['fallback_attempts'])->toHaveCount(2);
 
-    $attempt1 = $result['meta']['fallback_attempts'][0];
-    expect($attempt1['provider'])->toBe('provider-a')
-        ->and($attempt1['model'])->toBe('model-a')
-        ->and($attempt1['error'])->toContain('500')
-        ->and($attempt1['error_type'])->toBe('server_error')
-        ->and($attempt1['latency_ms'])->toBe(150);
-
-    $attempt2 = $result['meta']['fallback_attempts'][1];
-    expect($attempt2['provider'])->toBe('provider-b')
-        ->and($attempt2['model'])->toBe('model-b')
-        ->and($attempt2['error'])->toContain('429')
-        ->and($attempt2['error_type'])->toBe('rate_limit')
-        ->and($attempt2['latency_ms'])->toBe(50);
+    assertFallbackAttempt($result['meta']['fallback_attempts'][0], 'provider-a', 'model-a', '500', 'server_error', 150);
+    assertFallbackAttempt($result['meta']['fallback_attempts'][1], 'provider-b', 'model-b', '429', 'rate_limit', 50);
 });
 
 it('includes fallback attempts when all models fail', function (): void {
@@ -125,16 +137,12 @@ it('includes fallback attempts when all models fail', function (): void {
     ]);
 
     $llmClient = Mockery::mock(LlmClient::class);
-    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn([
-        'error' => 'HTTP 500: Server Error',
-        'error_type' => 'server_error',
-        'latency_ms' => 100,
-    ]);
-    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn([
-        'error' => 'Connection refused',
-        'error_type' => 'connection_error',
-        'latency_ms' => 50,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn(
+        makeErrorResponse('HTTP 500: Server Error', 'server_error', 100)
+    );
+    $llmClient->shouldReceive('chat')->once()->ordered()->andReturn(
+        makeErrorResponse('Connection refused', 'connection_error', 50)
+    );
 
     $runtime = makeRuntime($configResolver, $llmClient);
     $result = $runtime->run([makeMessage('user', 'Hi')], 1);
@@ -159,11 +167,9 @@ it('does not fall back on client errors and still records empty attempts', funct
 
     $llmClient = Mockery::mock(LlmClient::class);
     // Client error (401) — should NOT trigger fallback
-    $llmClient->shouldReceive('chat')->once()->andReturn([
-        'error' => 'HTTP 401: Unauthorized',
-        'error_type' => 'client_error',
-        'latency_ms' => 30,
-    ]);
+    $llmClient->shouldReceive('chat')->once()->andReturn(
+        makeErrorResponse('HTTP 401: Unauthorized', 'client_error', 30)
+    );
 
     $runtime = makeRuntime($configResolver, $llmClient);
     $result = $runtime->run([makeMessage('user', 'Hi')], 1);

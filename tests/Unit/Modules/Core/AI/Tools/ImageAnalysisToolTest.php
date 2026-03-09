@@ -2,44 +2,35 @@
 
 use App\Modules\Core\AI\Tools\ImageAnalysisTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new ImageAnalysisTool;
 });
 
+dataset('supported image formats', ['jpg', 'jpeg', 'png', 'gif', 'webp']);
+
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('image_analysis');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires image analysis capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_image_analysis.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['path', 'prompt'])
-            ->and($schema['required'])->toBe(['path', 'prompt']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'image_analysis',
+            'ai.tool_image_analysis.execute',
+            ['path', 'prompt'],
+            ['path', 'prompt'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects missing path', function () {
-        $result = $this->tool->execute(['prompt' => 'Describe this image']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['prompt' => 'Describe this image']);
     });
 
     it('rejects empty path', function () {
-        $result = $this->tool->execute(['path' => '', 'prompt' => 'Describe this image']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '', 'prompt' => 'Describe this image']);
     });
 
     it('rejects non-string path', function () {
@@ -48,13 +39,11 @@ describe('input validation', function () {
     });
 
     it('rejects missing prompt', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.jpg']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '/images/photo.jpg']);
     });
 
     it('rejects empty prompt', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.jpg', 'prompt' => '']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['path' => '/images/photo.jpg', 'prompt' => '']);
     });
 
     it('rejects prompt exceeding max length', function () {
@@ -93,35 +82,14 @@ describe('input validation', function () {
 });
 
 describe('supported formats', function () {
-    it('accepts jpg files', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.jpg', 'prompt' => 'Describe']);
-        $data = json_decode($result, true);
-        expect($data['status'])->toBe('analyzed');
-    });
+    it('accepts supported image formats', function (string $extension) {
+        $data = $this->decodeToolExecution([
+            'path' => '/images/photo.'.$extension,
+            'prompt' => 'Describe',
+        ]);
 
-    it('accepts jpeg files', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.jpeg', 'prompt' => 'Describe']);
-        $data = json_decode($result, true);
         expect($data['status'])->toBe('analyzed');
-    });
-
-    it('accepts png files', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.png', 'prompt' => 'Describe']);
-        $data = json_decode($result, true);
-        expect($data['status'])->toBe('analyzed');
-    });
-
-    it('accepts gif files', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.gif', 'prompt' => 'Describe']);
-        $data = json_decode($result, true);
-        expect($data['status'])->toBe('analyzed');
-    });
-
-    it('accepts webp files', function () {
-        $result = $this->tool->execute(['path' => '/images/photo.webp', 'prompt' => 'Describe']);
-        $data = json_decode($result, true);
-        expect($data['status'])->toBe('analyzed');
-    });
+    })->with('supported image formats');
 });
 
 describe('URL paths', function () {
@@ -130,7 +98,7 @@ describe('URL paths', function () {
             'path' => 'http://example.com/image',
             'prompt' => 'Describe this',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toBeNull()
             ->and($data['status'])->toBe('analyzed');
@@ -141,7 +109,7 @@ describe('URL paths', function () {
             'path' => 'https://example.com/images/photo.png',
             'prompt' => 'Describe this',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['status'])->toBe('analyzed');
     });
@@ -151,7 +119,7 @@ describe('URL paths', function () {
             'path' => 'https://example.com/image?w=500&h=300',
             'prompt' => 'Describe this',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['status'])->toBe('analyzed');
     });
@@ -163,7 +131,7 @@ describe('stub execution', function () {
             'path' => '/images/photo.jpg',
             'prompt' => 'What is in this image?',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toBeNull()
             ->and($data)->toHaveKeys(['action', 'path', 'prompt', 'status', 'message'])
@@ -176,7 +144,7 @@ describe('stub execution', function () {
             'path' => '/storage/images/chart.png',
             'prompt' => 'Extract data from chart',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['path'])->toBe('/storage/images/chart.png')
             ->and($data['prompt'])->toBe('Extract data from chart');
@@ -187,7 +155,7 @@ describe('stub execution', function () {
             'path' => '/images/photo.jpg',
             'prompt' => 'Describe',
         ]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data['message'])->toContain('stub');
     });
