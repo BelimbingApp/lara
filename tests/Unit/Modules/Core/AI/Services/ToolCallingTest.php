@@ -171,7 +171,7 @@ describe('DigitalWorkerToolRegistry', function () {
 
         $result = $registry->execute('fails', []);
 
-        expect($result)->toContain('Error executing fails');
+        expect($result)->toContain('Error executing "fails"');
         expect($result)->toContain('Boom!');
     });
 });
