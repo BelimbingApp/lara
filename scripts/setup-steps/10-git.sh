@@ -49,7 +49,7 @@ check_git_version() {
     local git_version=${1:-$CURRENT_GIT_VERSION}
 
     # Check cache first
-    if [ -n "${GIT_VERSION_CACHE[$git_version]:-}" ]; then
+    if [[ -n "${GIT_VERSION_CACHE[$git_version]:-}" ]]; then
         return "${GIT_VERSION_CACHE[$git_version]}"
     fi
 
@@ -58,7 +58,7 @@ check_git_version() {
     local result=$?
 
     # Cache the result
-    if [ $result -eq 0 ] || [ $result -eq 1 ]; then
+    if [[ $result -eq 0 ]] || [[ $result -eq 1 ]]; then
         GIT_VERSION_CACHE[$git_version]=0  # Version meets or exceeds latest
         return 0
     else
@@ -91,14 +91,14 @@ install_git() {
             if command_exists apt-get; then
                 # Check if Git is already installed and if version needs upgrade
                 local needs_upgrade=false
-                if [ "$CURRENT_GIT_VERSION" != "0" ]; then
+                if [[ "$CURRENT_GIT_VERSION" != "0" ]]; then
                     if ! check_git_version; then
                         needs_upgrade=true
                     fi
                 fi
 
                 # If upgrade needed or Git not installed, use Git's official PPA for latest version
-                if [ "$needs_upgrade" = true ] || [ "$CURRENT_GIT_VERSION" = "0" ]; then
+                if [[ "$needs_upgrade" = true ]] || [[ "$CURRENT_GIT_VERSION" = "0" ]]; then
                     echo -e "${CYAN}Adding Git's official PPA for latest version...${NC}"
                     sudo apt-get update -qq
                     sudo apt-get install -y -qq software-properties-common || true
@@ -170,7 +170,7 @@ main() {
     load_setup_state
 
     # Check if Git is already installed
-    if [ "$CURRENT_GIT_VERSION" != "0" ]; then
+    if [[ "$CURRENT_GIT_VERSION" != "0" ]]; then
         if check_git_version; then
             echo -e "${GREEN}✓${NC} Git is already installed: $CURRENT_GIT_VERSION (latest: ${LATEST_GIT_VERSION})"
             echo -e "${GREEN}✓${NC} Git setup complete (already satisfied)"
@@ -179,7 +179,7 @@ main() {
             echo -e "${YELLOW}⚠${NC} Git is installed: $CURRENT_GIT_VERSION (latest: ${LATEST_GIT_VERSION})"
             echo ""
 
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 if ask_yes_no "Upgrade Git to ${LATEST_GIT_VERSION}?" "y"; then
                     echo ""
                     # Continue to installation/upgrade
@@ -220,6 +220,7 @@ main() {
     echo -e "${GREEN}✓ Git setup complete!${NC}"
     echo -e "${CYAN}Installed:${NC}"
     echo -e "  • Git: $(git --version)"
+    return 0
 }
 
 # Run main function

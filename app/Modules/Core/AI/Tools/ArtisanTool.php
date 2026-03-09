@@ -20,6 +20,8 @@ use Illuminate\Support\Facades\Process;
  */
 class ArtisanTool implements DigitalWorkerTool
 {
+    private const ERROR_PREFIX = 'Error: ';
+
     private const TIMEOUT_SECONDS = 30;
 
     public function name(): string
@@ -60,7 +62,7 @@ class ArtisanTool implements DigitalWorkerTool
         $command = $arguments['command'] ?? '';
 
         if (! is_string($command) || trim($command) === '') {
-            return 'Error: No command provided.';
+            return self::ERROR_PREFIX.'No command provided.';
         }
 
         $command = trim($command);
@@ -69,7 +71,7 @@ class ArtisanTool implements DigitalWorkerTool
         $command = preg_replace('/^(php\s+)?artisan\s+/', '', $command) ?? $command;
 
         if ($command === '') {
-            return 'Error: Empty command after parsing.';
+            return self::ERROR_PREFIX.'Empty command after parsing.';
         }
 
         $fullCommand = 'php artisan '.$command;

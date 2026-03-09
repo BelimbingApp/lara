@@ -17,6 +17,8 @@ use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
  */
 class NavigateTool implements DigitalWorkerTool
 {
+    private const ERROR_PREFIX = 'Error: ';
+
     public function name(): string
     {
         return 'navigate';
@@ -53,12 +55,12 @@ class NavigateTool implements DigitalWorkerTool
         $url = $arguments['url'] ?? '';
 
         if (! is_string($url) || ! str_starts_with($url, '/')) {
-            return 'Error: URL must be a relative path starting with "/".';
+            return self::ERROR_PREFIX.'URL must be a relative path starting with "/".';
         }
 
         // Sanitize: only allow path characters
         if (preg_match('#^/[a-zA-Z0-9/_\-\.]+$#', $url) !== 1) {
-            return 'Error: URL contains invalid characters.';
+            return self::ERROR_PREFIX.'URL contains invalid characters.';
         }
 
         return '<lara-action>Livewire.navigate(\''.$url.'\')</lara-action>Navigation initiated to '.$url.'.';

@@ -8,12 +8,23 @@ use App\Base\Authz\DTO\AuthorizationDecision;
 use App\Base\Authz\Enums\AuthorizationReasonCode;
 use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
 use App\Modules\Core\AI\Services\DigitalWorkerToolRegistry;
+use App\Modules\Core\AI\Services\LaraCapabilityMatcher;
+use App\Modules\Core\AI\Services\LaraTaskDispatcher;
 use App\Modules\Core\AI\Tools\ArtisanTool;
 use App\Modules\Core\AI\Tools\BashTool;
+use App\Modules\Core\AI\Tools\DelegateTaskTool;
+use App\Modules\Core\AI\Tools\DocumentAnalysisTool;
+use App\Modules\Core\AI\Tools\ImageAnalysisTool;
 use App\Modules\Core\AI\Tools\NavigateTool;
 use Illuminate\Foundation\Testing\TestCase;
 
 uses(TestCase::class);
+
+const TOOL_METADATA_DESCRIPTION = 'has correct name and required capability';
+
+const NO_COMMAND_PROVIDED = 'No command provided';
+
+class ToolExecutionFailure extends RuntimeException {}
 
 function makeAllowAllAuthzService(): AuthorizationService
 {
@@ -151,7 +162,7 @@ describe('DigitalWorkerToolRegistry', function () {
 
             public function execute(array $arguments): string
             {
-                throw new RuntimeException('Boom!');
+                throw new ToolExecutionFailure('Boom!');
             }
         };
 
@@ -166,7 +177,7 @@ describe('DigitalWorkerToolRegistry', function () {
 });
 
 describe('ArtisanTool', function () {
-    it('has correct name and required capability', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
         $tool = new ArtisanTool;
 
         expect($tool->name())->toBe('artisan');
@@ -176,8 +187,8 @@ describe('ArtisanTool', function () {
     it('returns error for empty command', function () {
         $tool = new ArtisanTool;
 
-        expect($tool->execute([]))->toContain('No command provided');
-        expect($tool->execute(['command' => '']))->toContain('No command provided');
+        expect($tool->execute([]))->toContain(NO_COMMAND_PROVIDED);
+        expect($tool->execute(['command' => '']))->toContain(NO_COMMAND_PROVIDED);
     });
 
     it('strips php artisan prefix if LLM included it', function () {
@@ -191,7 +202,7 @@ describe('ArtisanTool', function () {
 });
 
 describe('NavigateTool', function () {
-    it('has correct name and required capability', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
         $tool = new NavigateTool;
 
         expect($tool->name())->toBe('navigate');
@@ -224,7 +235,7 @@ describe('NavigateTool', function () {
 });
 
 describe('BashTool', function () {
-    it('has correct name and required capability', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
         $tool = new BashTool;
 
         expect($tool->name())->toBe('bash');
@@ -234,8 +245,8 @@ describe('BashTool', function () {
     it('returns error for empty command', function () {
         $tool = new BashTool;
 
-        expect($tool->execute([]))->toContain('No command provided');
-        expect($tool->execute(['command' => '']))->toContain('No command provided');
+        expect($tool->execute([]))->toContain(NO_COMMAND_PROVIDED);
+        expect($tool->execute(['command' => '']))->toContain(NO_COMMAND_PROVIDED);
     });
 
     it('executes a simple command successfully', function () {
@@ -260,5 +271,227 @@ describe('BashTool', function () {
         $result = $tool->execute(['command' => 'true']);
 
         expect($result)->toBe('Command completed successfully (no output).');
+    });
+});
+
+describe('DelegateTaskTool', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
+        $tool = new DelegateTaskTool(
+            Mockery::mock(LaraCapabilityMatcher::class),
+            Mockery::mock(LaraTaskDispatcher::class),
+        );
+
+        expect($tool->name())->toBe('delegate_task');
+        expect($tool->requiredCapability())->toBe('ai.tool_delegate.execute');
+    });
+
+    it('returns error for empty task', function () {
+        $tool = new DelegateTaskTool(
+            Mockery::mock(LaraCapabilityMatcher::class),
+            Mockery::mock(LaraTaskDispatcher::class),
+        );
+
+        expect($tool->execute([]))->toContain('No task description provided');
+        expect($tool->execute(['task' => '']))->toContain('No task description provided');
+        expect($tool->execute(['task' => '   ']))->toContain('No task description provided');
+    });
+
+    it('returns error when no worker is available', function () {
+        $matcher = Mockery::mock(LaraCapabilityMatcher::class);
+        $matcher->shouldReceive('matchBestForTask')->andReturn(null);
+
+        $tool = new DelegateTaskTool($matcher, Mockery::mock(LaraTaskDispatcher::class));
+
+        $result = $tool->execute(['task' => 'Generate a report']);
+
+        expect($result)->toContain('Error');
+        expect($result)->toContain('No accessible Digital Worker');
+    });
+
+    it('dispatches task to best matching worker when no worker_id is given', function () {
+        $matcher = Mockery::mock(LaraCapabilityMatcher::class);
+        $matcher->shouldReceive('matchBestForTask')->with('Generate Q1 report')->andReturn([
+            'employee_id' => 42,
+            'name' => 'Report Bot',
+            'capability_summary' => 'Financial reporting',
+        ]);
+
+        $dispatcher = Mockery::mock(LaraTaskDispatcher::class);
+        $dispatcher->shouldReceive('dispatchForCurrentUser')->with(42, 'Generate Q1 report')->andReturn([
+            'dispatch_id' => 'dw_dispatch_abc123',
+            'status' => 'queued',
+            'employee_id' => 42,
+            'employee_name' => 'Report Bot',
+            'task' => 'Generate Q1 report',
+            'acting_for_user_id' => 1,
+            'created_at' => '2025-01-01T00:00:00+00:00',
+        ]);
+
+        $tool = new DelegateTaskTool($matcher, $dispatcher);
+
+        $result = $tool->execute(['task' => 'Generate Q1 report']);
+
+        expect($result)->toContain('Report Bot');
+        expect($result)->toContain('dw_dispatch_abc123');
+    });
+
+    it('dispatches to a specific worker when worker_id is given', function () {
+        $matcher = Mockery::mock(LaraCapabilityMatcher::class);
+        $matcher->shouldReceive('findAccessibleWorkerById')->with(7)->andReturn([
+            'employee_id' => 7,
+            'name' => 'Data Analyst',
+            'capability_summary' => 'Analytics',
+        ]);
+
+        $dispatcher = Mockery::mock(LaraTaskDispatcher::class);
+        $dispatcher->shouldReceive('dispatchForCurrentUser')->andReturn([
+            'dispatch_id' => 'dw_dispatch_xyz',
+            'status' => 'queued',
+            'employee_id' => 7,
+            'employee_name' => 'Data Analyst',
+            'task' => 'Run analytics',
+            'acting_for_user_id' => 1,
+            'created_at' => '2025-01-01T00:00:00+00:00',
+        ]);
+
+        $tool = new DelegateTaskTool($matcher, $dispatcher);
+
+        $result = $tool->execute(['task' => 'Run analytics', 'worker_id' => 7]);
+
+        expect($result)->toContain('Data Analyst');
+        expect($result)->toContain('dw_dispatch_xyz');
+    });
+
+    it('returns error when dispatcher throws', function () {
+        $matcher = Mockery::mock(LaraCapabilityMatcher::class);
+        $matcher->shouldReceive('matchBestForTask')->andReturn([
+            'employee_id' => 1,
+            'name' => 'Bot',
+            'capability_summary' => '',
+        ]);
+
+        $dispatcher = Mockery::mock(LaraTaskDispatcher::class);
+        $dispatcher->shouldReceive('dispatchForCurrentUser')
+            ->andThrow(new \RuntimeException('Dispatch unavailable'));
+
+        $tool = new DelegateTaskTool($matcher, $dispatcher);
+
+        $result = $tool->execute(['task' => 'some task']);
+
+        expect($result)->toContain('Error');
+        expect($result)->toContain('Dispatch unavailable');
+    });
+});
+
+describe('DocumentAnalysisTool', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
+        $tool = new DocumentAnalysisTool;
+
+        expect($tool->name())->toBe('document_analysis');
+        expect($tool->requiredCapability())->toBe('ai.tool_document_analysis.execute');
+    });
+
+    it('returns error for empty or missing path', function () {
+        $tool = new DocumentAnalysisTool;
+
+        expect($tool->execute([]))->toContain('No file path provided');
+        expect($tool->execute(['path' => '']))->toContain('No file path provided');
+        expect($tool->execute(['path' => '   ']))->toContain('No file path provided');
+    });
+
+    it('returns file content for a supported text file', function () {
+        $tool = new DocumentAnalysisTool;
+
+        $result = $tool->execute(['path' => 'README.md']);
+
+        expect($result)->toStartWith('File: README.md');
+    });
+
+    it('returns error for a path that does not exist', function () {
+        $tool = new DocumentAnalysisTool;
+
+        $result = $tool->execute(['path' => 'non-existent-file-xyz.txt']);
+
+        expect($result)->toContain('Error');
+    });
+
+    it('returns error for an unsupported file type', function () {
+        $tmpPath = storage_path('app/test_doc_unsupported.bin');
+        file_put_contents($tmpPath, 'binary');
+
+        $tool = new DocumentAnalysisTool;
+        $result = $tool->execute(['path' => 'storage/app/test_doc_unsupported.bin']);
+
+        @unlink($tmpPath);
+
+        expect($result)->toContain('Error');
+        expect($result)->toContain('.bin');
+    });
+
+    it('returns file content and header for a created temp file', function () {
+        $tmpPath = storage_path('app/test_doc_analysis_tool.txt');
+        file_put_contents($tmpPath, 'Hello, document analysis!');
+
+        $tool = new DocumentAnalysisTool;
+        $result = $tool->execute(['path' => 'storage/app/test_doc_analysis_tool.txt']);
+
+        @unlink($tmpPath);
+
+        expect($result)->toStartWith('File: storage/app/test_doc_analysis_tool.txt');
+        expect($result)->toContain('Hello, document analysis!');
+    });
+});
+
+describe('ImageAnalysisTool', function () {
+    it(TOOL_METADATA_DESCRIPTION, function () {
+        $tool = new ImageAnalysisTool;
+
+        expect($tool->name())->toBe('image_analysis');
+        expect($tool->requiredCapability())->toBe('ai.tool_image_analysis.execute');
+    });
+
+    it('returns error for empty or missing path', function () {
+        $tool = new ImageAnalysisTool;
+
+        expect($tool->execute([]))->toContain('No file path provided');
+        expect($tool->execute(['path' => '']))->toContain('No file path provided');
+        expect($tool->execute(['path' => '   ']))->toContain('No file path provided');
+    });
+
+    it('returns error for a path that does not exist', function () {
+        $tool = new ImageAnalysisTool;
+
+        $result = $tool->execute(['path' => 'non-existent-image-xyz.png']);
+
+        expect($result)->toContain('Error');
+    });
+
+    it('returns error for an unsupported file type', function () {
+        $tool = new ImageAnalysisTool;
+
+        // README.md is a text file, not a supported image type
+        $result = $tool->execute(['path' => 'README.md']);
+
+        expect($result)->toContain('Error');
+        expect($result)->toContain('.md');
+    });
+
+    it('returns metadata for a valid PNG image', function () {
+        // Minimal 1×1 transparent PNG
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=='
+        );
+        $tmpPath = storage_path('app/test_image_analysis_tool.png');
+        file_put_contents($tmpPath, $png);
+
+        $tool = new ImageAnalysisTool;
+        $result = $tool->execute(['path' => 'storage/app/test_image_analysis_tool.png']);
+
+        @unlink($tmpPath);
+
+        expect($result)->toContain('Image:');
+        expect($result)->toContain('Format: PNG');
+        expect($result)->toContain('Size:');
+        expect($result)->toContain('Dimensions:');
     });
 });

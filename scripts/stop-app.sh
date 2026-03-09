@@ -35,7 +35,7 @@ APP_ENV="${1:-local}"
 PORTS_FILE="$PROJECT_ROOT/storage/app/.devops/ports.env"
 
 # Read runtime ports written by start-app; fall back to .env or defaults
-if [ -f "$PORTS_FILE" ]; then
+if [[ -f "$PORTS_FILE" ]]; then
     APP_PORT=$(grep -E "^APP_PORT=" "$PORTS_FILE" 2>/dev/null | cut -d= -f2 || echo "")
     VITE_PORT=$(grep -E "^VITE_PORT=" "$PORTS_FILE" 2>/dev/null | cut -d= -f2 || echo "")
 else
@@ -51,7 +51,7 @@ echo -e "${YELLOW}Stopping ${APP_ENV} environment services (Laravel ${APP_PORT},
 stop_dev_services "$APP_ENV" "$APP_PORT" "$VITE_PORT"
 
 # Deregister from shared Caddy
-if [ -n "$FRONTEND_DOMAIN" ]; then
+if [[ -n "$FRONTEND_DOMAIN" ]]; then
     echo -e "${CYAN}Removing Caddy site fragment for ${FRONTEND_DOMAIN}...${NC}"
     remove_site_fragment "$FRONTEND_DOMAIN"
     if pgrep -x "caddy" > /dev/null; then

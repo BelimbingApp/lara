@@ -209,7 +209,9 @@ new class extends Component
                                             <button
                                                 wire:click="movePriorityUp({{ $provider->id }})"
                                                 class="text-muted hover:text-ink hover:bg-surface-subtle p-0.5 rounded transition-colors"
+                                                type="button"
                                                 title="{{ __('Move up') }}"
+                                                aria-label="{{ __('Move up') }}"
                                             >
                                                 <x-icon name="heroicon-m-arrow-up" class="w-3.5 h-3.5" />
                                             </button>
@@ -232,14 +234,18 @@ new class extends Component
                                         <button
                                             wire:click.stop="openEditProvider({{ $provider->id }})"
                                             class="text-accent hover:bg-surface-subtle p-1 rounded"
+                                            type="button"
                                             title="{{ __('Edit') }}"
+                                            aria-label="{{ __('Edit provider') }}"
                                         >
                                             <x-icon name="heroicon-o-pencil" class="w-4 h-4" />
                                         </button>
                                         <button
                                             wire:click.stop="confirmDeleteProvider({{ $provider->id }})"
                                             class="text-accent hover:bg-surface-subtle p-1 rounded"
+                                            type="button"
                                             title="{{ __('Delete') }}"
+                                            aria-label="{{ __('Delete provider') }}"
                                         >
                                             <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                         </button>
@@ -301,6 +307,7 @@ new class extends Component
                                                         </div>
                                                         <div class="flex items-center gap-1 shrink-0">
                                                             <button
+                                                                type="button"
                                                                 wire:click.stop="openProviderHelp('{{ $provider->name }}', '{{ $provider->auth_type ?? 'api_key' }}')"
                                                                 class="text-xs text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-200 underline whitespace-nowrap"
                                                             >
@@ -309,7 +316,9 @@ new class extends Component
                                                             <button
                                                                 wire:click.stop="clearSyncError"
                                                                 class="p-0.5 rounded text-red-400 hover:text-red-600 dark:hover:text-red-200 hover:bg-red-100 dark:hover:bg-red-800/50"
+                                                                type="button"
                                                                 title="{{ __('Dismiss') }}"
+                                                                aria-label="{{ __('Dismiss error') }}"
                                                             >
                                                                 <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5" />
                                                             </button>
@@ -337,12 +346,14 @@ new class extends Component
                                                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm font-medium text-ink font-mono">
                                                                     <div class="flex items-center gap-1.5">
                                                                         @if($model->is_default)
-                                                                            <span class="text-accent" title="{{ __('Default model') }}">★</span>
+                                                                            <span class="text-accent" title="{{ __('Default model') }}" aria-label="{{ __('Default model') }}">★</span>
                                                                         @else
                                                                             <button
                                                                                 wire:click="setDefaultModel({{ $model->id }})"
                                                                                 class="text-muted hover:text-accent transition-colors"
+                                                                                type="button"
                                                                                 title="{{ __('Set as default') }}"
+                                                                                aria-label="{{ __('Set as default model') }}"
                                                                             >☆</button>
                                                                         @endif
                                                                         <span>{{ $model->model_id }}</span>
@@ -362,10 +373,10 @@ new class extends Component
                                                                 </td>
                                                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                                                     <div class="flex items-center justify-end gap-1">
-                                                                        <button wire:click="openEditModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" title="{{ __('Edit') }}">
+                                                                        <button wire:click="openEditModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" type="button" title="{{ __('Edit') }}" aria-label="{{ __('Edit model') }}">
                                                                             <x-icon name="heroicon-o-pencil" class="w-4 h-4" />
                                                                         </button>
-                                                                        <button wire:click="confirmDeleteModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" title="{{ __('Delete') }}">
+                                                                        <button wire:click="confirmDeleteModel({{ $model->id }})" class="text-accent hover:bg-surface-subtle p-1 rounded" type="button" title="{{ __('Delete') }}" aria-label="{{ __('Delete model') }}">
                                                                             <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                                                         </button>
                                                                     </div>
@@ -407,7 +418,7 @@ new class extends Component
                 <h3 class="text-lg font-medium tracking-tight text-ink">
                     {{ $isEditingProvider ? __('Edit Provider') : __('Add Provider') }}
                 </h3>
-                <button wire:click="$set('showProviderForm', false)" class="text-muted hover:text-ink">
+                <button wire:click="$set('showProviderForm', false)" type="button" class="text-muted hover:text-ink" aria-label="{{ __('Close') }}">
                     <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
                 </button>
             </div>
@@ -470,7 +481,7 @@ new class extends Component
         <div class="p-card-inner">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium tracking-tight text-ink">{{ __('Delete Provider') }}</h3>
-                <button wire:click="$set('showDeleteProvider', false)" class="text-muted hover:text-ink">
+                <button wire:click="$set('showDeleteProvider', false)" type="button" class="text-muted hover:text-ink" aria-label="{{ __('Close') }}">
                     <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
                 </button>
             </div>
@@ -493,7 +504,7 @@ new class extends Component
                 <h3 class="text-lg font-medium tracking-tight text-ink">
                     {{ $isEditingModel ? __('Edit Model') : __('Add Model') }}
                 </h3>
-                <button wire:click="$set('showModelForm', false)" class="text-muted hover:text-ink">
+                <button wire:click="$set('showModelForm', false)" type="button" class="text-muted hover:text-ink" aria-label="{{ __('Close') }}">
                     <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
                 </button>
             </div>
@@ -558,7 +569,7 @@ new class extends Component
         <div class="p-card-inner">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium tracking-tight text-ink">{{ __('Delete Model') }}</h3>
-                <button wire:click="$set('showDeleteModel', false)" class="text-muted hover:text-ink">
+                <button wire:click="$set('showDeleteModel', false)" type="button" class="text-muted hover:text-ink" aria-label="{{ __('Close') }}">
                     <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
                 </button>
             </div>

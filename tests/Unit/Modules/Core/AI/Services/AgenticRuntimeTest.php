@@ -140,6 +140,69 @@ describe('AgenticRuntime', function () {
         expect($result['meta']['tool_actions'][0]['arguments'])->toBe(['input' => 'world']);
     });
 
+    it('prepends client actions collected from tool results to final content', function () {
+        $configResolver = Mockery::mock(ConfigResolver::class);
+        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+
+        $llmClient = Mockery::mock(LlmClient::class);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => null,
+            'latency_ms' => 200,
+            'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 15],
+            'tool_calls' => [
+                [
+                    'id' => 'call_002',
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'navigate_tool',
+                        'arguments' => '{}',
+                    ],
+                ],
+            ],
+        ]);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => 'Navigated successfully.',
+            'latency_ms' => 150,
+            'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 10],
+        ]);
+
+        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
+        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+        $registry->register(new class implements DigitalWorkerTool
+        {
+            public function name(): string
+            {
+                return 'navigate_tool';
+            }
+
+            public function description(): string
+            {
+                return 'Returns Lara actions';
+            }
+
+            public function parametersSchema(): array
+            {
+                return ['type' => 'object'];
+            }
+
+            public function requiredCapability(): ?string
+            {
+                return null;
+            }
+
+            public function execute(array $arguments): string
+            {
+                return '<lara-action>Livewire.navigate(\'/dashboard\')</lara-action>';
+            }
+        });
+
+        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $result = $runtime->run([buildTestMessage('Go to dashboard')], 1, 'You are Lara.');
+
+        expect($result['content'])->toStartWith('<lara-action>Livewire.navigate(\'/dashboard\')</lara-action>')
+            ->and($result['content'])->toContain('Navigated successfully.');
+    });
+
     it('returns error when no LLM configuration is available', function () {
         // Stub resolveConfig to return null by making resolve return empty
         // and having no employee in DB. We mock at the config resolver level.

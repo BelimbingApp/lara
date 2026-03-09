@@ -21,7 +21,7 @@ _CONFIG_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source versions.sh if it exists
 # shellcheck source=versions.sh
-if [ -f "$_CONFIG_DIR/versions.sh" ]; then
+if [[ -f "$_CONFIG_DIR/versions.sh" ]]; then
     source "$_CONFIG_DIR/versions.sh" 2>/dev/null || true
 fi
 unset _CONFIG_DIR
@@ -40,6 +40,7 @@ DEFAULT_PROXY_TYPE="caddy"
 # HTTPS is always 443 (shared Caddy with host-based routing).
 get_default_ports() {
     echo "5173|8000"
+    return 0
 }
 
 # Get backend port for environment (reads from .env or uses default)
@@ -48,10 +49,10 @@ get_backend_port() {
     local project_root=${2:-$PROJECT_ROOT}
 
     # Try to read from .env file
-    if [ -n "$project_root" ]; then
+    if [[ -n "$project_root" ]]; then
         local port
         port=$(get_env_var "APP_PORT" "" "$project_root/.env")
-        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
+        if [[ -n "$port" ]] && [[ "$port" =~ ^[0-9]+$ ]]; then
             echo "$port"
             return 0
         fi
@@ -61,6 +62,7 @@ get_backend_port() {
     local defaults
     defaults=$(get_default_ports "$env")
     echo "$defaults" | cut -d'|' -f2
+    return 0
 }
 
 # Get frontend port for environment (reads from .env or uses default)
@@ -69,10 +71,10 @@ get_frontend_port() {
     local project_root=${2:-$PROJECT_ROOT}
 
     # Try to read from .env file
-    if [ -n "$project_root" ]; then
+    if [[ -n "$project_root" ]]; then
         local port
         port=$(get_env_var "VITE_PORT" "" "$project_root/.env")
-        if [ -n "$port" ] && [[ "$port" =~ ^[0-9]+$ ]]; then
+        if [[ -n "$port" ]] && [[ "$port" =~ ^[0-9]+$ ]]; then
             echo "$port"
             return 0
         fi
@@ -82,6 +84,7 @@ get_frontend_port() {
     local defaults
     defaults=$(get_default_ports "$env")
     echo "$defaults" | cut -d'|' -f1
+    return 0
 }
 
 
@@ -98,29 +101,33 @@ get_default_domains() {
             echo "${env}.blb.lara|${env}.api.blb.lara"
             ;;
     esac
+    return 0
 }
 
 # Get default JWT expiration values
 get_default_jwt_expiration() {
     echo "24|30"
+    return 0
 }
 
 # Get default database name for an environment
 get_default_database_name() {
     local env=$1
     echo "belimbing_${env}"
+    return 0
 }
 
 # Get DB_CONNECTION from .env (pgsql, sqlite, mysql, etc.)
 # Uses PROJECT_ROOT; defaults to pgsql if unset or .env missing.
 get_db_connection() {
-    if [ -z "${PROJECT_ROOT:-}" ]; then
+    if [[ -z "${PROJECT_ROOT:-}" ]]; then
         echo "pgsql"
         return 0
     fi
     local val
     val=$(get_env_var "DB_CONNECTION" "pgsql")
     echo "$val"
+    return 0
 }
 
 # === Environment Validation ===
@@ -147,16 +154,18 @@ normalize_and_validate_env() {
     fi
 
     echo "$env"
+    return 0
 }
 
 # === State Management ===
 # Setup state file location
 get_setup_state_file() {
-    if [ -z "${PROJECT_ROOT:-}" ]; then
+    if [[ -z "${PROJECT_ROOT:-}" ]]; then
         echo "Error: PROJECT_ROOT not set" >&2
         return 1
     fi
     echo "$PROJECT_ROOT/storage/app/.devops/setup.env"
+    return 0
 }
 
 # Initialize setup state file with header if it doesn't exist
@@ -164,7 +173,7 @@ init_setup_state_file() {
     local state_file
     state_file=$(get_setup_state_file)
 
-    if [ ! -f "$state_file" ]; then
+    if [[ ! -f "$state_file" ]]; then
         mkdir -p "$(dirname "$state_file")"
         cat > "$state_file" << 'EOF'
 # Belimbing Setup State
@@ -172,6 +181,7 @@ init_setup_state_file() {
 # Do not edit manually - changes may be overwritten
 EOF
     fi
+    return 0
 }
 
 # Load setup state from storage/app/.devops/setup.env
@@ -184,25 +194,26 @@ load_setup_state() {
     # Preserve CLI-provided APP_ENV (takes precedence over state files)
     local cli_app_env="${APP_ENV:-}"
 
-    if [ -f "$state_file" ]; then
+    if [[ -f "$state_file" ]]; then
         # shellcheck disable=SC1090
         source "$state_file" 2>/dev/null || true
     fi
 
     # Also try loading from .env, make .env variables available
-    if [ -f "$PROJECT_ROOT/.env" ]; then
+    if [[ -f "$PROJECT_ROOT/.env" ]]; then
         set -a
         source "$PROJECT_ROOT/.env" 2>/dev/null || true
         set +a
     fi
 
     # Restore CLI argument if it was set (CLI takes precedence)
-    if [ -n "$cli_app_env" ]; then
+    if [[ -n "$cli_app_env" ]]; then
         APP_ENV="$cli_app_env"
     fi
 
     # Normalize and validate APP_ENV (from CLI, state file, or .env)
     APP_ENV=$(normalize_and_validate_env "$APP_ENV")
+    return 0
 }
 
 # Save a key-value pair to setup state file
@@ -225,6 +236,7 @@ save_to_setup_state() {
 
     # Append new value
     echo "${key}=\"${value}\"" >> "$state_file"
+    return 0
 }
 
 # Escape special characters for sed replacement string
@@ -238,6 +250,7 @@ escape_sed_replacement() {
     # Escape the delimiter # (we use # instead of | for better compatibility)
     value="${value//#/\\#}"
     printf '%s' "$value"
+    return 0
 }
 
 # Read a single variable from .env.
@@ -252,19 +265,19 @@ get_env_var() {
     local default="${2:-}"
     local env_file="${3:-${PROJECT_ROOT:-}/.env}"
 
-    [ -f "$env_file" ] || { echo "$default"; return 0; }
-    [ -n "$key" ] || { echo "$default"; return 0; }
+    [[ -f "$env_file" ]] || { echo "$default"; return 0; }
+    [[ -n "$key" ]] || { echo "$default"; return 0; }
 
     local key_escaped
     key_escaped=$(printf '%s' "$key" | sed 's/[.[\*^$()+?{|]/\\&/g')
     local line
     line=$(grep -E "^[[:space:]]*${key_escaped}[[:space:]]*=" "$env_file" 2>/dev/null | head -1)
-    [ -n "$line" ] || { echo "$default"; return 0; }
+    [[ -n "$line" ]] || { echo "$default"; return 0; }
 
     local val="${line#*=}"
     val=$(echo "$val" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
     val=$(echo "$val" | tr -d '"' | tr -d "'")
-    if [ -n "$val" ]; then
+    if [[ -n "$val" ]]; then
         echo "$val"
     else
         echo "$default"
@@ -279,7 +292,7 @@ update_env_file() {
     local var_value=$2
     local env_file="${3:-${PROJECT_ROOT:-}/.env}"
 
-    if [ ! -f "$env_file" ]; then
+    if [[ ! -f "$env_file" ]]; then
         echo "$var_name=\"$var_value\"" > "$env_file"
         return 0
     fi
@@ -332,7 +345,7 @@ update_env_file_if_missing() {
 
     local current
     current=$(get_env_var "$var_name" "" "$env_file")
-    if [ -z "$current" ]; then
+    if [[ -z "$current" ]]; then
         update_env_file "$var_name" "$default_value" "$env_file"
     fi
 }

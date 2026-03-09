@@ -62,42 +62,49 @@ REDIS_VERSION="8"
 # Usage: version=$(get_required_php_version)
 get_required_php_version() {
     echo "${REQUIRED_PHP_MAJOR}.${REQUIRED_PHP_MINOR}"
+    return 0
 }
 
 # Get latest Git version
 # Usage: version=$(get_latest_git_version)
 get_latest_git_version() {
     echo "$LATEST_GIT_VERSION"
+    return 0
 }
 
 # Get latest Bun version (with 'v' prefix if needed)
 # Usage: version=$(get_latest_bun_version)
 get_latest_bun_version() {
     echo "$LATEST_BUN_VERSION"
+    return 0
 }
 
 # Get Bun version with 'v' prefix for display
 # Usage: display_version=$(get_latest_bun_version_with_prefix)
 get_latest_bun_version_with_prefix() {
     echo "v${LATEST_BUN_VERSION}"
+    return 0
 }
 
 # Get PostgreSQL version
 # Usage: version=$(get_postgresql_version)
 get_postgresql_version() {
     echo "$POSTGRESQL_VERSION"
+    return 0
 }
 
 # Get PostgreSQL version for Homebrew (with @ prefix)
 # Usage: brew_version=$(get_postgresql_brew_version)
 get_postgresql_brew_version() {
     echo "postgresql@$(get_postgresql_version)"
+    return 0
 }
 
 # Get Redis version
 # Usage: version=$(get_redis_version)
 get_redis_version() {
     echo "$REDIS_VERSION"
+    return 0
 }
 
 # Compare two version strings (semantic versioning)
@@ -119,7 +126,7 @@ compare_version() {
 
     # Compare major, minor, patch in order
     local i=0
-    while [ $i -lt 3 ]; do
+    while [[ $i -lt 3 ]]; do
         local part1=${v1_parts[$i]:-0}
         local part2=${v2_parts[$i]:-0}
 
@@ -131,9 +138,9 @@ compare_version() {
         part1=${part1:-0}
         part2=${part2:-0}
 
-        if [ "$part1" -gt "$part2" ]; then
+        if [[ "$part1" -gt "$part2" ]]; then
             return 1  # v1 > v2
-        elif [ "$part1" -lt "$part2" ]; then
+        elif [[ "$part1" -lt "$part2" ]]; then
             return 2  # v1 < v2
         fi
 
@@ -169,9 +176,9 @@ version_meets_minimum() {
     current_minor=${current_minor:-0}
 
     # Compare: major version must be greater, or equal with minor >= required
-    if [ "$current_major" -gt "$required_major" ]; then
+    if [[ "$current_major" -gt "$required_major" ]]; then
         return 0  # Meets requirement
-    elif [ "$current_major" -eq "$required_major" ] && [ "$current_minor" -ge "$required_minor" ]; then
+    elif [[ "$current_major" -eq "$required_major" ]] && [[ "$current_minor" -ge "$required_minor" ]]; then
         return 0  # Meets requirement
     else
         return 1  # Does not meet requirement
@@ -196,7 +203,7 @@ check_git_version_meets_latest() {
     compare_version "$current_version" "$LATEST_GIT_VERSION"
     local result=$?
     # Returns 0 if current >= latest, non-zero otherwise
-    [ $result -eq 0 ] || [ $result -eq 1 ]
+    [[ $result -eq 0 ]] || [[ $result -eq 1 ]]
 }
 
 # Parse version string into major.minor.patch components
@@ -224,4 +231,5 @@ parse_version() {
     eval "if [ -z \"\$$major_var\" ]; then $major_var=0; fi"
     eval "if [ -z \"\$$minor_var\" ]; then $minor_var=0; fi"
     eval "if [ -z \"\$$patch_var\" ]; then $patch_var=0; fi"
+    return 0
 }

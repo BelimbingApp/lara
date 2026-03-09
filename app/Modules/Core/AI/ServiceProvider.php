@@ -23,6 +23,12 @@ use App\Modules\Core\AI\Services\ProviderAuthFlowService;
 use App\Modules\Core\AI\Services\SessionManager;
 use App\Modules\Core\AI\Tools\ArtisanTool;
 use App\Modules\Core\AI\Tools\BashTool;
+use App\Modules\Core\AI\Tools\BrowserTool;
+use App\Modules\Core\AI\Tools\DelegateTaskTool;
+use App\Modules\Core\AI\Tools\DocumentAnalysisTool;
+use App\Modules\Core\AI\Tools\ImageAnalysisTool;
+use App\Modules\Core\AI\Tools\MemoryGetTool;
+use App\Modules\Core\AI\Tools\MemorySearchTool;
 use App\Modules\Core\AI\Tools\NavigateTool;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
@@ -58,7 +64,20 @@ class ServiceProvider extends BaseServiceProvider
 
             $registry->register(new ArtisanTool);
             $registry->register(new BashTool);
+            $registry->register($app->make(BrowserTool::class));
             $registry->register(new NavigateTool);
+            $registry->register(new DelegateTaskTool(
+                $app->make(LaraCapabilityMatcher::class),
+                $app->make(LaraTaskDispatcher::class),
+            ));
+            $registry->register(new DocumentAnalysisTool);
+            $registry->register(new ImageAnalysisTool);
+            $registry->register(new MemoryGetTool);
+
+            $memorySearchTool = MemorySearchTool::createIfAvailable();
+            if ($memorySearchTool !== null) {
+                $registry->register($memorySearchTool);
+            }
 
             return $registry;
         });

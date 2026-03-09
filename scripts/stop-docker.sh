@@ -96,17 +96,19 @@ done
 
 # Get Docker Compose profile based on environment
 get_compose_profile() {
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "production" ]]; then
         echo "prod"
     else
         echo "dev"
     fi
+    return 0
 }
 
 # Get Docker Compose project name
 get_compose_project_name() {
     # Use consistent project name matching codebase convention
     echo "blb"
+    return 0
 }
 
 # Run docker compose with correct profile
@@ -137,9 +139,9 @@ cleanup_orphans() {
     orphaned_containers=$(docker ps -a --filter "name=${project_name}-" --format "{{.Names}}\t{{.Status}}" | \
         grep -E "(Created|Exited|Restarting)" | cut -f1 || true)
 
-    if [ -n "$orphaned_containers" ]; then
+    if [[ -n "$orphaned_containers" ]]; then
         echo "$orphaned_containers" | while read -r container; do
-            if [ -n "$container" ]; then
+            if [[ -n "$container" ]]; then
                 echo -e "  Removing orphaned container: ${CYAN}${container}${NC}"
                 docker rm -f "$container" 2>/dev/null || true
             fi
@@ -155,11 +157,12 @@ cleanup_orphans() {
         # Check if it has compose labels - if not, remove it so compose can recreate
         local compose_label
         compose_label=$(docker network inspect "$network_name" --format '{{index .Labels "com.docker.compose.network"}}' 2>/dev/null || echo "")
-        if [ -z "$compose_label" ] || [ "$compose_label" != "belimbing-network" ]; then
+        if [[ -z "$compose_label" ]] || [[ "$compose_label" != "belimbing-network" ]]; then
             echo -e "  Removing network with incorrect labels: ${CYAN}${network_name}${NC}"
             docker network rm "$network_name" 2>/dev/null || true
         fi
     fi
+    return 0
 }
 
 # Stop Docker services
@@ -168,7 +171,7 @@ cleanup_orphans() {
 stop_services() {
     local remove_volumes="${1:-false}"
 
-    if [ "$remove_volumes" = "true" ]; then
+    if [[ "$remove_volumes" = "true" ]]; then
         echo -e "${CYAN}Stopping services and removing volumes...${NC}"
         if run_compose down -v; then
             echo -e "${GREEN}✓${NC} Services stopped and volumes removed"
@@ -194,7 +197,7 @@ stop_services() {
 # Returns 0 if volumes should be removed, 1 if not
 validate_volume_removal() {
     # Prevent volume deletion in production for safety
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "production" ]]; then
         echo -e "${RED}✗${NC} Volume deletion is not allowed in production environment" >&2
         echo ""
         echo -e "${YELLOW}For safety reasons, volumes cannot be removed via this script in production.${NC}"
@@ -217,13 +220,13 @@ validate_volume_removal() {
     echo ""
 
     # Handle non-interactive mode
-    if [ ! -t 0 ]; then
+    if [[ ! -t 0 ]]; then
         echo -e "${YELLOW}⚠ Non-interactive mode: Proceeding with volume deletion...${NC}"
         echo ""
     fi
 
     # Ask for confirmation in interactive mode
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         if ! ask_yes_no "Are you sure you want to delete all data?" "n"; then
             echo -e "${YELLOW}Operation cancelled. Volumes preserved.${NC}"
             return 1
@@ -271,7 +274,7 @@ main() {
         echo -e "${YELLOW}⚠${NC} No Belimbing containers are running"
 
         # Still run cleanup if requested
-        if [ "$CLEANUP_ORPHANS" = true ]; then
+        if [[ "$CLEANUP_ORPHANS" = true ]]; then
             cleanup_orphans
         fi
 
@@ -285,7 +288,7 @@ main() {
 
     # Stop services
     local remove_volumes=false
-    if [ "$REMOVE_VOLUMES" = true ]; then
+    if [[ "$REMOVE_VOLUMES" = true ]]; then
         # Validate and confirm volume removal
         if ! validate_volume_removal; then
             exit 1
@@ -299,7 +302,7 @@ main() {
     fi
 
     # Cleanup orphans if requested
-    if [ "$CLEANUP_ORPHANS" = true ]; then
+    if [[ "$CLEANUP_ORPHANS" = true ]]; then
         echo ""
         cleanup_orphans
     fi
@@ -309,6 +312,7 @@ main() {
     echo ""
     echo -e "${CYAN}Note:${NC} Volumes are preserved (data is safe)"
     echo -e "  To remove volumes: ${CYAN}$0 $APP_ENV --volumes${NC}"
+    return 0
 }
 
 # Run main function

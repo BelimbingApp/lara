@@ -470,7 +470,7 @@ new class extends Component
         <x-ui.card>
             <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-4">{{ __('User Details') }}</h3>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div x-data="{ editing: false, val: '{{ addslashes($user->name) }}' }">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Name') }}</dt>
                     <dd class="text-sm text-ink">
@@ -525,7 +525,7 @@ new class extends Component
                         <select
                             x-show="editing"
                             x-model="val"
-                            @change="editing = false; $wire.saveCompany(val ? parseInt(val) : null)"
+                            @change="editing = false; $wire.saveCompany(val ? parseInt(val, 10) : null)"
                             @keydown.escape="editing = false; val = '{{ $user->company_id ?? '' }}'"
                             @blur="editing = false"
                             class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
@@ -555,7 +555,7 @@ new class extends Component
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Updated') }}</dt>
                     <dd class="mt-0.5 text-sm text-muted tabular-nums">{{ $user->updated_at->format('Y-m-d H:i') }}</dd>
                 </div>
-            </div>
+            </dl>
         </x-ui.card>
 
         <x-ui.card>
@@ -566,7 +566,7 @@ new class extends Component
             <p class="text-xs text-muted mt-0.5 mb-4">{{ __('Roles determine what this user can do. Each role grants a set of capabilities. Effective permissions show the combined result of all assigned roles.') }}</p>
 
             {{-- Roles --}}
-            <div class="mb-4">
+            <dl class="mb-4">
                 <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Roles') }}</dt>
                 <dd>
                     @if($assignedRoles->isEmpty())
@@ -582,6 +582,7 @@ new class extends Component
                                             wire:click="removeRole({{ $assignment->id }})"
                                             class="ml-0.5 text-muted hover:text-status-danger transition-colors"
                                             title="{{ __('Remove role') }}"
+                                            aria-label="{{ __('Remove role') }}"
                                         >
                                             <x-icon name="heroicon-o-x-mark" class="w-3 h-3" />
                                         </button>
@@ -591,7 +592,7 @@ new class extends Component
                         </div>
                     @endif
                 </dd>
-            </div>
+            </dl>
 
             {{-- Assign Roles --}}
             @if($canManageRoles && $availableRoles->isNotEmpty() && !$hasGrantAll)
@@ -670,7 +671,7 @@ new class extends Component
                     <p class="text-xs text-muted mb-3">{{ __('Green = from roles. Blue = direct grant. Red = denied. Click ✕ to remove or deny.') }}</p>
 
                     @forelse($effectivePermissions as $domain => $capabilities)
-                        <div class="mb-3">
+                        <dl class="mb-3">
                             <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">{{ $domain }}</dt>
                             <dd class="flex flex-wrap gap-1">
                                 @foreach($capabilities as $capability)
@@ -683,6 +684,7 @@ new class extends Component
                                                     wire:click="removeCapability({{ $directGrantIds[$capability] }})"
                                                     class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
                                                     title="{{ __('Remove direct grant') }}"
+                                                    aria-label="{{ __('Remove direct grant') }}"
                                                 >
                                                     <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
                                                 </button>
@@ -697,6 +699,7 @@ new class extends Component
                                                     wire:click="denyCapability('{{ $capability }}')"
                                                     class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
                                                     title="{{ __('Deny this capability') }}"
+                                                    aria-label="{{ __('Deny this capability') }}"
                                                 >
                                                     <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
                                                 </button>
@@ -705,7 +708,7 @@ new class extends Component
                                     @endif
                                 @endforeach
                             </dd>
-                        </div>
+                        </dl>
                     @empty
                         <p class="text-sm text-muted">{{ __('No permissions. Assign a role or company first.') }}</p>
                     @endforelse
@@ -713,7 +716,7 @@ new class extends Component
                     {{-- Denied capabilities --}}
                     @if (! empty($deniedPermissions))
                         <div class="mt-4 pt-4 border-t border-border-default">
-                            <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Denied') }}</dt>
+                            <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Denied') }}</div>
                             @foreach ($deniedPermissions as $domain => $capabilities)
                                 <div class="mb-3">
                                     <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-1">{{ $domain }}</div>
@@ -727,6 +730,7 @@ new class extends Component
                                                         wire:click="removeCapability({{ $directDenyIds[$capability] }})"
                                                         class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
                                                         title="{{ __('Remove deny') }}"
+                                                        aria-label="{{ __('Remove deny') }}"
                                                     >
                                                         <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
                                                     </button>
@@ -745,7 +749,7 @@ new class extends Component
                             x-data="{ capFilter: '', selected: @entangle('selectedCapabilityKeys') }"
                             class="mt-4 pt-4 border-t border-border-default"
                         >
-                            <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Add Capabilities') }}</dt>
+                            <div class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-2">{{ __('Add Capabilities') }}</div>
                             <x-ui.search-input
                                 x-model="capFilter"
                                 placeholder="{{ __('Search capabilities...') }}"

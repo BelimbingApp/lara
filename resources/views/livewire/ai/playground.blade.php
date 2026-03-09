@@ -441,8 +441,10 @@ new class extends Component
                 @if($selectedEmployeeId)
                     <button
                         wire:click="openLlmConfig"
+                        type="button"
                         class="ml-auto px-2 py-2 text-muted hover:text-ink transition-colors"
                         title="{{ __('LLM Configuration') }}"
+                        aria-label="{{ __('LLM Configuration') }}"
                     >
                         <x-icon name="heroicon-o-cog-6-tooth" class="w-4 h-4" />
                     </button>
@@ -597,9 +599,9 @@ new class extends Component
                             @endif
                             @if(!empty($lastRunMeta['fallback_attempts']))
                                 <div x-data="{ open: false }" class="pt-1 border-t border-border-default">
-                                    <button @click="open = !open" class="flex items-center gap-1 text-muted hover:text-ink transition-colors w-full text-left">
-                                        <span class="text-[10px]" x-text="open ? '▾' : '▸'"></span>
-                                        <dt class="text-muted">{{ __('Fallback Attempts') }} ({{ count($lastRunMeta['fallback_attempts']) }})</dt>
+                                    <button type="button" @click="open = !open" class="flex items-center gap-1 text-muted hover:text-ink transition-colors w-full text-left">
+                                        <span class="text-[10px]" x-text="open ? '▾' : '▸'" aria-hidden="true"></span>
+                                        <span class="text-muted">{{ __('Fallback Attempts') }} ({{ count($lastRunMeta['fallback_attempts']) }})</span>
                                     </button>
                                     <div x-show="open" x-cloak class="mt-1 space-y-1.5">
                                         @foreach($lastRunMeta['fallback_attempts'] as $i => $attempt)
@@ -626,7 +628,7 @@ new class extends Component
         <div class="p-card-inner">
             <div class="flex items-center justify-between mb-4">
                 <h3 class="text-lg font-medium tracking-tight text-ink">{{ __('LLM Configuration') }}</h3>
-                <button wire:click="$set('showLlmConfig', false)" class="text-muted hover:text-ink">
+                <button wire:click="$set('showLlmConfig', false)" type="button" class="text-muted hover:text-ink" aria-label="{{ __('Close') }}">
                     <x-icon name="heroicon-o-x-mark" class="w-5 h-5" />
                 </button>
             </div>
@@ -644,24 +646,30 @@ new class extends Component
                                 <button
                                     wire:click="moveLlmModel({{ $index }}, 'up')"
                                     class="text-muted hover:text-ink p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                    type="button"
                                     @if($index === 0) disabled @endif
                                     title="{{ __('Move Up') }}"
+                                    aria-label="{{ __('Move Up') }}"
                                 >
                                     <x-icon name="heroicon-m-chevron-down" class="w-4 h-4 rotate-180" />
                                 </button>
                                 <button
                                     wire:click="moveLlmModel({{ $index }}, 'down')"
                                     class="text-muted hover:text-ink p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                    type="button"
                                     @if($index === count($llmModels) - 1) disabled @endif
                                     title="{{ __('Move Down') }}"
+                                    aria-label="{{ __('Move Down') }}"
                                 >
                                     <x-icon name="heroicon-m-chevron-down" class="w-4 h-4" />
                                 </button>
                                 <button
                                     wire:click="removeLlmModel({{ $index }})"
                                     class="text-muted hover:text-ink p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                                    type="button"
                                     @if(count($llmModels) <= 1) disabled @endif
                                     title="{{ __('Remove') }}"
+                                    aria-label="{{ __('Remove LLM model') }}"
                                 >
                                     <x-icon name="heroicon-o-trash" class="w-4 h-4" />
                                 </button>

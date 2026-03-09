@@ -43,7 +43,7 @@ main() {
     load_setup_state
 
     # Check if Caddy is being used
-    if [ "${PROXY_TYPE:-}" != "caddy" ]; then
+    if [[ "${PROXY_TYPE:-}" != "caddy" ]]; then
         echo -e "${YELLOW}ℹ${NC} Caddy is not configured as the reverse proxy"
         echo -e "  Current proxy type: ${CYAN}${PROXY_TYPE:-none}${NC}"
         echo ""
@@ -70,7 +70,7 @@ main() {
         echo -e "  4. Re-run this script: ${CYAN}./scripts/setup-steps/75-ssl-trust.sh${NC}"
         echo ""
 
-        if [ -t 0 ]; then
+        if [[ -t 0 ]]; then
             if ask_yes_no "Try to set up SSL trust anyway? (may fail if certificates don't exist yet)" "n"; then
                 echo ""
             else
@@ -118,6 +118,7 @@ main() {
         echo -e "  This shouldn't happen. Check that ${CYAN}scripts/shared/caddy.sh${NC} is present."
         exit 1
     fi
+    return 0
 }
 
 # Run main function

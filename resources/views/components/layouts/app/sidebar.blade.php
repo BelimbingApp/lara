@@ -9,9 +9,6 @@
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="dark">
 <head>
     @include('partials.head')
-    @if($title)
-        <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
-    @endif
 </head>
 <body class="min-h-screen bg-surface-card">
     <!-- Desktop Layout (lg and up) -->

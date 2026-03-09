@@ -20,8 +20,8 @@
 
                 <div class="relative z-20 mt-auto">
                     <blockquote class="space-y-2">
-                        <h2 class="text-xl font-semibold">&ldquo;{{ trim($message) }}&rdquo;</h2>
-                        <footer><h3 class="text-lg font-semibold">{{ trim($author) }}</h3></footer>
+                        <p class="text-xl font-semibold">&ldquo;{{ trim($message) }}&rdquo;</p>
+                        <footer><cite class="text-lg font-semibold not-italic">{{ trim($author) }}</cite></footer>
                     </blockquote>
                 </div>
             </div>

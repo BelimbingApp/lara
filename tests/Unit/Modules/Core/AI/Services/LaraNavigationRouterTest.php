@@ -15,6 +15,8 @@ use Tests\TestCase;
 
 uses(TestCase::class, LazilyRefreshDatabase::class);
 
+const AI_PROVIDERS_URL = '/admin/ai/providers';
+
 /**
  * @return array{user: User}
  */
@@ -43,7 +45,10 @@ function makeAllowAllAuthService(): AuthorizationService
             return AuthorizationDecision::allow(['test']);
         }
 
-        public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void {}
+        public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void
+        {
+            // This stub intentionally does nothing because these tests only exercise can().
+        }
 
         public function filterAllowed(Actor $actor, string $capability, iterable $resources, array $context = []): Collection
         {
@@ -99,7 +104,7 @@ it('resolves /go providers to AI Providers route', function (): void {
 
     expect($result)->not->toBeNull()
         ->and($result['status'])->toBe('navigation')
-        ->and($result['navigation']['url'])->toBe('/admin/ai/providers');
+        ->and($result['navigation']['url'])->toBe(AI_PROVIDERS_URL);
 });
 
 it('resolves /go users when user has core.user.list capability', function (): void {
@@ -185,7 +190,7 @@ it('orchestration service delegates explicit /go to router', function (): void {
 
     expect($result)->not->toBeNull()
         ->and($result['meta']['orchestration']['status'])->toBe('navigation')
-        ->and($result['meta']['orchestration']['navigation']['url'])->toBe('/admin/ai/providers');
+        ->and($result['meta']['orchestration']['navigation']['url'])->toBe(AI_PROVIDERS_URL);
 });
 
 it('orchestration returns null for natural language navigation (deferred to LLM)', function (): void {
@@ -213,8 +218,8 @@ it('resolves all expanded targets', function (): void {
         'employees' => '/admin/employees',
         'roles' => '/admin/roles',
         'addresses' => '/admin/addresses',
-        'providers' => '/admin/ai/providers',
-        'models' => '/admin/ai/providers',
+        'providers' => AI_PROVIDERS_URL,
+        'models' => AI_PROVIDERS_URL,
         'playground' => '/admin/ai/playground',
         'setup-lara' => '/admin/setup/lara',
     ];

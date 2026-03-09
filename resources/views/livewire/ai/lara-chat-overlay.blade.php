@@ -302,6 +302,7 @@ new class extends Component
                                 wire:click="deleteSession('{{ $session->id }}')"
                                 class="opacity-0 group-hover:opacity-100 transition-opacity text-muted hover:text-ink p-1"
                                 title="{{ __('Delete session') }}"
+                                aria-label="{{ __('Delete session') }}"
                             >
                                 <x-icon name="heroicon-o-trash" class="w-3.5 h-3.5" />
                             </button>

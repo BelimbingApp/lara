@@ -50,20 +50,20 @@ prompt_for_domains() {
     default_frontend=$(get_env_var "FRONTEND_DOMAIN" "$default_frontend")
     default_backend=$(get_env_var "BACKEND_DOMAIN" "$default_backend")
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         # All informational output goes to stderr so only the result goes to stdout
         echo -e "${CYAN}Domain Configuration${NC}" >&2
         echo "" >&2
         local custom_frontend
         custom_frontend=$(ask_input "Frontend domain" "$default_frontend")
         # Use default if empty (shouldn't happen since default is provided, but safety check)
-        [ -z "$custom_frontend" ] && custom_frontend="$default_frontend"
+        [[ -z "$custom_frontend" ]] && custom_frontend="$default_frontend"
 
         echo "" >&2
         local custom_backend
         custom_backend=$(ask_input "Backend domain" "$default_backend")
         # Use default if empty (shouldn't happen since default is provided, but safety check)
-        [ -z "$custom_backend" ] && custom_backend="$default_backend"
+        [[ -z "$custom_backend" ]] && custom_backend="$default_backend"
 
         # Validate domains (output to stderr)
         if ! is_valid_domain "$custom_frontend"; then
@@ -79,6 +79,7 @@ prompt_for_domains() {
         # Non-interactive: use defaults
         echo "${default_frontend}|${default_backend}"
     fi
+    return 0
 }
 
 # Extract domains from existing Belimbing config in Caddyfile
@@ -86,7 +87,7 @@ prompt_for_domains() {
 extract_belimbing_domains() {
     local caddyfile=$1
 
-    if [ ! -f "$caddyfile" ]; then
+    if [[ ! -f "$caddyfile" ]]; then
         return 1
     fi
 
@@ -114,12 +115,12 @@ extract_belimbing_domains() {
 
         # Only check for end of block after we've seen at least one https:// line
         # This allows comments like "# Environment: local" to be part of the block header
-        if [ "$in_belimbing_block" = true ] && [ "$found_first_https" = true ] && [[ "$line" =~ ^# ]]; then
+        if [[ "$in_belimbing_block" = true ]] && [[ "$found_first_https" = true ]] && [[ "$line" =~ ^# ]]; then
             break
         fi
 
         # Extract domain from site address lines (top-level, non-indented) in Belimbing block
-        if [ "$in_belimbing_block" = true ] && [[ "$line" =~ ^[^[:space:]] ]] && [[ "$line" == *"{"* ]]; then
+        if [[ "$in_belimbing_block" = true ]] && [[ "$line" =~ ^[^[:space:]] ]] && [[ "$line" == *"{"* ]]; then
             found_first_https=true
             # Extract first token, then strip scheme, port, and trailing "{"
             local addr
@@ -127,10 +128,10 @@ extract_belimbing_domains() {
             addr="${addr#https://}"
             addr="${addr%%\{}"
             addr="${addr%%:*}"
-            if [ -n "$addr" ]; then
-                if [ -z "$frontend_domain" ]; then
+            if [[ -n "$addr" ]]; then
+                if [[ -z "$frontend_domain" ]]; then
                     frontend_domain="$addr"
-                elif [ -z "$backend_domain" ]; then
+                elif [[ -z "$backend_domain" ]]; then
                     backend_domain="$addr"
                     break
                 fi
@@ -138,7 +139,7 @@ extract_belimbing_domains() {
         fi
     done < "$caddyfile"
 
-    if [ -n "$frontend_domain" ] && [ -n "$backend_domain" ]; then
+    if [[ -n "$frontend_domain" ]] && [[ -n "$backend_domain" ]]; then
         echo "${frontend_domain}|${backend_domain}"
         return 0
     fi
@@ -171,12 +172,12 @@ configure_existing_caddy() {
 
     # Find Caddyfile location
     for location in "${caddyfile_locations[@]}"; do
-        if [ -f "$location" ]; then
+        if [[ -f "$location" ]]; then
             caddyfile="$location"
             # Check if it's a system file (never touch these)
             if [[ "$caddyfile" =~ ^/(etc|usr/local/etc)/ ]]; then
                 is_system_file=true
-            elif [ "$caddyfile" = "$PROJECT_ROOT/Caddyfile" ]; then
+            elif [[ "$caddyfile" = "$PROJECT_ROOT/Caddyfile" ]]; then
                 is_project_file=true
             fi
             break
@@ -184,10 +185,10 @@ configure_existing_caddy() {
     done
 
     # If no Caddyfile found, try to detect from Caddy process
-    if [ -z "$caddyfile" ] && command_exists caddy; then
+    if [[ -z "$caddyfile" ]] && command_exists caddy; then
         local caddy_pid
         caddy_pid=$(pgrep -x caddy | head -1)
-        if [ -n "$caddy_pid" ]; then
+        if [[ -n "$caddy_pid" ]]; then
             echo -e "${YELLOW}⚠${NC} Caddy is running but Caddyfile location not detected"
         fi
     fi
@@ -196,12 +197,12 @@ configure_existing_caddy() {
     # We never modify system Caddyfiles. If a system Caddyfile exists, we still rely on
     # running a project-specific Caddy instance using $PROJECT_ROOT/Caddyfile (via start-app.sh).
     caddyfile="$PROJECT_ROOT/Caddyfile"
-    if [ "$is_system_file" = true ]; then
+    if [[ "$is_system_file" = true ]]; then
         echo -e "${CYAN}ℹ${NC} System Caddyfile detected: ${CYAN}$caddyfile${NC}"
         echo -e "${CYAN}ℹ${NC} Belimbing will use the project Caddyfile: ${CYAN}$PROJECT_ROOT/Caddyfile${NC}"
     fi
 
-    if [ ! -f "$caddyfile" ]; then
+    if [[ ! -f "$caddyfile" ]]; then
         echo -e "${RED}✗${NC} Missing project Caddyfile: ${CYAN}$caddyfile${NC}" >&2
         echo -e "${CYAN}ℹ${NC} Restore it from the repo, then re-run this step." >&2
         return 1
@@ -215,11 +216,11 @@ configure_existing_caddy() {
     mkdir -p "$certs_dir"
 
     # Generate self-signed certificates if they don't exist
-    if [ ! -f "$certs_dir/${frontend_domain}.pem" ]; then
+    if [[ ! -f "$certs_dir/${frontend_domain}.pem" ]]; then
         echo -e "${CYAN}Generating self-signed certificates...${NC}"
         if command_exists mkcert; then
             # Use mkcert for trusted local certificates
-            if [ ! -f "$certs_dir/${frontend_domain}.pem" ]; then
+            if [[ ! -f "$certs_dir/${frontend_domain}.pem" ]]; then
                 mkcert -cert-file "$certs_dir/${frontend_domain}.pem" \
                        -key-file "$certs_dir/${frontend_domain}-key.pem" \
                        "$frontend_domain" "$backend_domain" 2>/dev/null || true
@@ -251,31 +252,31 @@ main() {
     existing_proxy=$(detect_proxy)
 
     # Check if already configured AND proxy is still running/valid
-    if [ -n "${PROXY_TYPE:-}" ]; then
+    if [[ -n "${PROXY_TYPE:-}" ]]; then
         # Only prompt if the previously chosen proxy is still active/valid
         local should_prompt=false
 
-        if [ "$PROXY_TYPE" = "caddy" ] && [ "$existing_proxy" = "caddy" ]; then
+        if [[ "$PROXY_TYPE" = "caddy" ]] && [[ "$existing_proxy" = "caddy" ]]; then
             # Caddy was chosen AND is currently running
             should_prompt=true
-        elif [ "$PROXY_TYPE" = "nginx" ] || [ "$PROXY_TYPE" = "apache" ] || [ "$PROXY_TYPE" = "traefik" ]; then
+        elif [[ "$PROXY_TYPE" = "nginx" ]] || [[ "$PROXY_TYPE" = "apache" ]] || [[ "$PROXY_TYPE" = "traefik" ]]; then
             # Manual proxy was chosen AND matches what's running
-            if [ "$existing_proxy" = "$PROXY_TYPE" ]; then
+            if [[ "$existing_proxy" = "$PROXY_TYPE" ]]; then
                 should_prompt=true
             fi
-        elif [ "$PROXY_TYPE" = "manual" ] && [ "$existing_proxy" != "none" ]; then
+        elif [[ "$PROXY_TYPE" = "manual" ]] && [[ "$existing_proxy" != "none" ]]; then
             # Generic manual choice AND some proxy is running
             should_prompt=true
-        elif [ "$PROXY_TYPE" = "none" ]; then
+        elif [[ "$PROXY_TYPE" = "none" ]]; then
             # "None" is always valid (no proxy needed)
             should_prompt=true
         fi
 
-        if [ "$should_prompt" = true ]; then
+        if [[ "$should_prompt" = true ]]; then
             echo -e "${CYAN}ℹ${NC} You previously chose: ${YELLOW}$PROXY_TYPE${NC} as your reverse proxy"
             echo ""
 
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 if ask_yes_no "Use the same choice again?" "y"; then
                     echo -e "${GREEN}✓${NC} Keeping your choice: ${CYAN}$PROXY_TYPE${NC}"
 
@@ -286,7 +287,7 @@ main() {
                     backend_domain=$(get_env_var "BACKEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f2)")
 
                     # Add hosts entries if missing
-                    if [ "$PROXY_TYPE" != "none" ]; then
+                    if [[ "$PROXY_TYPE" != "none" ]]; then
                         echo ""
                         ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
                     fi
@@ -306,7 +307,7 @@ main() {
                 backend_domain=$(get_env_var "BACKEND_DOMAIN" "$(echo "$defaults" | cut -d'|' -f2)")
 
                 # Add hosts entries if missing
-                if [ "$PROXY_TYPE" != "none" ]; then
+                if [[ "$PROXY_TYPE" != "none" ]]; then
                     echo ""
                     ensure_domains_in_hosts "$frontend_domain" "$backend_domain"
                 fi
@@ -319,12 +320,12 @@ main() {
     # Display detection results
     echo -e "${CYAN}Detecting existing reverse proxies...${NC}"
 
-    if [ "$existing_proxy" != "none" ]; then
+    if [[ "$existing_proxy" != "none" ]]; then
         echo -e "${YELLOW}⚠${NC} Detected existing reverse proxy: ${YELLOW}$existing_proxy${NC}"
         echo ""
 
         # Special handling for Caddy: auto-configure it
-        if [ "$existing_proxy" = "caddy" ]; then
+        if [[ "$existing_proxy" = "caddy" ]]; then
             echo -e "${GREEN}✓${NC} Caddy detected - will auto-configure for Belimbing"
             echo ""
             PROXY_TYPE="caddy"
@@ -383,7 +384,7 @@ ${CYAN}Options:${NC}
 
 EOF
 
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 echo -e "${CYAN}What would you like to do?${NC}"
                 echo -e "  ${CYAN}1${NC} - Use Caddy anyway (will auto-handle port conflicts)"
                 echo -e "  ${CYAN}2${NC} - Use my existing $existing_proxy (manual configuration required)"
@@ -455,12 +456,12 @@ EOF
     echo ""
 
     # Handle Caddy installation if selected
-    if [ "$PROXY_TYPE" = "caddy" ]; then
+    if [[ "$PROXY_TYPE" = "caddy" ]]; then
         echo -e "${CYAN}Setting up Caddy...${NC}"
         echo ""
 
         # Prompt for domains if not already set (e.g., from existing Caddy auto-config)
-        if [ -z "${FRONTEND_DOMAIN:-}" ] || [ -z "${BACKEND_DOMAIN:-}" ]; then
+        if [[ -z "${FRONTEND_DOMAIN:-}" ]] || [[ -z "${BACKEND_DOMAIN:-}" ]]; then
             echo ""
             local domains
             domains=$(prompt_for_domains)
@@ -509,7 +510,7 @@ EOF
         echo -e "  ${CYAN}Frontend: ${FRONTEND_DOMAIN:-$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f1)}${NC}"
         echo -e "  ${CYAN}Backend: ${BACKEND_DOMAIN:-$(echo "$(get_default_domains "$APP_ENV")" | cut -d'|' -f2)}${NC}"
         echo -e "  ${CYAN}Caddyfile will be generated during final setup${NC}"
-    elif [ "$PROXY_TYPE" = "manual" ] || [ "$PROXY_TYPE" = "nginx" ] || [ "$PROXY_TYPE" = "apache" ] || [ "$PROXY_TYPE" = "traefik" ]; then
+    elif [[ "$PROXY_TYPE" = "manual" ]] || [[ "$PROXY_TYPE" = "nginx" ]] || [[ "$PROXY_TYPE" = "apache" ]] || [[ "$PROXY_TYPE" = "traefik" ]]; then
         echo -e "${CYAN}ℹ${NC} Using manual proxy configuration: $PROXY_TYPE"
         echo -e "  ${CYAN}Configuration snippets will be generated during final setup${NC}"
     else
@@ -532,6 +533,7 @@ EOF
     echo -e "Proxy settings saved to: ${CYAN}$PROJECT_ROOT/.env${NC}"
     echo ""
     echo -e "${GREEN}✓ Reverse proxy setup complete!${NC}"
+    return 0
 }
 
 # Run main function

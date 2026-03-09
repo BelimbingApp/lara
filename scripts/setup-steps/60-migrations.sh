@@ -44,7 +44,7 @@ run_migrations() {
     echo -e "${CYAN}Running database migrations...${NC}"
 
     local migrate_args=()
-    if [ "$APP_ENV" = "local" ]; then
+    if [[ "$APP_ENV" = "local" ]]; then
         migrate_args=(--seed --dev)
     else
         migrate_args=(--seed --force)
@@ -67,7 +67,7 @@ create_licensee_company() {
     echo -e "${CYAN}Creating licensee company...${NC}"
 
     local company_name
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         local default_company="${LICENSEE_COMPANY_NAME:-My Company}"
         company_name=$(ask_input "Licensee company name" "$default_company")
     else
@@ -77,13 +77,14 @@ create_licensee_company() {
     local result
     result=$(php artisan tinker --execute="echo App\Modules\Core\Company\Models\Company::provisionLicensee('$company_name') ? 'created' : 'exists';" 2>/dev/null | tail -1)
 
-    if [ "$result" = "created" ]; then
+    if [[ "$result" = "created" ]]; then
         echo -e "${GREEN}✓${NC} Licensee company created: ${CYAN}$company_name${NC} (id=1)"
-    elif [ "$result" = "exists" ]; then
+    elif [[ "$result" = "exists" ]]; then
         echo -e "${GREEN}✓${NC} Licensee company already exists (id=1)"
     else
         echo -e "${YELLOW}⚠${NC} Failed to create licensee company — it can be set up later via the admin panel"
     fi
+    return 0
 }
 
 # Create admin user via artisan command
@@ -100,7 +101,7 @@ create_admin_user() {
     # Skip if any user already exists (first-admin only during setup)
     local users_exist
     users_exist=$(php artisan tinker --execute="echo App\Modules\Core\User\Models\User::query()->exists() ? 'true' : 'false';" 2>/dev/null | tail -1)
-    if [ "$users_exist" = "true" ]; then
+    if [[ "$users_exist" = "true" ]]; then
         echo -e "${GREEN}✓${NC} Users already exist, skipping admin creation"
         return 0
     fi
@@ -110,16 +111,16 @@ create_admin_user() {
     admin_email=$(grep -E "^ADMIN_EMAIL=" "$(get_setup_state_file)" 2>/dev/null | cut -d '=' -f2 | tr -d '"' || echo "")
     default_email="${ADMIN_EMAIL:-${DEV_ADMIN_EMAIL:-admin@example.com}}"
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         # Interactive mode: prompt for credentials, use .env/setup state as default
-        if [ -z "$admin_email" ]; then
+        if [[ -z "$admin_email" ]]; then
             admin_email=$(ask_input "Admin email address" "$default_email")
         else
             echo -e "  Using email from setup state: ${CYAN}$admin_email${NC}"
         fi
 
         admin_password=$(ask_password "Admin password (min 8 chars)")
-        if [ -z "$admin_password" ]; then
+        if [[ -z "$admin_password" ]]; then
             echo -e "${YELLOW}⚠${NC} No password provided, skipping admin creation"
             echo -e "  Create admin later with: ${CYAN}php artisan blb:user:create${NC}"
             return 0
@@ -136,16 +137,16 @@ create_admin_user() {
         # Non-interactive mode: check for password file or skip
         local password_file="${ADMIN_PASSWORD_FILE:-}"
 
-        if [ -z "$admin_email" ]; then
+        if [[ -z "$admin_email" ]]; then
             echo -e "${YELLOW}⚠${NC} Non-interactive mode: ADMIN_EMAIL not found in setup state"
             echo -e "  Set ADMIN_EMAIL in setup state or create admin later with: ${CYAN}php artisan blb:user:create${NC}"
             return 0
         fi
 
-        if [ -n "$password_file" ] && [ -f "$password_file" ]; then
+        if [[ -n "$password_file" ]] && [[ -f "$password_file" ]]; then
             # Read password from file (more secure than env var)
             admin_password=$(cat "$password_file" | tr -d '\n')
-            if [ -n "$admin_password" ]; then
+            if [[ -n "$admin_password" ]]; then
                 if echo "$admin_password" | php artisan blb:user:create "$admin_email" --stdin --role=core_admin; then
                     return 0
                 else
@@ -167,7 +168,7 @@ rebuild_caches() {
     echo -e "${CYAN}Rebuilding application caches...${NC}"
 
     # Only cache in production/staging environments
-    if [ "$APP_ENV" = "production" ] || [ "$APP_ENV" = "staging" ]; then
+    if [[ "$APP_ENV" = "production" ]] || [[ "$APP_ENV" = "staging" ]]; then
         php artisan config:cache 2>/dev/null || true
         php artisan route:cache 2>/dev/null || true
         php artisan view:cache 2>/dev/null || true
@@ -179,6 +180,7 @@ rebuild_caches() {
         php artisan view:clear 2>/dev/null || true
         echo -e "${GREEN}✓${NC} Caches cleared (development mode)"
     fi
+    return 0
 }
 
 # Create Lara — BLB's system Digital Worker (employee id=1)
@@ -189,13 +191,14 @@ create_lara() {
     local result
     result=$(php artisan tinker --execute="echo App\Modules\Core\Employee\Models\Employee::provisionLara() ? 'created' : 'exists';" 2>/dev/null | tail -1)
 
-    if [ "$result" = "created" ]; then
+    if [[ "$result" = "created" ]]; then
         echo -e "${GREEN}✓${NC} Lara created (employee id=1)"
-    elif [ "$result" = "exists" ]; then
+    elif [[ "$result" = "exists" ]]; then
         echo -e "${GREEN}✓${NC} Lara already exists (employee id=1)"
     else
         echo -e "${YELLOW}⚠${NC} Failed to create Lara — she can be provisioned later via the admin panel"
     fi
+    return 0
 }
 
 # Main setup function
@@ -215,7 +218,7 @@ main() {
     fi
     echo -e "${GREEN}✓${NC} PHP available"
 
-    if [ ! -f "$PROJECT_ROOT/artisan" ]; then
+    if [[ ! -f "$PROJECT_ROOT/artisan" ]]; then
         echo -e "${RED}✗${NC} Laravel artisan not found" >&2
         echo -e "  Run ${CYAN}./scripts/setup-steps/25-laravel.sh${NC} first" >&2
         exit 1
@@ -239,7 +242,7 @@ main() {
     echo ""
 
     # For non-local environments, dev seeders don't run — create company and admin manually
-    if [ "$APP_ENV" != "local" ]; then
+    if [[ "$APP_ENV" != "local" ]]; then
         print_subsection_header "Licensee Company"
         create_licensee_company
         echo ""
@@ -269,6 +272,7 @@ main() {
     echo -e "${CYAN}Next steps:${NC}"
     echo -e "  • Start development: ${CYAN}./scripts/start-app.sh${NC}"
     echo ""
+    return 0
 }
 
 # Run main function

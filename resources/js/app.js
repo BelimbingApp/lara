@@ -8,5 +8,5 @@ if (!window.Alpine) {
     import('alpinejs').then((module) => {
         window.Alpine = module.default
         window.Alpine.start()
-    })
+    }).catch(() => {})
 }

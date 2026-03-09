@@ -39,13 +39,15 @@ PROXY_TYPE=""
 
 # Logging function
 log() {
-    if [ -n "$LOG_FILE" ]; then
+    if [[ -n "$LOG_FILE" ]]; then
         echo "[$(date '+%Y-%m-%d %H:%M:%S %Z')] $*" >> "$LOG_FILE"
     fi
+    return 0
 }
 
 now_epoch_s() {
     date +%s
+    return 0
 }
 
 # Check for required dependencies (verification only, no installation)
@@ -75,7 +77,7 @@ check_dependencies() {
         missing+=("caddy")
     fi
 
-    if [ ${#missing[@]} -gt 0 ]; then
+    if [[ ${#missing[@]} -gt 0 ]]; then
         echo -e "${RED}✗${NC} Missing required dependencies:" >&2
         for dep in "${missing[@]}"; do
             echo -e "  ${BULLET} $dep" >&2
@@ -98,11 +100,12 @@ check_dependencies() {
         exit 1
     fi
 
-    if [ "$has_bun" = true ]; then
+    if [[ "$has_bun" = true ]]; then
         echo -e "${GREEN}✓${NC} All dependencies available (using Bun)"
     else
         echo -e "${GREEN}✓${NC} All dependencies available (using Node.js/npm)"
     fi
+    return 0
 }
 
 # Read and validate APP_ENV
@@ -128,14 +131,14 @@ read_app_env() {
     BACKEND_DOMAIN=$(get_env_var "BACKEND_DOMAIN" "")
 
     # Use defaults if not set
-    if [ -z "$FRONTEND_DOMAIN" ]; then
+    if [[ -z "$FRONTEND_DOMAIN" ]]; then
         if command -v get_default_domains >/dev/null 2>&1; then
             FRONTEND_DOMAIN=$(get_default_domains "$APP_ENV" | cut -d'|' -f1)
         else
             FRONTEND_DOMAIN="${APP_ENV}.blb.lara"
         fi
     fi
-    if [ -z "$BACKEND_DOMAIN" ]; then
+    if [[ -z "$BACKEND_DOMAIN" ]]; then
         if command -v get_default_domains >/dev/null 2>&1; then
             BACKEND_DOMAIN=$(get_default_domains "$APP_ENV" | cut -d'|' -f2)
         else
@@ -147,11 +150,13 @@ read_app_env() {
     log "Environment: $APP_ENV, Frontend: $FRONTEND_DOMAIN, Backend: $BACKEND_DOMAIN"
 
     echo -e "${GREEN}Using environment: ${APP_ENV}${NC}"
+    return 0
 }
 
 # Read PROXY_TYPE from .env (used to decide whether to start Caddy).
 read_proxy_type() {
     PROXY_TYPE=$(get_env_var "PROXY_TYPE" "caddy")
+    return 0
 }
 
 # Check if domains are in /etc/hosts
@@ -172,7 +177,7 @@ check_hosts_entries() {
         missing_hosts+=("$BACKEND_DOMAIN")
     fi
 
-    if [ ${#missing_hosts[@]} -gt 0 ]; then
+    if [[ ${#missing_hosts[@]} -gt 0 ]]; then
         echo ""
         echo -e "${YELLOW}⚠${NC} The following domains are not in /etc/hosts${hosts_note}:"
         for domain in "${missing_hosts[@]}"; do
@@ -212,7 +217,7 @@ check_hosts_entries() {
         local win_missing=()
         local win_wrong_ip=()
 
-        if [ -z "$wsl_ip" ]; then
+        if [[ -z "$wsl_ip" ]]; then
             echo -e "${YELLOW}⚠${NC} Could not determine WSL2 IP address for Windows hosts file check"
             log "WARNING: Could not determine WSL2 IP address"
             return $result
@@ -231,15 +236,15 @@ check_hosts_entries() {
             win_wrong_ip+=("$BACKEND_DOMAIN")
         fi
 
-        if [ ${#win_missing[@]} -gt 0 ] || [ ${#win_wrong_ip[@]} -gt 0 ]; then
+        if [[ ${#win_missing[@]} -gt 0 ]] || [[ ${#win_wrong_ip[@]} -gt 0 ]]; then
             echo ""
             echo -e "${YELLOW}⚠${NC} Windows hosts file may need configuration (WSL2 detected):"
 
-            if [ ${#win_missing[@]} -gt 0 ]; then
+            if [[ ${#win_missing[@]} -gt 0 ]]; then
                 echo -e "  ${YELLOW}Missing domains:${NC} ${win_missing[*]}"
             fi
 
-            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+            if [[ ${#win_wrong_ip[@]} -gt 0 ]]; then
                 echo -e "  ${YELLOW}Wrong IP address (using 127.0.0.1 instead of WSL2 IP):${NC} ${win_wrong_ip[*]}"
             fi
 
@@ -255,14 +260,14 @@ check_hosts_entries() {
             echo -e "${CYAN}To fix:${NC}"
             echo -e "  1. Open Notepad as Administrator (Win+R → ${YELLOW}notepad${NC} → Ctrl+Shift+Enter)"
             echo -e "  2. Open: ${YELLOW}C:\\Windows\\System32\\drivers\\etc\\hosts${NC}"
-            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+            if [[ ${#win_wrong_ip[@]} -gt 0 ]]; then
                 echo -e "  3. Remove/comment lines with ${YELLOW}127.0.0.1${NC} for these domains"
             fi
             echo -e "  4. Add: ${YELLOW}$wsl_ip $FRONTEND_DOMAIN $BACKEND_DOMAIN${NC}"
             echo -e "  5. Save and close"
             echo ""
             echo -e "${CYAN}Or use PowerShell (Run as Administrator):${NC}"
-            if [ ${#win_wrong_ip[@]} -gt 0 ]; then
+            if [[ ${#win_wrong_ip[@]} -gt 0 ]]; then
                 echo -e "  ${YELLOW}\$content = Get-Content \"C:\\Windows\\System32\\drivers\\etc\\hosts\"; \$content = \$content | Where-Object { \$_ -notmatch \"127\\.0\\.0\\.1.*local\\.blb\\.lara\" -and \$_ -notmatch \"127\\.0\\.0\\.1.*local\\.api\\.blb\\.lara\" }; \$content | Set-Content \"C:\\Windows\\System32\\drivers\\etc\\hosts\"${NC}"
             fi
             echo -e "  ${YELLOW}Add-Content -Path \"C:\\Windows\\System32\\drivers\\etc\\hosts\" -Value \"$wsl_ip $FRONTEND_DOMAIN $BACKEND_DOMAIN\"${NC}"
@@ -283,7 +288,7 @@ get_ports() {
 
     # APP_PORT: .env pin → free port from 8000
     preferred=$(get_env_var "APP_PORT" "")
-    if [ -n "$preferred" ] && [[ "$preferred" =~ ^[0-9]+$ ]]; then
+    if [[ -n "$preferred" ]] && [[ "$preferred" =~ ^[0-9]+$ ]]; then
         APP_PORT="$preferred"
     else
         APP_PORT=$(next_free_port 8000)
@@ -291,7 +296,7 @@ get_ports() {
 
     # VITE_PORT: .env pin → free port from 5173
     preferred=$(get_env_var "VITE_PORT" "")
-    if [ -n "$preferred" ] && [[ "$preferred" =~ ^[0-9]+$ ]]; then
+    if [[ -n "$preferred" ]] && [[ "$preferred" =~ ^[0-9]+$ ]]; then
         VITE_PORT="$preferred"
     else
         VITE_PORT=$(next_free_port 5173)
@@ -311,6 +316,7 @@ VITE_PORT=$VITE_PORT
 EOF
 
     echo -e "${CYAN}ℹ${NC} Ports: Laravel ${APP_PORT}, Vite ${VITE_PORT}, HTTPS ${HTTPS_PORT}"
+    return 0
 }
 
 # Check if preferred port is available; if not, fail with clear message (don't silently steal another instance's port).
@@ -333,7 +339,7 @@ check_and_stop_services() {
 # Deregister this instance from the shared Caddy.
 # Removes the site fragment and stops Caddy if no sites remain.
 deregister_caddy() {
-    if [ -n "${FRONTEND_DOMAIN:-}" ]; then
+    if [[ -n "${FRONTEND_DOMAIN:-}" ]]; then
         echo -e "${CYAN}Removing Caddy site fragment...${NC}"
         log "Removing site fragment for $FRONTEND_DOMAIN"
         remove_site_fragment "$FRONTEND_DOMAIN"
@@ -342,6 +348,7 @@ deregister_caddy() {
         fi
         maybe_stop_shared_caddy
     fi
+    return 0
 }
 
 # Set up cleanup handler
@@ -355,13 +362,13 @@ cleanup() {
 
     deregister_caddy
 
-    if [ -n "${APP_ENV:-}" ]; then
+    if [[ -n "${APP_ENV:-}" ]]; then
         stop_dev_services "$APP_ENV" "$APP_PORT" "$VITE_PORT"
     else
         stop_dev_services "local"
     fi
 
-    [ -f "$PID_FILE" ] && rm -f "$PID_FILE"
+    [[ -f "$PID_FILE" ]] && rm -f "$PID_FILE"
     rm -f "$PROJECT_ROOT/storage/app/.devops/ports.env"
 
     log "Services stopped"
@@ -378,7 +385,7 @@ wait_for_service() {
     start_ts=$(now_epoch_s)
 
     echo -e "${CYAN}Waiting for $service_name to be ready...${NC}"
-    while [ $attempt -le $max_attempts ]; do
+    while [[ $attempt -le $max_attempts ]]; do
         if curl -s -f --connect-timeout 1 --max-time 2 "$url" >/dev/null 2>&1 || \
            curl -s -f -k --connect-timeout 1 --max-time 2 "https://$url" >/dev/null 2>&1; then
             echo -e "${GREEN}✓${NC} $service_name is ready"
@@ -406,7 +413,7 @@ start_caddy() {
     export HTTPS_PORT="$HTTPS_PORT"
 
     local tls_mode
-    if [ "$APP_ENV" = "local" ] || [ "$APP_ENV" = "testing" ]; then
+    if [[ "$APP_ENV" = "local" ]] || [[ "$APP_ENV" = "testing" ]]; then
         tls_mode="internal"
     else
         tls_mode=$(get_env_var "TLS_MODE" "internal")
@@ -428,6 +435,7 @@ start_caddy() {
     }
 
     log "Shared Caddy ready (sites on :443)"
+    return 0
 }
 
 # launch_browser is provided by shared/runtime.sh
@@ -451,6 +459,7 @@ start_services() {
 
     echo -e "${CYAN}ℹ${NC} Dev services output: ${dev_log_file}"
     echo -e "${CYAN}ℹ${NC} To watch: ${YELLOW}tail -f ${dev_log_file}${NC}"
+    return 0
 }
 
 # Main orchestration function
@@ -536,7 +545,7 @@ main() {
     echo ""
 
     # Start Caddy only when PROXY_TYPE=caddy. Start if not running, skip if already running (or reload if our config).
-    if [ "$PROXY_TYPE" = "caddy" ]; then
+    if [[ "$PROXY_TYPE" = "caddy" ]]; then
         echo -e "${CYAN}Starting Caddy reverse proxy...${NC}"
         echo ""
         start_caddy
@@ -562,6 +571,7 @@ main() {
 
     # Wait for background process
     wait "$DEV_PID" 2>/dev/null || true
+    return 0
 }
 
 # Run main function
