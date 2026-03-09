@@ -63,7 +63,8 @@ class ArtisanTool implements DigitalWorkerTool
                     'type' => 'string',
                     'description' => 'The artisan command to run (without "php artisan" prefix). '
                         .'Examples: "tinker --execute=\'echo App\\\\Modules\\\\Core\\\\User\\\\Models\\\\User::count();\'", '
-                        .'"blb:ai:catalog:sync --dry-run", "route:list --columns=name,uri".',
+                        .'"blb:ai:catalog:sync --dry-run", "route:list --columns=name,uri", '
+                        .'"blb:user:create alice@example.com --name=\'Alice Smith\' --role=core_admin".',
                 ],
                 'timeout' => [
                     'type' => 'integer',

@@ -478,6 +478,8 @@ class ToolMetadataRegistry
                 setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'List routes', 'input' => ['command' => 'route:list --compact']],
+                    ['label' => 'Create a user', 'input' => ['command' => "blb:user:create alice@example.com --name='Alice Smith' --role=core_admin"]],
+                    ['label' => '⚠ Wipe database (destroys all data)', 'input' => ['command' => 'db:wipe --force']],
                 ],
                 healthChecks: [
                     'Artisan process available',
@@ -498,6 +500,7 @@ class ToolMetadataRegistry
                 setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'Disk usage', 'input' => ['command' => 'df -h']],
+                    ['label' => '⚠ Clear application logs (irreversible)', 'input' => ['command' => 'truncate -s 0 storage/logs/laravel.log && echo "Log cleared."']],
                 ],
                 healthChecks: [
                     'Shell access available',
@@ -516,6 +519,10 @@ class ToolMetadataRegistry
                 riskClass: ToolRiskClass::HIGH_IMPACT,
                 capability: 'ai.tool_write_js.execute',
                 setupRequirements: self::NO_EXTERNAL_SETUP,
+                testExamples: [
+                    ['label' => 'Scroll to top', 'input' => ['script' => 'window.scrollTo({top: 0, behavior: "smooth"})', 'description' => 'Scroll the page to the top']],
+                    ['label' => '⚠ Redirect user to another page', 'input' => ['script' => 'window.location.href = "/dashboard"', 'description' => 'Navigate user away from current page']],
+                ],
                 limits: [
                     'Executes in the user\'s browser context',
                 ],
