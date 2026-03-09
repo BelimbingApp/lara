@@ -5,8 +5,9 @@ use App\Modules\Core\AI\Services\LaraTaskDispatcher;
 use App\Modules\Core\AI\Tools\DelegateTaskTool;
 use Illuminate\Auth\Access\AuthorizationException;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->dispatcher = Mockery::mock(LaraTaskDispatcher::class);
@@ -15,36 +16,20 @@ beforeEach(function () {
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('delegate_task');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires delegate capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_delegate.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['task', 'worker_id'])
-            ->and($schema['required'])->toBe(['task']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'delegate_task',
+            'ai.tool_delegate.execute',
+            ['task', 'worker_id'],
+            ['task'],
+        );
     });
 });
 
 describe('input validation', function () {
-    it('rejects empty task', function () {
-        $result = $this->tool->execute(['task' => '']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects missing task', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty task', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('task');
     });
 
     it('rejects task exceeding max length', function () {

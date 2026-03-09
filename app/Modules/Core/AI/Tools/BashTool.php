@@ -6,6 +6,7 @@
 namespace App\Modules\Core\AI\Tools;
 
 use App\Modules\Core\AI\Contracts\DigitalWorkerTool;
+use App\Modules\Core\AI\Tools\Concerns\FormatsProcessResult;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -19,6 +20,8 @@ use Illuminate\Support\Facades\Process;
  */
 class BashTool implements DigitalWorkerTool
 {
+    use FormatsProcessResult;
+
     private const ERROR_PREFIX = 'Error: ';
 
     private const TIMEOUT_SECONDS = 30;
@@ -69,27 +72,6 @@ class BashTool implements DigitalWorkerTool
             ->path(base_path())
             ->run($command);
 
-        $output = trim($result->output());
-        $errorOutput = trim($result->errorOutput());
-
-        if (! $result->successful()) {
-            $message = 'Command failed (exit code '.$result->exitCode().').';
-
-            if ($errorOutput !== '') {
-                $message .= "\n".$errorOutput;
-            }
-
-            if ($output !== '') {
-                $message .= "\n".$output;
-            }
-
-            return $message;
-        }
-
-        if ($output === '' && $errorOutput === '') {
-            return 'Command completed successfully (no output).';
-        }
-
-        return $output !== '' ? $output : $errorOutput;
+        return $this->formatProcessResult($result);
     }
 }

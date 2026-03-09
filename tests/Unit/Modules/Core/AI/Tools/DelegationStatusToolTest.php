@@ -2,44 +2,29 @@
 
 use App\Modules\Core\AI\Tools\DelegationStatusTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new DelegationStatusTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('delegation_status');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires delegation_status capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_delegation_status.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('dispatch_id')
-            ->and($schema['required'])->toBe(['dispatch_id']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'delegation_status',
+            'ai.tool_delegation_status.execute',
+            ['dispatch_id'],
+            ['dispatch_id'],
+        );
     });
 });
 
 describe('input validation', function () {
-    it('rejects empty dispatch_id', function () {
-        $result = $this->tool->execute(['dispatch_id' => '']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects missing dispatch_id', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty dispatch_id', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('dispatch_id');
     });
 
     it('rejects invalid dispatch_id format', function () {

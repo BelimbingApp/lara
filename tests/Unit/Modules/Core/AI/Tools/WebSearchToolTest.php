@@ -4,32 +4,23 @@ use App\Modules\Core\AI\Tools\WebSearchTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
+
+beforeEach(function () {
+    $this->tool = new WebSearchTool('parallel', 'test-key');
+});
 
 describe('tool metadata', function () {
-    beforeEach(function () {
-        $this->tool = new WebSearchTool('parallel', 'test-key');
-    });
-
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('web_search');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires web_search capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_web_search.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('query')
-            ->and($schema['required'])->toBe(['query']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'web_search',
+            'ai.tool_web_search.execute',
+            ['query'],
+            ['query'],
+        );
     });
 });
 
@@ -63,26 +54,12 @@ describe('factory method', function () {
 });
 
 describe('input validation', function () {
-    beforeEach(function () {
-        $this->tool = new WebSearchTool('parallel', 'test-key');
-    });
-
-    it('rejects empty query', function () {
-        $result = $this->tool->execute(['query' => '']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects missing query', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty query', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('query');
     });
 });
 
 describe('parallel provider', function () {
-    beforeEach(function () {
-        $this->tool = new WebSearchTool('parallel', 'test-key');
-    });
-
     it('sends request to parallel endpoint', function () {
         Http::fake([
             'api.parallel.ai/*' => Http::response([

@@ -3,88 +3,44 @@
 use App\Modules\Core\AI\Tools\QueryDataTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new QueryDataTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('query_data');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires query_data capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_query_data.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('query')
-            ->and($schema['properties'])->toHaveKey('limit')
-            ->and($schema['required'])->toBe(['query']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'query_data',
+            'ai.tool_query_data.execute',
+            ['query', 'limit'],
+            ['query'],
+        );
     });
 });
 
 describe('SQL validation', function () {
-    it('rejects empty query', function () {
-        $result = $this->tool->execute(['query' => '']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty query', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('query');
     });
 
-    it('rejects missing query', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects INSERT statements', function () {
-        $result = $this->tool->execute(['query' => "INSERT INTO users (name) VALUES ('test')"]);
-        expect($result)->toContain('INSERT')
+    it('rejects write statements', function (string $query, string $keyword) {
+        $result = $this->tool->execute(['query' => $query]);
+        expect($result)->toContain($keyword)
             ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects UPDATE statements', function () {
-        $result = $this->tool->execute(['query' => "UPDATE users SET name = 'test'"]);
-        expect($result)->toContain('UPDATE')
-            ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects DELETE statements', function () {
-        $result = $this->tool->execute(['query' => 'DELETE FROM users']);
-        expect($result)->toContain('DELETE')
-            ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects DROP statements', function () {
-        $result = $this->tool->execute(['query' => 'DROP TABLE users']);
-        expect($result)->toContain('DROP')
-            ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects ALTER statements', function () {
-        $result = $this->tool->execute(['query' => 'ALTER TABLE users ADD COLUMN foo text']);
-        expect($result)->toContain('ALTER')
-            ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects TRUNCATE statements', function () {
-        $result = $this->tool->execute(['query' => 'TRUNCATE TABLE users']);
-        expect($result)->toContain('TRUNCATE')
-            ->and($result)->toContain('not allowed');
-    });
-
-    it('rejects CREATE statements', function () {
-        $result = $this->tool->execute(['query' => 'CREATE TABLE evil (id int)']);
-        expect($result)->toContain('CREATE')
-            ->and($result)->toContain('not allowed');
-    });
+    })->with([
+        ['INSERT INTO users (name) VALUES (\'test\')', 'INSERT'],
+        ['UPDATE users SET name = \'test\'', 'UPDATE'],
+        ['DELETE FROM users', 'DELETE'],
+        ['DROP TABLE users', 'DROP'],
+        ['ALTER TABLE users ADD COLUMN foo text', 'ALTER'],
+        ['TRUNCATE TABLE users', 'TRUNCATE'],
+        ['CREATE TABLE evil (id int)', 'CREATE'],
+    ]);
 
     it('rejects multi-statement queries', function () {
         $result = $this->tool->execute(['query' => 'SELECT 1; DROP TABLE users']);

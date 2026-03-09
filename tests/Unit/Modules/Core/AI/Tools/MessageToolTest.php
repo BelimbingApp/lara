@@ -4,9 +4,24 @@ use App\Modules\Core\AI\Contracts\Messaging\ChannelAdapter;
 use App\Modules\Core\AI\DTO\Messaging\ChannelCapabilities;
 use App\Modules\Core\AI\Services\Messaging\ChannelAdapterRegistry;
 use App\Modules\Core\AI\Tools\MessageTool;
+use Tests\Support\AssertsToolBehavior;
 use Tests\TestCase;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
+
+const UPDATED_MESSAGE_TEXT = 'Updated text';
+
+dataset('message actions requiring message_id', [
+    ['reply', ['text' => 'Reply text']],
+    ['react', ['emoji' => '👍']],
+    ['edit', ['text' => UPDATED_MESSAGE_TEXT]],
+    ['delete', []],
+]);
+
+dataset('message actions requiring text', [
+    ['reply', ['message_id' => 'msg-123']],
+    ['edit', ['message_id' => 'msg-123']],
+]);
 
 beforeEach(function () {
     $this->registry = new ChannelAdapterRegistry;
@@ -46,25 +61,14 @@ beforeEach(function () {
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('message');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires message capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_message.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('action')
-            ->and($schema['properties'])->toHaveKey('channel')
-            ->and($schema['required'])->toBe(['action', 'channel']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'message',
+            'ai.tool_message.execute',
+            ['action', 'channel'],
+            ['action', 'channel'],
+        );
     });
 
     it('schema declares all actions', function () {
@@ -84,32 +88,23 @@ describe('tool metadata', function () {
 
 describe('input validation', function () {
     it('rejects missing action', function () {
-        $result = $this->tool->execute(['channel' => 'telegram']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['channel' => 'telegram']);
     });
 
     it('rejects invalid action', function () {
-        $result = $this->tool->execute(['action' => 'bogus', 'channel' => 'telegram']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('Must be one of');
+        $this->assertToolError(['action' => 'bogus', 'channel' => 'telegram'], 'Must be one of');
     });
 
     it('rejects missing channel', function () {
-        $result = $this->tool->execute(['action' => 'send']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('channel');
+        $this->assertToolError(['action' => 'send'], 'channel');
     });
 
     it('rejects empty channel', function () {
-        $result = $this->tool->execute(['action' => 'send', 'channel' => '']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('channel');
+        $this->assertToolError(['action' => 'send', 'channel' => ''], 'channel');
     });
 
     it('rejects unavailable channel', function () {
-        $result = $this->tool->execute(['action' => 'send', 'channel' => 'discord']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('not available');
+        $this->assertToolError(['action' => 'send', 'channel' => 'discord'], 'not available');
     });
 
     it('lists available channels when channel unavailable', function () {
@@ -129,23 +124,19 @@ describe('input validation', function () {
 
 describe('send action', function () {
     it('requires target', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'send',
             'channel' => 'telegram',
             'text' => 'Hello',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('target');
+        ], 'target');
     });
 
     it('requires text', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'send',
             'channel' => 'telegram',
             'target' => '+1234567890',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('text');
+        ], 'text');
     });
 
     it('rejects text exceeding max length', function () {
@@ -171,14 +162,12 @@ describe('send action', function () {
     });
 
     it('sends successfully', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'send',
             'channel' => 'telegram',
             'target' => '+1234567890',
             'text' => 'Hello there!',
         ]);
-
-        $data = json_decode($result, true);
 
         expect($data['action'])->toBe('send')
             ->and($data['channel'])->toBe('telegram')
@@ -188,117 +177,73 @@ describe('send action', function () {
     });
 
     it('includes media_path when provided', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'send',
             'channel' => 'telegram',
             'target' => '+1234567890',
             'text' => 'See attachment',
             'media_path' => '/storage/uploads/image.png',
         ]);
-
-        $data = json_decode($result, true);
         expect($data['media_path'])->toBe('/storage/uploads/image.png');
     });
 
     it('sets media_path to null when not provided', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'send',
             'channel' => 'telegram',
             'target' => '+1234567890',
             'text' => 'No attachment',
         ]);
-
-        $data = json_decode($result, true);
         expect($data['media_path'])->toBeNull();
     });
 
     it('allows longer text on high-limit channels', function () {
         $longText = str_repeat('x', 5000);
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'send',
             'channel' => 'email',
             'target' => 'user@example.com',
             'text' => $longText,
         ]);
-
-        $data = json_decode($result, true);
         expect($data['status'])->toBe('sent');
     });
 });
 
 describe('reply action', function () {
-    it('requires message_id', function () {
-        $result = $this->tool->execute([
-            'action' => 'reply',
-            'channel' => 'telegram',
-            'text' => 'Reply text',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('message_id');
-    });
-
-    it('requires text', function () {
-        $result = $this->tool->execute([
-            'action' => 'reply',
-            'channel' => 'telegram',
-            'message_id' => 'msg-123',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('text');
-    });
-
     it('replies successfully', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'reply',
             'channel' => 'telegram',
             'message_id' => 'msg-123',
             'text' => 'Got it!',
-        ]);
-
-        $data = json_decode($result, true);
+        ], 'replied');
 
         expect($data['action'])->toBe('reply')
             ->and($data['channel'])->toBe('telegram')
             ->and($data['message_id'])->toBe('msg-123')
-            ->and($data['text'])->toBe('Got it!')
-            ->and($data['status'])->toBe('replied');
+            ->and($data['text'])->toBe('Got it!');
     });
 });
 
 describe('react action', function () {
-    it('requires message_id', function () {
-        $result = $this->tool->execute([
-            'action' => 'react',
-            'channel' => 'telegram',
-            'emoji' => '👍',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('message_id');
-    });
-
     it('requires emoji', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'react',
             'channel' => 'telegram',
             'message_id' => 'msg-123',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('emoji');
+        ], 'emoji');
     });
 
     it('reacts successfully on supported channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'react',
             'channel' => 'telegram',
             'message_id' => 'msg-123',
             'emoji' => '👍',
-        ]);
-
-        $data = json_decode($result, true);
+        ], 'reacted');
 
         expect($data['action'])->toBe('react')
-            ->and($data['emoji'])->toBe('👍')
-            ->and($data['status'])->toBe('reacted');
+            ->and($data['emoji'])->toBe('👍');
     });
 
     it('rejects reaction on unsupported channel', function () {
@@ -314,40 +259,17 @@ describe('react action', function () {
 });
 
 describe('edit action', function () {
-    it('requires message_id', function () {
-        $result = $this->tool->execute([
-            'action' => 'edit',
-            'channel' => 'telegram',
-            'text' => 'Updated text',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('message_id');
-    });
-
-    it('requires text', function () {
-        $result = $this->tool->execute([
-            'action' => 'edit',
-            'channel' => 'telegram',
-            'message_id' => 'msg-123',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('text');
-    });
-
     it('edits successfully on supported channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'edit',
             'channel' => 'telegram',
             'message_id' => 'msg-123',
-            'text' => 'Updated text',
-        ]);
-
-        $data = json_decode($result, true);
+            'text' => UPDATED_MESSAGE_TEXT,
+        ], 'edited');
 
         expect($data['action'])->toBe('edit')
             ->and($data['message_id'])->toBe('msg-123')
-            ->and($data['text'])->toBe('Updated text')
-            ->and($data['status'])->toBe('edited');
+            ->and($data['text'])->toBe(UPDATED_MESSAGE_TEXT);
     });
 
     it('rejects editing on unsupported channel', function () {
@@ -355,7 +277,7 @@ describe('edit action', function () {
             'action' => 'edit',
             'channel' => 'email',
             'message_id' => 'msg-123',
-            'text' => 'Updated text',
+            'text' => UPDATED_MESSAGE_TEXT,
         ]);
         expect($result)->toContain('Error')
             ->and($result)->toContain('does not support message editing');
@@ -363,27 +285,15 @@ describe('edit action', function () {
 });
 
 describe('delete action', function () {
-    it('requires message_id', function () {
-        $result = $this->tool->execute([
-            'action' => 'delete',
-            'channel' => 'telegram',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('message_id');
-    });
-
     it('deletes successfully on supported channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'delete',
             'channel' => 'telegram',
             'message_id' => 'msg-123',
-        ]);
-
-        $data = json_decode($result, true);
+        ], 'deleted');
 
         expect($data['action'])->toBe('delete')
-            ->and($data['message_id'])->toBe('msg-123')
-            ->and($data['status'])->toBe('deleted');
+            ->and($data['message_id'])->toBe('msg-123');
     });
 
     it('rejects deletion on unsupported channel', function () {
@@ -399,25 +309,21 @@ describe('delete action', function () {
 
 describe('poll action', function () {
     it('requires target', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'poll',
             'channel' => 'telegram',
             'question' => 'Lunch?',
             'options' => ['Pizza', 'Sushi'],
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('target');
+        ], 'target');
     });
 
     it('requires question', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'poll',
             'channel' => 'telegram',
             'target' => 'chat-123',
             'options' => ['Pizza', 'Sushi'],
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('question');
+        ], 'question');
     });
 
     it('requires at least 2 options', function () {
@@ -457,21 +363,18 @@ describe('poll action', function () {
     });
 
     it('creates poll successfully on supported channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'poll',
             'channel' => 'telegram',
             'target' => 'chat-123',
             'question' => 'Lunch?',
             'options' => ['Pizza', 'Sushi', 'Tacos'],
-        ]);
-
-        $data = json_decode($result, true);
+        ], 'created');
 
         expect($data['action'])->toBe('poll')
             ->and($data['channel'])->toBe('telegram')
             ->and($data['question'])->toBe('Lunch?')
-            ->and($data['options'])->toBe(['Pizza', 'Sushi', 'Tacos'])
-            ->and($data['status'])->toBe('created');
+            ->and($data['options'])->toBe(['Pizza', 'Sushi', 'Tacos']);
     });
 
     it('rejects polls on unsupported channel', function () {
@@ -489,12 +392,10 @@ describe('poll action', function () {
 
 describe('list_conversations action', function () {
     it('lists conversations with default limit', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'list_conversations',
             'channel' => 'telegram',
         ]);
-
-        $data = json_decode($result, true);
 
         expect($data['action'])->toBe('list_conversations')
             ->and($data['channel'])->toBe('telegram')
@@ -504,75 +405,62 @@ describe('list_conversations action', function () {
     });
 
     it('respects custom limit', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'list_conversations',
             'channel' => 'telegram',
             'limit' => 25,
         ]);
-
-        $data = json_decode($result, true);
         expect($data['limit'])->toBe(25);
     });
 
     it('caps limit at 50', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'list_conversations',
             'channel' => 'telegram',
             'limit' => 100,
         ]);
-
-        $data = json_decode($result, true);
         expect($data['limit'])->toBe(50);
     });
 
     it('enforces minimum limit of 1', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'list_conversations',
             'channel' => 'telegram',
             'limit' => 0,
         ]);
-
-        $data = json_decode($result, true);
         expect($data['limit'])->toBe(1);
     });
 });
 
 describe('search action', function () {
     it('requires query', function () {
-        $result = $this->tool->execute([
+        $this->assertToolError([
             'action' => 'search',
             'channel' => 'telegram',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('query');
+        ], 'query');
     });
 
     it('searches successfully on supported channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->assertToolExecutionStatus([
             'action' => 'search',
             'channel' => 'telegram',
             'query' => 'project status',
-        ]);
-
-        $data = json_decode($result, true);
+        ], 'searched');
 
         expect($data['action'])->toBe('search')
             ->and($data['channel'])->toBe('telegram')
             ->and($data['query'])->toBe('project status')
             ->and($data['limit'])->toBe(10)
-            ->and($data['results'])->toBe([])
-            ->and($data['status'])->toBe('searched');
+            ->and($data['results'])->toBe([]);
     });
 
     it('respects custom limit', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'search',
             'channel' => 'telegram',
             'query' => 'meeting',
             'limit' => 5,
         ]);
-
-        $data = json_decode($result, true);
         expect($data['limit'])->toBe(5);
     });
 
@@ -595,6 +483,24 @@ describe('search action', function () {
     });
 });
 
+describe('shared action validation', function () {
+    it('requires message_id for relevant actions', function (string $action, array $arguments) {
+        $this->assertToolError([
+            'action' => $action,
+            'channel' => 'telegram',
+            ...$arguments,
+        ], 'message_id');
+    })->with('message actions requiring message_id');
+
+    it('requires text for relevant actions', function (string $action, array $arguments) {
+        $this->assertToolError([
+            'action' => $action,
+            'channel' => 'telegram',
+            ...$arguments,
+        ], 'text');
+    })->with('message actions requiring text');
+});
+
 describe('channel adapter registry integration', function () {
     it('lists available channels in error messages', function () {
         $result = $this->tool->execute([
@@ -606,14 +512,12 @@ describe('channel adapter registry integration', function () {
     });
 
     it('routes to correct channel', function () {
-        $result = $this->tool->execute([
+        $data = $this->decodeToolExecution([
             'action' => 'send',
             'channel' => 'email',
             'target' => 'user@example.com',
             'text' => 'Hello via email',
         ]);
-
-        $data = json_decode($result, true);
         expect($data['channel'])->toBe('email');
     });
 });

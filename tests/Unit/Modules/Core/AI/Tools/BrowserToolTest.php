@@ -4,8 +4,9 @@ use App\Modules\Core\AI\Services\Browser\BrowserPoolManager;
 use App\Modules\Core\AI\Services\Browser\BrowserSsrfGuard;
 use App\Modules\Core\AI\Tools\BrowserTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->poolManager = Mockery::mock(BrowserPoolManager::class);
@@ -17,37 +18,24 @@ beforeEach(function () {
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('browser');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires browser capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_browser.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('action')
-            ->and($schema['required'])->toBe(['action']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'browser',
+            'ai.tool_browser.execute',
+            ['action'],
+            ['action'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects missing action', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+        $this->assertToolError([]);
     });
 
     it('rejects invalid action', function () {
-        $result = $this->tool->execute(['action' => 'bogus']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('Must be one of');
+        $this->assertToolError(['action' => 'bogus'], 'Must be one of');
     });
 
     it('returns error when pool unavailable', function () {
@@ -61,73 +49,51 @@ describe('input validation', function () {
 
 describe('navigate action', function () {
     it('rejects missing url', function () {
-        $result = $this->tool->execute(['action' => 'navigate']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('url');
+        $this->assertToolError(['action' => 'navigate'], 'url');
     });
 
     it('rejects SSRF blocked url', function () {
         $this->ssrfGuard->shouldReceive('validate')
-            ->with('http://evil.internal')
+            ->with('https://evil.internal')
             ->andReturn('Blocked: private');
 
-        $result = $this->tool->execute(['action' => 'navigate', 'url' => 'http://evil.internal']);
+        $result = $this->tool->execute(['action' => 'navigate', 'url' => 'https://evil.internal']);
 
         expect($result)->toContain('Error')
             ->and($result)->toContain('Blocked');
     });
 
     it('navigates successfully', function () {
-        $result = $this->tool->execute(['action' => 'navigate', 'url' => 'https://example.com']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('navigated');
+        $this->assertToolExecutionStatus(['action' => 'navigate', 'url' => 'https://example.com'], 'navigated');
     });
 });
 
 describe('snapshot action', function () {
     it('returns snapshot with default format', function () {
-        $result = $this->tool->execute(['action' => 'snapshot']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['format'])->toBe('ai')
-            ->and($data['status'])->toBe('captured');
+        $data = $this->assertToolExecutionStatus(['action' => 'snapshot'], 'captured');
+        expect($data['format'])->toBe('ai');
     });
 
     it('accepts aria format', function () {
-        $result = $this->tool->execute(['action' => 'snapshot', 'format' => 'aria']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['format'])->toBe('aria');
+        $data = $this->decodeToolExecution(['action' => 'snapshot', 'format' => 'aria']);
+        expect($data['format'])->toBe('aria');
     });
 });
 
 describe('screenshot action', function () {
     it('returns screenshot stub', function () {
-        $result = $this->tool->execute(['action' => 'screenshot']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('captured');
+        $this->assertToolExecutionStatus(['action' => 'screenshot'], 'captured');
     });
 
     it('accepts full_page flag', function () {
-        $result = $this->tool->execute(['action' => 'screenshot', 'full_page' => true]);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['full_page'])->toBeTrue();
+        $data = $this->decodeToolExecution(['action' => 'screenshot', 'full_page' => true]);
+        expect($data['full_page'])->toBeTrue();
     });
 });
 
 describe('act action', function () {
     it('rejects missing kind', function () {
-        $result = $this->tool->execute(['action' => 'act']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('kind');
+        $this->assertToolError(['action' => 'act'], 'kind');
     });
 
     it('rejects invalid kind', function () {
@@ -136,57 +102,37 @@ describe('act action', function () {
     });
 
     it('rejects missing ref', function () {
-        $result = $this->tool->execute(['action' => 'act', 'kind' => 'click']);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('ref');
+        $this->assertToolError(['action' => 'act', 'kind' => 'click'], 'ref');
     });
 
     it('performs action successfully', function () {
-        $result = $this->tool->execute(['action' => 'act', 'kind' => 'click', 'ref' => 'e1']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('performed');
+        $this->assertToolExecutionStatus(['action' => 'act', 'kind' => 'click', 'ref' => 'e1'], 'performed');
     });
 });
 
 describe('tabs action', function () {
     it('lists tabs', function () {
-        $result = $this->tool->execute(['action' => 'tabs']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('listed');
+        $this->assertToolExecutionStatus(['action' => 'tabs'], 'listed');
     });
 });
 
 describe('open action', function () {
     it('rejects missing url', function () {
-        $result = $this->tool->execute(['action' => 'open']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['action' => 'open']);
     });
 
     it('opens tab successfully', function () {
-        $result = $this->tool->execute(['action' => 'open', 'url' => 'https://example.com']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('opened');
+        $this->assertToolExecutionStatus(['action' => 'open', 'url' => 'https://example.com'], 'opened');
     });
 });
 
 describe('close action', function () {
     it('rejects missing tab_id', function () {
-        $result = $this->tool->execute(['action' => 'close']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['action' => 'close']);
     });
 
     it('closes tab', function () {
-        $result = $this->tool->execute(['action' => 'close', 'tab_id' => 'tab1']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('closed');
+        $this->assertToolExecutionStatus(['action' => 'close', 'tab_id' => 'tab1'], 'closed');
     });
 });
 
@@ -212,21 +158,13 @@ describe('evaluate action', function () {
     it('evaluates when enabled', function () {
         config()->set('ai.tools.browser.evaluate_enabled', true);
 
-        $result = $this->tool->execute(['action' => 'evaluate', 'script' => 'document.title']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('evaluated');
+        $this->assertToolExecutionStatus(['action' => 'evaluate', 'script' => 'document.title'], 'evaluated');
     });
 });
 
 describe('pdf action', function () {
     it('exports pdf', function () {
-        $result = $this->tool->execute(['action' => 'pdf']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('exported');
+        $this->assertToolExecutionStatus(['action' => 'pdf'], 'exported');
     });
 });
 
@@ -243,11 +181,7 @@ describe('cookies action', function () {
     });
 
     it('gets cookies', function () {
-        $result = $this->tool->execute(['action' => 'cookies', 'cookie_action' => 'get']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('retrieved');
+        $this->assertToolExecutionStatus(['action' => 'cookies', 'cookie_action' => 'get'], 'retrieved');
     });
 
     it('rejects set without name', function () {
@@ -256,24 +190,16 @@ describe('cookies action', function () {
     });
 
     it('sets cookie', function () {
-        $result = $this->tool->execute([
+        $this->assertToolExecutionStatus([
             'action' => 'cookies',
             'cookie_action' => 'set',
             'cookie_name' => 'test',
             'cookie_value' => 'val',
-        ]);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('set');
+        ], 'set');
     });
 
     it('clears cookies', function () {
-        $result = $this->tool->execute(['action' => 'cookies', 'cookie_action' => 'clear']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('cleared');
+        $this->assertToolExecutionStatus(['action' => 'cookies', 'cookie_action' => 'clear'], 'cleared');
     });
 });
 
@@ -285,42 +211,27 @@ describe('wait action', function () {
     });
 
     it('accepts text condition', function () {
-        $result = $this->tool->execute(['action' => 'wait', 'text' => 'Hello']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('waited');
+        $data = $this->decodeToolExecution(['action' => 'wait', 'text' => 'Hello']);
+        expect($data['status'])->toBe('waited');
     });
 
     it('accepts selector condition', function () {
-        $result = $this->tool->execute(['action' => 'wait', 'selector' => '#main']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('waited');
+        $data = $this->decodeToolExecution(['action' => 'wait', 'selector' => '#main']);
+        expect($data['status'])->toBe('waited');
     });
 
     it('accepts url condition', function () {
-        $result = $this->tool->execute(['action' => 'wait', 'url' => 'https://example.com/done']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['status'])->toBe('waited');
+        $data = $this->decodeToolExecution(['action' => 'wait', 'url' => 'https://example.com/done']);
+        expect($data['status'])->toBe('waited');
     });
 
     it('uses default timeout', function () {
-        $result = $this->tool->execute(['action' => 'wait', 'text' => 'Hello']);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['timeout_ms'])->toBe(5000);
+        $data = $this->decodeToolExecution(['action' => 'wait', 'text' => 'Hello']);
+        expect($data['timeout_ms'])->toBe(5000);
     });
 
     it('accepts custom timeout', function () {
-        $result = $this->tool->execute(['action' => 'wait', 'text' => 'Hi', 'timeout_ms' => 10000]);
-        $data = json_decode($result, true);
-
-        expect($data)->not->toBeNull()
-            ->and($data['timeout_ms'])->toBe(10000);
+        $data = $this->decodeToolExecution(['action' => 'wait', 'text' => 'Hi', 'timeout_ms' => 10000]);
+        expect($data['timeout_ms'])->toBe(10000);
     });
 });

@@ -3,46 +3,37 @@
 use App\Modules\Core\AI\Tools\SystemInfoTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new SystemInfoTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('system_info');
-    });
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'system_info',
+            'ai.tool_system_info.execute',
+            ['section'],
+            [],
+        );
 
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires system_info capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_system_info.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKey('section')
-            ->and($schema['properties']['section'])->toHaveKey('enum');
+        expect($this->tool->parametersSchema()['properties']['section'])->toHaveKey('enum');
     });
 });
 
 describe('section selection', function () {
     it('returns all sections by default', function () {
-        $result = $this->tool->execute([]);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution([]);
 
         expect($data)->toHaveKeys(['framework', 'modules', 'providers', 'health']);
     });
 
     it('returns only requested section', function () {
-        $result = $this->tool->execute(['section' => 'framework']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'framework']);
 
         expect($data)->toHaveKey('framework')
             ->and($data)->not->toHaveKey('modules')
@@ -51,15 +42,13 @@ describe('section selection', function () {
     });
 
     it('falls back to all for invalid section', function () {
-        $result = $this->tool->execute(['section' => 'bogus']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'bogus']);
 
         expect($data)->toHaveKeys(['framework', 'modules', 'providers', 'health']);
     });
 
     it('returns framework section with expected keys', function () {
-        $result = $this->tool->execute(['section' => 'framework']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'framework']);
 
         expect($data['framework'])->toHaveKeys([
             'laravel_version',
@@ -73,8 +62,7 @@ describe('section selection', function () {
     });
 
     it('returns health section with expected keys', function () {
-        $result = $this->tool->execute(['section' => 'health']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'health']);
 
         expect($data['health'])->toHaveKeys([
             'queue_connection',
@@ -86,22 +74,19 @@ describe('section selection', function () {
     });
 
     it('reports database as connected', function () {
-        $result = $this->tool->execute(['section' => 'health']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'health']);
 
         expect($data['health']['database'])->toBe('connected');
     });
 
     it('returns modules as array', function () {
-        $result = $this->tool->execute(['section' => 'modules']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'modules']);
 
         expect($data['modules'])->toBeArray();
     });
 
     it('returns providers as array', function () {
-        $result = $this->tool->execute(['section' => 'providers']);
-        $data = json_decode($result, true);
+        $data = $this->decodeToolExecution(['section' => 'providers']);
 
         expect($data['providers'])->toBeArray();
     });
@@ -109,9 +94,7 @@ describe('section selection', function () {
 
 describe('output format', function () {
     it('returns valid JSON', function () {
-        $result = $this->tool->execute([]);
-
-        expect(json_decode($result, true))->not->toBeNull();
+        expect($this->decodeToolExecution([]))->toBeArray();
     });
 
     it('returns pretty-printed JSON', function () {

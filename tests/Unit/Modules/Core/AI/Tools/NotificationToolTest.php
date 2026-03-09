@@ -5,79 +5,62 @@ use App\Modules\Core\User\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
+
+const NOTIFICATION_TEST_BODY = 'Test body';
+
+dataset('notification required string fields', [
+    [['user_id' => 1, 'body' => NOTIFICATION_TEST_BODY], 'subject'],
+    [['user_id' => 1, 'subject' => '', 'body' => NOTIFICATION_TEST_BODY], 'subject'],
+    [['user_id' => 1, 'subject' => 'Test'], 'body'],
+    [['user_id' => 1, 'subject' => 'Test', 'body' => ' '], 'body'],
+]);
 
 beforeEach(function () {
     $this->tool = new NotificationTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('notification');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires notification capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_notification.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['user_id', 'channel', 'subject', 'body'])
-            ->and($schema['required'])->toBe(['user_id', 'subject', 'body']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'notification',
+            'ai.tool_notification.execute',
+            ['user_id', 'channel', 'subject', 'body'],
+            ['user_id', 'subject', 'body'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects missing user_id', function () {
-        $result = $this->tool->execute(['subject' => 'Test', 'body' => 'Test body']);
-        expect($result)->toContain('Error');
+        $this->assertToolError(['subject' => 'Test', 'body' => NOTIFICATION_TEST_BODY]);
     });
 
     it('rejects invalid user_id type', function () {
-        $result = $this->tool->execute(['user_id' => 'invalid', 'subject' => 'Test', 'body' => 'Test body']);
+        $result = $this->tool->execute(['user_id' => 'invalid', 'subject' => 'Test', 'body' => NOTIFICATION_TEST_BODY]);
         expect($result)->toContain('Error');
     });
 
     it('rejects negative user_id', function () {
-        $result = $this->tool->execute(['user_id' => -1, 'subject' => 'Test', 'body' => 'Test body']);
+        $result = $this->tool->execute(['user_id' => -1, 'subject' => 'Test', 'body' => NOTIFICATION_TEST_BODY]);
         expect($result)->toContain('Error');
     });
 
-    it('rejects missing subject', function () {
-        $result = $this->tool->execute(['user_id' => 1, 'body' => 'Test body']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects empty subject', function () {
-        $result = $this->tool->execute(['user_id' => 1, 'subject' => '', 'body' => 'Test body']);
-        expect($result)->toContain('Error');
-    });
+    it('rejects missing or empty required string fields', function (array $arguments, string $fragment) {
+        $this->assertToolError($arguments, $fragment);
+    })->with('notification required string fields');
 
     it('rejects subject exceeding max length', function () {
         $result = $this->tool->execute([
             'user_id' => 1,
             'subject' => str_repeat('x', 256),
-            'body' => 'Test body',
+            'body' => NOTIFICATION_TEST_BODY,
         ]);
         expect($result)->toContain('Error')
             ->and($result)->toContain('exceed');
-    });
-
-    it('rejects missing body', function () {
-        $result = $this->tool->execute(['user_id' => 1, 'subject' => 'Test']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects empty body', function () {
-        $result = $this->tool->execute(['user_id' => 1, 'subject' => 'Test', 'body' => ' ']);
-        expect($result)->toContain('Error');
     });
 
     it('rejects body exceeding max length', function () {
@@ -94,7 +77,7 @@ describe('input validation', function () {
         $result = $this->tool->execute([
             'user_id' => 1,
             'subject' => 'Test',
-            'body' => 'Test body',
+            'body' => NOTIFICATION_TEST_BODY,
             'channel' => 'sms',
         ]);
         expect($result)->toContain('Error');
@@ -114,7 +97,7 @@ describe('recipient resolution', function () {
         $result = $this->tool->execute([
             'user_id' => 99999,
             'subject' => 'Test',
-            'body' => 'Test body',
+            'body' => NOTIFICATION_TEST_BODY,
         ]);
 
         expect($result)->toContain('Error')
@@ -131,7 +114,7 @@ describe('recipient resolution', function () {
             'body' => 'World',
         ]);
 
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
 
         expect($data)->not->toBeNull()
             ->and($data['status'])->toBe('sent')
@@ -170,7 +153,7 @@ describe('notification sending', function () {
         $notification = $sentTypes[$firstType][0]['notification'];
         expect($notification->via($user))->toBe(['database']);
 
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
         expect($data['channel'])->toBe('database');
     });
 
@@ -192,7 +175,7 @@ describe('notification sending', function () {
         $notification = $sentTypes[$firstType][0]['notification'];
         expect($notification->via($user))->toBe(['broadcast']);
 
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
         expect($data['channel'])->toBe('broadcast');
     });
 
@@ -223,7 +206,7 @@ describe('output format', function () {
             'body' => 'Valid JSON output',
         ]);
 
-        expect(json_decode($result, true))->not->toBeNull();
+        expect($this->decodeToolResult($result))->toBeArray();
     });
 
     it('includes sent_at timestamp', function () {
@@ -236,7 +219,7 @@ describe('output format', function () {
             'body' => 'Check sent_at field',
         ]);
 
-        $data = json_decode($result, true);
+        $data = $this->decodeToolResult($result);
         expect($data['sent_at'])->not->toBeEmpty();
     });
 });

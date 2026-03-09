@@ -2,39 +2,29 @@
 
 use App\Modules\Core\AI\Tools\ScheduleTaskTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new ScheduleTaskTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('schedule_task');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires schedule capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_schedule.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['action', 'task_id', 'description', 'cron_expression', 'worker_id', 'enabled'])
-            ->and($schema['required'])->toBe(['action']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'schedule_task',
+            'ai.tool_schedule.execute',
+            ['action', 'task_id', 'description', 'cron_expression', 'worker_id', 'enabled'],
+            ['action'],
+        );
     });
 });
 
 describe('input validation', function () {
     it('rejects missing action', function () {
-        $result = $this->tool->execute([]);
-        expect($result)->toContain('Error');
+        $this->assertToolError([]);
     });
 
     it('rejects invalid action', function () {
@@ -63,14 +53,15 @@ describe('list action', function () {
 });
 
 describe('add action', function () {
-    it('rejects missing description', function () {
-        $result = $this->tool->execute(['action' => 'add']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty description', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('description', ['action' => 'add']);
     });
 
-    it('rejects missing cron_expression', function () {
-        $result = $this->tool->execute(['action' => 'add', 'description' => 'test']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty cron_expression', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument(
+            'cron_expression',
+            ['action' => 'add', 'description' => 'test'],
+        );
     });
 
     it('rejects invalid cron expression', function () {
@@ -134,9 +125,8 @@ describe('add action', function () {
 });
 
 describe('update action', function () {
-    it('rejects missing task_id', function () {
-        $result = $this->tool->execute(['action' => 'update']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty task_id for updates', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('task_id', ['action' => 'update']);
     });
 
     it('rejects invalid task_id format', function () {
@@ -165,9 +155,8 @@ describe('update action', function () {
 });
 
 describe('remove action', function () {
-    it('rejects missing task_id', function () {
-        $result = $this->tool->execute(['action' => 'remove']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty task_id for removals', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('task_id', ['action' => 'remove']);
     });
 
     it('accepts valid task_id', function () {
@@ -180,9 +169,8 @@ describe('remove action', function () {
 });
 
 describe('status action', function () {
-    it('rejects missing task_id', function () {
-        $result = $this->tool->execute(['action' => 'status']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty task_id for status checks', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('task_id', ['action' => 'status']);
     });
 
     it('returns status for valid task_id', function () {

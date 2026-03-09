@@ -2,44 +2,29 @@
 
 use App\Modules\Core\AI\Tools\WriteJsTool;
 use Tests\TestCase;
+use Tests\Support\AssertsToolBehavior;
 
-uses(TestCase::class);
+uses(TestCase::class, AssertsToolBehavior::class);
 
 beforeEach(function () {
     $this->tool = new WriteJsTool;
 });
 
 describe('tool metadata', function () {
-    it('returns correct name', function () {
-        expect($this->tool->name())->toBe('write_js');
-    });
-
-    it('returns a description', function () {
-        expect($this->tool->description())->not->toBeEmpty();
-    });
-
-    it('requires write_js capability', function () {
-        expect($this->tool->requiredCapability())->toBe('ai.tool_write_js.execute');
-    });
-
-    it('has valid parameter schema', function () {
-        $schema = $this->tool->parametersSchema();
-
-        expect($schema['type'])->toBe('object')
-            ->and($schema['properties'])->toHaveKeys(['script', 'description'])
-            ->and($schema['required'])->toBe(['script', 'description']);
+    it('has the expected metadata', function () {
+        $this->assertToolMetadata(
+            $this->tool,
+            'write_js',
+            'ai.tool_write_js.execute',
+            ['script', 'description'],
+            ['script', 'description'],
+        );
     });
 });
 
 describe('input validation', function () {
-    it('rejects missing script', function () {
-        $result = $this->tool->execute(['description' => 'Test']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects empty script', function () {
-        $result = $this->tool->execute(['script' => '', 'description' => 'Test']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty script', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('script', ['description' => 'Test']);
     });
 
     it('rejects non-string script', function () {
@@ -47,14 +32,8 @@ describe('input validation', function () {
         expect($result)->toContain('Error');
     });
 
-    it('rejects missing description', function () {
-        $result = $this->tool->execute(['script' => 'console.log("hi")']);
-        expect($result)->toContain('Error');
-    });
-
-    it('rejects empty description', function () {
-        $result = $this->tool->execute(['script' => 'console.log("hi")', 'description' => '']);
-        expect($result)->toContain('Error');
+    it('rejects missing or empty description', function () {
+        $this->assertRejectsMissingAndEmptyStringArgument('description', ['script' => 'console.log("hi")']);
     });
 
     it('rejects script exceeding max length', function () {
@@ -77,77 +56,23 @@ describe('input validation', function () {
 });
 
 describe('security validation', function () {
-    it('blocks eval()', function () {
+    it('blocks unsafe script patterns', function (string $script, string $description) {
         $result = $this->tool->execute([
-            'script' => 'eval("alert(1)")',
-            'description' => 'Test eval',
+            'script' => $script,
+            'description' => $description,
         ]);
         expect($result)->toContain('Error')
             ->and($result)->toContain('blocked');
-    });
-
-    it('blocks eval() case-insensitively', function () {
-        $result = $this->tool->execute([
-            'script' => 'EVAL("alert(1)")',
-            'description' => 'Test eval',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks Function()', function () {
-        $result = $this->tool->execute([
-            'script' => 'new Function("return 1")()',
-            'description' => 'Test Function',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks document.cookie', function () {
-        $result = $this->tool->execute([
-            'script' => 'let c = document.cookie;',
-            'description' => 'Test cookie theft',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks localStorage', function () {
-        $result = $this->tool->execute([
-            'script' => 'localStorage.getItem("key")',
-            'description' => 'Test localStorage',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks sessionStorage', function () {
-        $result = $this->tool->execute([
-            'script' => 'sessionStorage.setItem("key", "val")',
-            'description' => 'Test sessionStorage',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks importScripts', function () {
-        $result = $this->tool->execute([
-            'script' => 'importScripts("evil.js")',
-            'description' => 'Test importScripts',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
-
-    it('blocks dynamic import()', function () {
-        $result = $this->tool->execute([
-            'script' => 'import("./module.js").then(m => m.run())',
-            'description' => 'Test dynamic import',
-        ]);
-        expect($result)->toContain('Error')
-            ->and($result)->toContain('blocked');
-    });
+    })->with([
+        ['eval("alert(1)")', 'Test eval'],
+        ['EVAL("alert(1)")', 'Test eval'],
+        ['new Function("return 1")()', 'Test Function'],
+        ['let c = document.cookie;', 'Test cookie theft'],
+        ['localStorage.getItem("key")', 'Test localStorage'],
+        ['sessionStorage.setItem("key", "val")', 'Test sessionStorage'],
+        ['importScripts("evil.js")', 'Test importScripts'],
+        ['import("./module.js").then(m => m.run())', 'Test dynamic import'],
+    ]);
 });
 
 describe('lara-action execution', function () {

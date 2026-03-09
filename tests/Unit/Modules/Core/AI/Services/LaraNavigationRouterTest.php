@@ -12,70 +12,39 @@ use App\Modules\Core\User\Models\User;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Collection;
 use Tests\TestCase;
+use Tests\Support\CreatesLaraFixtures;
 
-uses(TestCase::class, LazilyRefreshDatabase::class);
+uses(TestCase::class, LazilyRefreshDatabase::class, CreatesLaraFixtures::class);
 
 const AI_PROVIDERS_URL = '/admin/ai/providers';
 
-/**
- * @return array{user: User}
- */
-function createNavigationFixture(): array
+function makeAuthorizationService(bool $allowed): AuthorizationService
 {
-    $company = Company::factory()->create();
-    $employee = Employee::factory()->create([
-        'company_id' => $company->id,
-        'status' => 'active',
-    ]);
-
-    $user = User::factory()->create([
-        'company_id' => $company->id,
-        'employee_id' => $employee->id,
-    ]);
-
-    return ['user' => $user];
-}
-
-function makeAllowAllAuthService(): AuthorizationService
-{
-    return new class implements AuthorizationService
+    return new class ($allowed) implements AuthorizationService
     {
+        public function __construct(
+            private readonly bool $allowed
+        ) {}
+
         public function can(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): AuthorizationDecision
         {
-            return AuthorizationDecision::allow(['test']);
+            return $this->allowed
+                ? AuthorizationDecision::allow(['test'])
+                : AuthorizationDecision::deny(AuthorizationReasonCode::DENIED_MISSING_CAPABILITY, ['test']);
         }
 
         public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void
         {
-            // This stub intentionally does nothing because these tests only exercise can().
+            if (! $this->allowed) {
+                throw new \App\Base\Authz\Exceptions\AuthorizationDeniedException(
+                    AuthorizationDecision::deny(AuthorizationReasonCode::DENIED_MISSING_CAPABILITY, ['test'])
+                );
+            }
         }
 
         public function filterAllowed(Actor $actor, string $capability, iterable $resources, array $context = []): Collection
         {
-            return collect($resources);
-        }
-    };
-}
-
-function makeDenyAllAuthService(): AuthorizationService
-{
-    return new class implements AuthorizationService
-    {
-        public function can(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): AuthorizationDecision
-        {
-            return AuthorizationDecision::deny(AuthorizationReasonCode::DENIED_MISSING_CAPABILITY, ['test']);
-        }
-
-        public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void
-        {
-            throw new \App\Base\Authz\Exceptions\AuthorizationDeniedException(
-                AuthorizationDecision::deny(AuthorizationReasonCode::DENIED_MISSING_CAPABILITY, ['test'])
-            );
-        }
-
-        public function filterAllowed(Actor $actor, string $capability, iterable $resources, array $context = []): Collection
-        {
-            return collect();
+            return $this->allowed ? collect($resources) : collect();
         }
     };
 }
@@ -83,7 +52,7 @@ function makeDenyAllAuthService(): AuthorizationService
 // --- Explicit /go commands ---
 
 it('resolves /go dashboard to navigation payload', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $router = app(LaraNavigationRouter::class);
@@ -96,7 +65,7 @@ it('resolves /go dashboard to navigation payload', function (): void {
 });
 
 it('resolves /go providers to AI Providers route', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $router = app(LaraNavigationRouter::class);
@@ -108,10 +77,10 @@ it('resolves /go providers to AI Providers route', function (): void {
 });
 
 it('resolves /go users when user has core.user.list capability', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
-    $router = new LaraNavigationRouter(makeAllowAllAuthService());
+    $router = new LaraNavigationRouter(makeAuthorizationService(true));
     $result = $router->resolve('/go users');
 
     expect($result)->not->toBeNull()
@@ -120,10 +89,10 @@ it('resolves /go users when user has core.user.list capability', function (): vo
 });
 
 it('denies /go users when user lacks core.user.list capability', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
-    $router = new LaraNavigationRouter(makeDenyAllAuthService());
+    $router = new LaraNavigationRouter(makeAuthorizationService(false));
     $result = $router->resolve('/go users');
 
     expect($result)->not->toBeNull()
@@ -133,10 +102,10 @@ it('denies /go users when user lacks core.user.list capability', function (): vo
 });
 
 it('denies /go roles when user lacks admin.role.list capability', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
-    $router = new LaraNavigationRouter(makeDenyAllAuthService());
+    $router = new LaraNavigationRouter(makeAuthorizationService(false));
     $result = $router->resolve('/go roles');
 
     expect($result)->not->toBeNull()
@@ -145,7 +114,7 @@ it('denies /go roles when user lacks admin.role.list capability', function (): v
 });
 
 it('returns unknown target status for unsupported target', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $router = app(LaraNavigationRouter::class);
@@ -157,7 +126,7 @@ it('returns unknown target status for unsupported target', function (): void {
 });
 
 it('returns usage guidance for empty /go command', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $router = app(LaraNavigationRouter::class);
@@ -168,7 +137,7 @@ it('returns usage guidance for empty /go command', function (): void {
 });
 
 it('returns null for non-navigation messages', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $router = app(LaraNavigationRouter::class);
@@ -182,7 +151,7 @@ it('returns null for non-navigation messages', function (): void {
 // --- Integration with LaraOrchestrationService ---
 
 it('orchestration service delegates explicit /go to router', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $service = app(\App\Modules\Core\AI\Services\LaraOrchestrationService::class);
@@ -194,7 +163,7 @@ it('orchestration service delegates explicit /go to router', function (): void {
 });
 
 it('orchestration returns null for natural language navigation (deferred to LLM)', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
     $service = app(\App\Modules\Core\AI\Services\LaraOrchestrationService::class);
@@ -206,10 +175,10 @@ it('orchestration returns null for natural language navigation (deferred to LLM)
 // --- Target completeness ---
 
 it('resolves all expanded targets', function (): void {
-    $fixture = createNavigationFixture();
+    $fixture = $this->createLaraFixture();
     $this->actingAs($fixture['user']);
 
-    $router = new LaraNavigationRouter(makeAllowAllAuthService());
+    $router = new LaraNavigationRouter(makeAuthorizationService(true));
 
     $targets = [
         'dashboard' => '/dashboard',
