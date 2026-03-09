@@ -18,6 +18,8 @@ use App\Modules\Core\AI\Enums\ToolRiskClass;
  */
 class ToolMetadataRegistry
 {
+    private const NO_EXTERNAL_SETUP = ['No external configuration required'];
+
     /** @var array<string, ToolMetadata> */
     private array $metadata = [];
 
@@ -180,9 +182,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::SYSTEM,
                 riskClass: ToolRiskClass::READ_ONLY,
                 capability: 'ai.tool_system_info.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'Full overview', 'input' => ['section' => 'all']],
                     ['label' => 'Health check', 'input' => ['section' => 'health']],
@@ -309,11 +309,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::DELEGATION,
                 riskClass: ToolRiskClass::READ_ONLY,
                 capability: 'ai.tool_delegation_status.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
-                testExamples: [],
-                healthChecks: [],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 limits: [
                     'Read-only status check',
                 ],
@@ -327,11 +323,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::DELEGATION,
                 riskClass: ToolRiskClass::READ_ONLY,
                 capability: 'ai.tool_worker_list.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
-                testExamples: [],
-                healthChecks: [],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 limits: [
                     'Shows supervised workers only',
                 ],
@@ -391,11 +383,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::BROWSER,
                 riskClass: ToolRiskClass::READ_ONLY,
                 capability: 'ai.tool_navigate.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
-                testExamples: [],
-                healthChecks: [],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 limits: [
                     'Internal BLB routes only',
                 ],
@@ -437,9 +425,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::SYSTEM,
                 riskClass: ToolRiskClass::HIGH_IMPACT,
                 capability: 'ai.tool_artisan.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'List routes', 'input' => ['command' => 'route:list --compact']],
                 ],
@@ -459,9 +445,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::SYSTEM,
                 riskClass: ToolRiskClass::HIGH_IMPACT,
                 capability: 'ai.tool_bash.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'Disk usage', 'input' => ['command' => 'df -h']],
                 ],
@@ -481,11 +465,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::BROWSER,
                 riskClass: ToolRiskClass::HIGH_IMPACT,
                 capability: 'ai.tool_write_js.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
-                testExamples: [],
-                healthChecks: [],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 limits: [
                     'Executes in the user\'s browser context',
                 ],
@@ -527,11 +507,7 @@ class ToolMetadataRegistry
                 category: ToolCategory::MEDIA,
                 riskClass: ToolRiskClass::READ_ONLY,
                 capability: 'ai.tool_document_analysis.execute',
-                setupRequirements: [
-                    'No external configuration required',
-                ],
-                testExamples: [],
-                healthChecks: [],
+                setupRequirements: self::NO_EXTERNAL_SETUP,
                 limits: [
                     'Read-only document processing',
                 ],
@@ -548,8 +524,6 @@ class ToolMetadataRegistry
                 setupRequirements: [
                     'Vision-capable LLM model configured',
                 ],
-                testExamples: [],
-                healthChecks: [],
                 limits: [
                     'Read-only image processing',
                 ],
