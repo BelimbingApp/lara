@@ -62,38 +62,38 @@ class AgenticRuntime
             );
         }
 
+        return $this->runToolCallingLoop($runId, $config, $credentials, $messages, $systemPrompt);
+    }
+
+    /**
+     * Execute the iterative tool-calling loop after configuration has been resolved.
+     *
+     * @param  array{api_key: string, base_url: string, model: string, max_tokens: int, temperature: float, timeout: int, provider_name: string|null}  $config
+     * @param  array{api_key: string, base_url: string}  $credentials
+     * @param  list<Message>  $messages
+     * @return array{content: string, run_id: string, meta: array<string, mixed>}
+     */
+    private function runToolCallingLoop(
+        string $runId,
+        array $config,
+        array $credentials,
+        array $messages,
+        ?string $systemPrompt,
+    ): array {
         $apiMessages = $this->buildApiMessages($messages, $systemPrompt);
         $tools = $this->toolRegistry->toolDefinitionsForCurrentUser();
         $toolActions = [];
         $clientActions = [];
 
         for ($iteration = 0; $iteration < self::MAX_ITERATIONS; $iteration++) {
-            $result = $this->llmClient->chat(
-                baseUrl: $credentials['base_url'],
-                apiKey: $credentials['api_key'],
-                model: $config['model'],
-                messages: $apiMessages,
-                maxTokens: $config['max_tokens'],
-                temperature: $config['temperature'],
-                timeout: $config['timeout'],
-                providerName: $config['provider_name'],
-                tools: $tools !== [] ? $tools : null,
-                toolChoice: $tools !== [] ? 'auto' : null,
-            );
+            $result = $this->chatWithTools($credentials, $config, $apiMessages, $tools);
 
-            if (isset($result['error'])) {
-                return $this->errorResult(
-                    $runId,
-                    $config['model'],
-                    (string) ($config['provider_name'] ?? 'unknown'),
-                    $result['latency_ms'],
-                    $result['error'],
-                    $result['error_type'] ?? 'unknown',
-                );
+            $errorResult = $this->buildLlmErrorResult($runId, $config, $result);
+            if ($errorResult !== null) {
+                return $errorResult;
             }
 
-            // No tool calls — LLM produced final response
-            if (! isset($result['tool_calls']) || $result['tool_calls'] === []) {
+            if ($this->hasNoToolCalls($result)) {
                 return $this->successResult(
                     $runId,
                     $config,
@@ -103,39 +103,176 @@ class AgenticRuntime
                 );
             }
 
-            // Append assistant message with tool calls to conversation
-            $assistantMessage = ['role' => 'assistant', 'content' => $result['content'] ?? null];
-            $assistantMessage['tool_calls'] = $result['tool_calls'];
-            $apiMessages[] = $assistantMessage;
-
-            // Execute each tool and append results
-            foreach ($result['tool_calls'] as $toolCall) {
-                $functionName = $toolCall['function']['name'] ?? '';
-                $arguments = json_decode($toolCall['function']['arguments'] ?? '{}', true) ?: [];
-                $toolCallId = $toolCall['id'] ?? '';
-
-                $toolResult = $this->toolRegistry->execute($functionName, $arguments);
-
-                $toolActions[] = [
-                    'tool' => $functionName,
-                    'arguments' => $arguments,
-                    'result_preview' => Str::limit($toolResult, 200),
-                ];
-
-                // Collect <lara-action> blocks for client-side execution
-                if (preg_match_all('/<lara-action>.*?<\/lara-action>/s', $toolResult, $matches)) {
-                    array_push($clientActions, ...$matches[0]);
-                }
-
-                $apiMessages[] = [
-                    'role' => 'tool',
-                    'tool_call_id' => $toolCallId,
-                    'content' => $toolResult,
-                ];
-            }
+            $this->appendAssistantToolCallMessage($apiMessages, $result);
+            $this->executeToolCalls($result['tool_calls'], $apiMessages, $toolActions, $clientActions);
         }
 
-        // Max iterations reached — return last content or error
+        return $this->maxIterationsResult($runId, $config);
+    }
+
+    /**
+     * Call the LLM with the current conversation and available tools.
+     *
+     * @param  array{api_key: string, base_url: string}  $credentials
+     * @param  array{api_key: string, base_url: string, model: string, max_tokens: int, temperature: float, timeout: int, provider_name: string|null}  $config
+     * @param  list<array<string, mixed>>  $apiMessages
+     * @param  list<array<string, mixed>>  $tools
+     * @return array<string, mixed>
+     */
+    private function chatWithTools(array $credentials, array $config, array $apiMessages, array $tools): array
+    {
+        return $this->llmClient->chat(
+            baseUrl: $credentials['base_url'],
+            apiKey: $credentials['api_key'],
+            model: $config['model'],
+            messages: $apiMessages,
+            maxTokens: $config['max_tokens'],
+            temperature: $config['temperature'],
+            timeout: $config['timeout'],
+            providerName: $config['provider_name'],
+            tools: $tools !== [] ? $tools : null,
+            toolChoice: $tools !== [] ? 'auto' : null,
+        );
+    }
+
+    /**
+     * Build an error result from an LLM failure payload.
+     *
+     * @param  array{api_key: string, base_url: string, model: string, max_tokens: int, temperature: float, timeout: int, provider_name: string|null}  $config
+     * @param  array<string, mixed>  $result
+     * @return array{content: string, run_id: string, meta: array<string, mixed>}|null
+     */
+    private function buildLlmErrorResult(string $runId, array $config, array $result): ?array
+    {
+        if (! isset($result['error'])) {
+            return null;
+        }
+
+        return $this->errorResult(
+            $runId,
+            $config['model'],
+            (string) ($config['provider_name'] ?? 'unknown'),
+            (int) ($result['latency_ms'] ?? 0),
+            (string) $result['error'],
+            (string) ($result['error_type'] ?? 'unknown'),
+        );
+    }
+
+    /**
+     * Determine whether the LLM has finished without requesting tools.
+     *
+     * @param  array<string, mixed>  $result
+     */
+    private function hasNoToolCalls(array $result): bool
+    {
+        return ! isset($result['tool_calls']) || $result['tool_calls'] === [];
+    }
+
+    /**
+     * Append the assistant tool-call payload into the running conversation.
+     *
+     * @param  list<array<string, mixed>>  $apiMessages
+     * @param  array<string, mixed>  $result
+     */
+    private function appendAssistantToolCallMessage(array &$apiMessages, array $result): void
+    {
+        $apiMessages[] = [
+            'role' => 'assistant',
+            'content' => $result['content'] ?? null,
+            'tool_calls' => $result['tool_calls'],
+        ];
+    }
+
+    /**
+     * Execute requested tools and append tool responses back into the conversation.
+     *
+     * @param  list<array<string, mixed>>  $toolCalls
+     * @param  list<array<string, mixed>>  $apiMessages
+     * @param  list<array<string, mixed>>  $toolActions
+     * @param  list<string>  $clientActions
+     */
+    private function executeToolCalls(
+        array $toolCalls,
+        array &$apiMessages,
+        array &$toolActions,
+        array &$clientActions,
+    ): void {
+        foreach ($toolCalls as $toolCall) {
+            $toolExecution = $this->executeToolCall($toolCall);
+
+            $toolActions[] = $toolExecution['action'];
+            array_push($clientActions, ...$toolExecution['client_actions']);
+            $apiMessages[] = $toolExecution['message'];
+        }
+    }
+
+    /**
+     * Execute a single tool call and format the follow-up metadata.
+     *
+     * @param  array<string, mixed>  $toolCall
+     * @return array{
+     *     action: array{tool: string, arguments: array<string, mixed>, result_preview: string},
+     *     client_actions: list<string>,
+     *     message: array{role: string, tool_call_id: string, content: string}
+     * }
+     */
+    private function executeToolCall(array $toolCall): array
+    {
+        $functionName = (string) ($toolCall['function']['name'] ?? '');
+        $arguments = $this->decodeToolArguments($toolCall);
+        $toolCallId = (string) ($toolCall['id'] ?? '');
+        $toolResult = $this->toolRegistry->execute($functionName, $arguments);
+
+        return [
+            'action' => [
+                'tool' => $functionName,
+                'arguments' => $arguments,
+                'result_preview' => Str::limit($toolResult, 200),
+            ],
+            'client_actions' => $this->extractClientActions($toolResult),
+            'message' => [
+                'role' => 'tool',
+                'tool_call_id' => $toolCallId,
+                'content' => $toolResult,
+            ],
+        ];
+    }
+
+    /**
+     * Decode JSON arguments from a tool call payload.
+     *
+     * @param  array<string, mixed>  $toolCall
+     * @return array<string, mixed>
+     */
+    private function decodeToolArguments(array $toolCall): array
+    {
+        $arguments = json_decode((string) ($toolCall['function']['arguments'] ?? '{}'), true);
+
+        return is_array($arguments) ? $arguments : [];
+    }
+
+    /**
+     * Extract Lara client-action blocks from tool output.
+     *
+     * @return list<string>
+     */
+    private function extractClientActions(string $toolResult): array
+    {
+        if (preg_match_all('/<lara-action>.*?<\/lara-action>/s', $toolResult, $matches) < 1) {
+            return [];
+        }
+
+        return $matches[0];
+    }
+
+    /**
+     * Build the standard max-iteration failure response.
+     *
+     * @param  array{api_key: string, base_url: string, model: string, max_tokens: int, temperature: float, timeout: int, provider_name: string|null}  $config
+     * @return array{content: string, run_id: string, meta: array<string, mixed>}
+     */
+    private function maxIterationsResult(string $runId, array $config): array
+    {
         return $this->errorResult(
             $runId,
             $config['model'],

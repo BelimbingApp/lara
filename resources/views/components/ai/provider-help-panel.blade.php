@@ -19,8 +19,10 @@
                         <span class="text-xs text-muted">— {{ $providerName }}</span>
                     </div>
                     <button
+                        type="button"
                         wire:click.stop="closeProviderHelp"
                         class="text-muted hover:text-ink p-0.5 rounded hover:bg-surface-subtle shrink-0"
+                        aria-label="{{ __('Close') }}"
                         title="{{ __('Close') }}"
                     >
                         <x-icon name="heroicon-o-x-mark" class="w-4 h-4" />

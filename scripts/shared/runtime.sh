@@ -4,7 +4,7 @@
 
 # Source colors if not already loaded
 RUNTIME_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -z "${RED:-}" ]; then
+if [[ -z "${RED:-}" ]]; then
     source "$RUNTIME_SCRIPT_DIR/colors.sh"
 fi
 
@@ -19,6 +19,7 @@ if ! command -v detect_os >/dev/null 2>&1; then
         else
             echo "linux"
         fi
+        return 0
     }
 fi
 
@@ -31,7 +32,7 @@ fi
 ensure_storage_dirs() {
     local project_root=$1
 
-    if [ -z "$project_root" ]; then
+    if [[ -z "$project_root" ]]; then
         echo -e "${RED}${CROSS_MARK} Project root not provided${NC}" >&2
         return 1
     fi
@@ -55,6 +56,7 @@ ensure_storage_dirs() {
 get_storage_dir() {
     local project_root=$1
     echo "$project_root/storage"
+    return 0
 }
 
 # Get script logs directory path (devops/script logs)
@@ -62,24 +64,28 @@ get_storage_dir() {
 get_logs_dir() {
     local project_root=$1
     echo "$project_root/storage/logs/scripts"
+    return 0
 }
 
 # Get backups directory path (script-managed backups)
 get_backups_dir() {
     local project_root=$1
     echo "$project_root/storage/app/backups"
+    return 0
 }
 
 # Get tmp directory path (script runtime files: PIDs, setup state)
 get_tmp_dir() {
     local project_root=$1
     echo "$project_root/storage/app/.devops"
+    return 0
 }
 
 # Get Laravel application logs directory path
 get_laravel_logs_dir() {
     local project_root=$1
     echo "$project_root/storage/logs"
+    return 0
 }
 
 # === Common Initialization for Setup Steps ===
@@ -104,6 +110,7 @@ init_setup_step_script() {
     source "$SCRIPTS_DIR/shared/validation.sh" 2>/dev/null || true
     # shellcheck source=../shared/interactive.sh
     source "$SCRIPTS_DIR/shared/interactive.sh" 2>/dev/null || true
+    return 0
 }
 
 # Clean script runtime directories (removes only script files, not Laravel app files)
@@ -111,7 +118,7 @@ clean_script_dirs() {
     local project_root=$1
     local storage_dir="$project_root/storage"
 
-    if [ ! -d "$storage_dir" ]; then
+    if [[ ! -d "$storage_dir" ]]; then
         echo -e "${YELLOW}${INFO_MARK} storage/ directory does not exist${NC}"
         return 0
     fi
@@ -119,9 +126,9 @@ clean_script_dirs() {
     echo -e "${YELLOW}${INFO_MARK} Cleaning script runtime directories...${NC}"
 
     # Remove only script-specific directories, preserve Laravel app files
-    [ -d "$storage_dir/app/.devops" ] && rm -rf "${storage_dir}/app/.devops"/*
-    [ -d "$storage_dir/logs/scripts" ] && rm -rf "${storage_dir}/logs/scripts"/*
-    [ -d "$storage_dir/app/backups" ] && rm -rf "${storage_dir}/app/backups"/*
+    [[ -d "$storage_dir/app/.devops" ]] && rm -rf "${storage_dir}/app/.devops"/*
+    [[ -d "$storage_dir/logs/scripts" ]] && rm -rf "${storage_dir}/logs/scripts"/*
+    [[ -d "$storage_dir/app/backups" ]] && rm -rf "${storage_dir}/app/backups"/*
 
     echo -e "${GREEN}${CHECK_MARK}${NC} Cleaned"
     return 0
@@ -139,6 +146,7 @@ show_banner() {
    ╚═════╝ ╚══════╝╚══════╝╚═╝╚═╝     ╚═╝╚═════╝ ╚═╝╚═╝  ╚═══╝ ╚═════╝
 EOF
     echo -e "${NC}"
+    return 0
 }
 
 # Print a section banner with magenta top and bottom lines
@@ -156,6 +164,7 @@ print_section_banner() {
     echo -e "${color}${BOLD}  ${title}${NC}"
     echo -e "${color}════════════════════════════════════════════════════════════${NC}"
     echo ""
+    return 0
 }
 
 # Print a subsection header with horizontal lines
@@ -170,12 +179,14 @@ print_subsection_header() {
     echo -e "  ${title}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
+    return 0
 }
 
 # Print a simple horizontal divider line
 # Usage: print_divider
 print_divider() {
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    return 0
 }
 
 # Launch browser helper (WSL2-friendly)
@@ -238,10 +249,10 @@ stop_dev_services() {
     local frontend_port="${3:-}"
 
     # Get ports if not provided
-    if [ -z "$backend_port" ] || [ -z "$frontend_port" ]; then
+    if [[ -z "$backend_port" ]] || [[ -z "$frontend_port" ]]; then
         if command -v get_backend_port >/dev/null 2>&1 && command -v get_frontend_port >/dev/null 2>&1; then
             local project_root="${PROJECT_ROOT:-}"
-            if [ -z "$project_root" ]; then
+            if [[ -z "$project_root" ]]; then
                 # Try to detect project root
                 project_root="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
             fi
@@ -277,12 +288,12 @@ stop_dev_services() {
     # Stop concurrently processes first (parent manages children)
     local pids
     pids=$(pgrep -f "concurrently" 2>/dev/null || true)
-    if [ -n "$pids" ]; then
+    if [[ -n "$pids" ]]; then
         echo -e "${CYAN}Stopping concurrently processes...${NC}"
         echo "$pids" | xargs kill -TERM 2>/dev/null || true
         sleep 1
         pids=$(pgrep -f "concurrently" 2>/dev/null || true)
-        if [ -n "$pids" ]; then
+        if [[ -n "$pids" ]]; then
             echo "$pids" | xargs kill -9 2>/dev/null || true
         fi
     fi
@@ -294,15 +305,16 @@ stop_dev_services() {
         local port_pids
 
         port_pids=$(lsof -ti:"$port" 2>/dev/null || true)
-        if [ -n "$port_pids" ]; then
+        if [[ -n "$port_pids" ]]; then
             echo -e "${CYAN}Stopping $service_name (port $port)...${NC}"
             echo "$port_pids" | xargs kill -TERM 2>/dev/null || true
             sleep 0.5
             port_pids=$(lsof -ti:"$port" 2>/dev/null || true)
-            if [ -n "$port_pids" ]; then
+            if [[ -n "$port_pids" ]]; then
                 echo "$port_pids" | xargs kill -9 2>/dev/null || true
             fi
         fi
+        return 0
     }
 
     stop_port_by_number "$backend_port" "Laravel server"
@@ -310,4 +322,5 @@ stop_dev_services() {
 
     # Wait for output to flush
     sleep 0.5
+    return 0
 }

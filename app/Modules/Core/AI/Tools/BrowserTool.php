@@ -29,6 +29,8 @@ use App\Modules\Core\AI\Services\Browser\BrowserSsrfGuard;
  */
 class BrowserTool implements DigitalWorkerTool
 {
+    private const ERROR_PREFIX = 'Error: ';
+
     /**
      * Valid actions for browser automation.
      *
@@ -189,11 +191,11 @@ class BrowserTool implements DigitalWorkerTool
         $action = $arguments['action'] ?? '';
 
         if (! is_string($action) || ! in_array($action, self::ACTIONS, true)) {
-            return 'Error: Invalid action. Must be one of: '.implode(', ', self::ACTIONS).'.';
+            return self::ERROR_PREFIX.'Invalid action. Must be one of: '.implode(', ', self::ACTIONS).'.';
         }
 
         if (! $this->poolManager->isAvailable()) {
-            return 'Error: Browser automation is not available. '
+            return self::ERROR_PREFIX.'Browser automation is not available. '
                 .'The browser tool is either disabled or Playwright is not installed. '
                 .'Contact an administrator to enable it.';
         }
@@ -225,14 +227,14 @@ class BrowserTool implements DigitalWorkerTool
         $url = $arguments['url'] ?? '';
 
         if (! is_string($url) || trim($url) === '') {
-            return 'Error: "url" is required for the navigate action.';
+            return self::ERROR_PREFIX.'"url" is required for the navigate action.';
         }
 
         $url = trim($url);
         $ssrfCheck = $this->ssrfGuard->validate($url);
 
         if ($ssrfCheck !== true) {
-            return 'Error: '.$ssrfCheck;
+            return self::ERROR_PREFIX.$ssrfCheck;
         }
 
         return json_encode([
@@ -304,14 +306,14 @@ class BrowserTool implements DigitalWorkerTool
         $kind = $arguments['kind'] ?? '';
 
         if (! is_string($kind) || ! in_array($kind, self::ACT_KINDS, true)) {
-            return 'Error: "kind" is required for the act action. '
+            return self::ERROR_PREFIX.'"kind" is required for the act action. '
                 .'Must be one of: '.implode(', ', self::ACT_KINDS).'.';
         }
 
         $ref = $arguments['ref'] ?? null;
 
         if (! is_string($ref) || trim($ref) === '') {
-            return 'Error: "ref" is required for the act action. '
+            return self::ERROR_PREFIX.'"ref" is required for the act action. '
                 .'Use a snapshot to get element references.';
         }
 
@@ -353,14 +355,14 @@ class BrowserTool implements DigitalWorkerTool
         $url = $arguments['url'] ?? '';
 
         if (! is_string($url) || trim($url) === '') {
-            return 'Error: "url" is required for the open action.';
+            return self::ERROR_PREFIX.'"url" is required for the open action.';
         }
 
         $url = trim($url);
         $ssrfCheck = $this->ssrfGuard->validate($url);
 
         if ($ssrfCheck !== true) {
-            return 'Error: '.$ssrfCheck;
+            return self::ERROR_PREFIX.$ssrfCheck;
         }
 
         return json_encode([
@@ -384,7 +386,7 @@ class BrowserTool implements DigitalWorkerTool
         $tabId = $arguments['tab_id'] ?? '';
 
         if (! is_string($tabId) || trim($tabId) === '') {
-            return 'Error: "tab_id" is required for the close action.';
+            return self::ERROR_PREFIX.'"tab_id" is required for the close action.';
         }
 
         return json_encode([
@@ -407,14 +409,14 @@ class BrowserTool implements DigitalWorkerTool
     private function handleEvaluate(array $arguments): string
     {
         if (! config('ai.tools.browser.evaluate_enabled', false)) {
-            return 'Error: JavaScript evaluation is disabled. '
+            return self::ERROR_PREFIX.'JavaScript evaluation is disabled. '
                 .'An administrator must enable it via config("ai.tools.browser.evaluate_enabled").';
         }
 
         $script = $arguments['script'] ?? '';
 
         if (! is_string($script) || trim($script) === '') {
-            return 'Error: "script" is required for the evaluate action.';
+            return self::ERROR_PREFIX.'"script" is required for the evaluate action.';
         }
 
         return json_encode([
@@ -453,7 +455,7 @@ class BrowserTool implements DigitalWorkerTool
         $cookieAction = $arguments['cookie_action'] ?? '';
 
         if (! is_string($cookieAction) || ! in_array($cookieAction, self::COOKIE_ACTIONS, true)) {
-            return 'Error: "cookie_action" is required for the cookies action. '
+            return self::ERROR_PREFIX.'"cookie_action" is required for the cookies action. '
                 .'Must be one of: '.implode(', ', self::COOKIE_ACTIONS).'.';
         }
 
@@ -492,11 +494,11 @@ class BrowserTool implements DigitalWorkerTool
         $value = $arguments['cookie_value'] ?? '';
 
         if (! is_string($name) || trim($name) === '') {
-            return 'Error: "cookie_name" is required to set a cookie.';
+            return self::ERROR_PREFIX.'"cookie_name" is required to set a cookie.';
         }
 
         if (! is_string($value)) {
-            return 'Error: "cookie_value" is required to set a cookie.';
+            return self::ERROR_PREFIX.'"cookie_value" is required to set a cookie.';
         }
 
         return json_encode([
@@ -540,7 +542,7 @@ class BrowserTool implements DigitalWorkerTool
         $url = $arguments['url'] ?? null;
 
         if ($text === null && $selector === null && $url === null) {
-            return 'Error: At least one of "text", "selector", or "url" is required for the wait action.';
+            return self::ERROR_PREFIX.'At least one of "text", "selector", or "url" is required for the wait action.';
         }
 
         $timeoutMs = 5000;

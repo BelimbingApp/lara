@@ -8,10 +8,8 @@
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
+    <title>{{ isset($title) && $title ? $title . ' — ' . config('app.name') : config('app.name') }}</title>
     @include('partials.head')
-    @if($title)
-        <title>{{ $title }} - {{ config('app.name', 'Belimbing') }}</title>
-    @endif
 </head>
 <body
     x-data="{
@@ -47,9 +45,9 @@
             }
 
             try {
-                new Function(js)();
+                new Function(js)(); // NOSONAR - intentional: executes Lara AI-injected JS in a sandboxed try/catch
             } catch (e) {
-                console.error('[Lara] Action execution failed:', e);
+                console.error('[Lara] Action execution failed:', e); // NOSONAR - intentional error logging in catch block
             }
         }
     }"

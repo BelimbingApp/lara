@@ -34,7 +34,8 @@
                 document.documentElement.classList.toggle('dark');
             "
             class="relative w-9 h-5 rounded-full bg-border-input dark:bg-zinc-700 transition-colors hover:bg-muted/50 dark:hover:bg-zinc-600 shadow-inner"
-            title="Toggle theme"
+            :aria-label="theme === 'dark' ? '{{ __('Switch to light mode') }}' : '{{ __('Switch to dark mode') }}'"
+            title="{{ __('Toggle theme') }}"
             :aria-pressed="theme === 'light'"
         >
             <span

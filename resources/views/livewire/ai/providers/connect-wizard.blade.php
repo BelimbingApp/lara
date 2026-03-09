@@ -430,7 +430,7 @@ new class extends Component
                                         <button
                                             type="button"
                                             class="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-accent bg-surface-card border border-border-default rounded-md hover:bg-surface-subtle transition-colors focus:ring-2 focus:ring-accent focus:ring-offset-2"
-                                            x-on:click="navigator.clipboard.writeText('{{ $flow['user_code'] }}'); copied = true; setTimeout(() => copied = false, 2000)"
+                                            x-on:click="navigator.clipboard.writeText('{{ $flow['user_code'] }}').then(() => { copied = true; setTimeout(() => copied = false, 2000) }).catch(() => {})"
                                             x-text="copied ? '{{ __('Copied!') }}' : '{{ __('Copy') }}'"
                                             :aria-label="copied ? '{{ __('Code copied to clipboard') }}' : '{{ __('Copy authorization code') }}'"
                                         >

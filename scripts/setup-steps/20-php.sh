@@ -269,7 +269,7 @@ ensure_php_extensions_installed() {
         fi
     done
 
-    if [ ${#missing_extensions[@]} -gt 0 ]; then
+    if [[ ${#missing_extensions[@]} -gt 0 ]]; then
         echo -e "${YELLOW}⚠${NC} Missing PHP extensions: ${missing_extensions[*]}"
         local os_type
         os_type=$(detect_os)
@@ -309,7 +309,7 @@ ensure_php_extensions_installed() {
                 still_missing+=("$ext")
             fi
         done
-        if [ ${#still_missing[@]} -eq 0 ]; then
+        if [[ ${#still_missing[@]} -eq 0 ]]; then
             echo -e "${GREEN}✓${NC} All required PHP extensions installed"
         else
             echo -e "${RED}✗${NC} Still missing extensions: ${still_missing[*]}"
@@ -317,6 +317,7 @@ ensure_php_extensions_installed() {
     else
         echo -e "${GREEN}✓${NC} All required PHP extensions present"
     fi
+    return 0
 }
 
 # Install Composer
@@ -338,7 +339,7 @@ install_composer() {
     local actual_signature
     actual_signature=$(php -r "echo hash_file('sha384', '$composer_installer');")
 
-    if [ "$expected_signature" != "$actual_signature" ]; then
+    if [[ "$expected_signature" != "$actual_signature" ]]; then
         echo -e "${RED}✗${NC} Composer installer signature mismatch" >&2
         rm -f "$composer_installer"
         return 1
@@ -400,7 +401,7 @@ main() {
             php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "unknown")
             echo -e "${YELLOW}⚠${NC} PHP version too old: $php_version (requires ${required_php_version}+)"
 
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 if ask_yes_no "Upgrade PHP to ${required_php_version}+?" "y"; then
                     if ! upgrade_php; then
                         echo -e "${RED}✗${NC} PHP upgrade failed"
@@ -424,7 +425,7 @@ main() {
         else
             echo -e "${YELLOW}ℹ${NC} PHP not found"
 
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 if ask_yes_no "Install PHP ${required_php_version}+?" "y"; then
                     if ! install_php; then
                         echo -e "${RED}✗${NC} PHP installation failed"
@@ -462,13 +463,13 @@ main() {
         composer self-update --quiet 2>/dev/null || sudo composer self-update --quiet 2>/dev/null || true
         local updated_version
         updated_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
-        if [ "$composer_version" != "$updated_version" ]; then
+        if [[ "$composer_version" != "$updated_version" ]]; then
             echo -e "${GREEN}✓${NC} Composer updated: $updated_version"
         fi
     else
         echo -e "${YELLOW}ℹ${NC} Composer not found"
 
-        if [ -t 0 ]; then
+        if [[ -t 0 ]]; then
             if ask_yes_no "Install Composer?" "y"; then
                 if ! install_composer; then
                     echo -e "${RED}✗${NC} Composer installation failed"
@@ -509,6 +510,7 @@ main() {
         echo -e "  • Composer: $(composer --version 2>/dev/null | head -1)"
     fi
     echo ""
+    return 0
 }
 
 # Run main function

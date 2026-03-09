@@ -56,7 +56,7 @@ create_directories() {
 
     for dir in "${dirs[@]}"; do
         local full_path="$PROJECT_ROOT/$dir"
-        if [ ! -d "$full_path" ]; then
+        if [[ ! -d "$full_path" ]]; then
             mkdir -p "$full_path"
             echo -e "  ${GREEN}✓${NC} Created: $dir"
         else
@@ -66,14 +66,15 @@ create_directories() {
 
     echo -e "${GREEN}✓${NC} Directories ready"
     fi
+    return 0
 }
 
 # Detect app name from git repository or directory
 detect_app_name() {
-    if command_exists git && [ -d "$PROJECT_ROOT/.git" ]; then
+    if command_exists git && [[ -d "$PROJECT_ROOT/.git" ]]; then
         local repo_name
         repo_name=$(git remote get-url origin 2>/dev/null | sed 's/.*\///' | sed 's/\.git$//' || echo "")
-        if [ -n "$repo_name" ]; then
+        if [[ -n "$repo_name" ]]; then
             echo "$repo_name"
             return 0
         fi
@@ -81,6 +82,7 @@ detect_app_name() {
 
     # Fallback: use directory name
     basename "$PROJECT_ROOT"
+    return 0
 }
 
 # Detect admin email from git config
@@ -88,6 +90,7 @@ detect_admin_email() {
     if command_exists git; then
         git config user.email 2>/dev/null || echo ""
     fi
+    return 0
 }
 
 # Detect app URL based on environment
@@ -109,11 +112,12 @@ detect_app_url() {
             echo "https://local.blb.lara"
             ;;
     esac
+    return 0
 }
 
 # Create .env file from .env.example with smart defaults
 create_env_file() {
-    if [ -f "$PROJECT_ROOT/.env" ]; then
+    if [[ -f "$PROJECT_ROOT/.env" ]]; then
         echo -e "${CYAN}ℹ${NC} .env file already exists"
         return 0
     fi
@@ -132,7 +136,7 @@ create_env_file() {
     echo -e "${CYAN}Auto-detecting configuration values...${NC}"
 
     # Set APP_NAME
-    if [ -n "$app_name" ]; then
+    if [[ -n "$app_name" ]]; then
         update_env_file "APP_NAME" "$app_name"
         echo -e "  ${GREEN}✓${NC} APP_NAME: $app_name (from git repository)"
     fi
@@ -146,7 +150,7 @@ create_env_file() {
     echo -e "  ${GREEN}✓${NC} APP_URL: $app_url (based on environment)"
 
     # Set APP_DEBUG based on environment
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "production" ]]; then
         update_env_file "APP_DEBUG" "false"
         echo -e "  ${GREEN}✓${NC} APP_DEBUG: false (production)"
     else
@@ -165,11 +169,11 @@ create_env_file() {
 
     # Interactive prompts for critical settings (only if not detected and interactive)
     echo ""
-    if [ -z "$detected_email" ] && [ -t 0 ]; then
+    if [[ -z "$detected_email" ]] && [[ -t 0 ]]; then
         echo -e "${CYAN}Admin email not detected from git config${NC}"
         local admin_email
         admin_email=$(ask_input "Enter admin email address (optional, can be set later)" "")
-        if [ -n "$admin_email" ]; then
+        if [[ -n "$admin_email" ]]; then
             # Basic email validation
             if [[ "$admin_email" =~ ^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$ ]]; then
                 save_to_setup_state "ADMIN_EMAIL" "$admin_email"
@@ -179,7 +183,7 @@ create_env_file() {
                 save_to_setup_state "ADMIN_EMAIL" "$admin_email"
             fi
         fi
-    elif [ -n "$detected_email" ]; then
+    elif [[ -n "$detected_email" ]]; then
         save_to_setup_state "ADMIN_EMAIL" "$detected_email"
         echo -e "  ${GREEN}✓${NC} Admin email: $detected_email (from git config)"
     fi
@@ -188,6 +192,7 @@ create_env_file() {
     echo -e "${YELLOW}Note:${NC} Review and update .env with your configuration"
     echo -e "${CYAN}ℹ${NC} APP_KEY will be generated in the Laravel setup step (after PHP/Composer installation)"
     echo -e "${CYAN}ℹ${NC} Database credentials will be configured in the database setup step"
+    return 0
 }
 
 # Main setup function
@@ -203,7 +208,7 @@ main() {
     # 1. Validate project structure FIRST (fail fast)
     print_subsection_header "Validating Project Structure"
 
-    if [ -f "$PROJECT_ROOT/.env.example" ]; then
+    if [[ -f "$PROJECT_ROOT/.env.example" ]]; then
         echo -e "${GREEN}✓${NC} .env.example found"
     else
         echo -e "${RED}✗${NC} .env.example not found"
@@ -211,7 +216,7 @@ main() {
         exit 1
     fi
 
-    if [ -f "$PROJECT_ROOT/composer.json" ]; then
+    if [[ -f "$PROJECT_ROOT/composer.json" ]]; then
         echo -e "${GREEN}✓${NC} composer.json found"
     else
         echo -e "${RED}✗${NC} composer.json not found"
@@ -253,6 +258,7 @@ main() {
     echo ""
     echo -e "Configuration saved to: ${CYAN}$(get_setup_state_file)${NC}"
     echo ""
+    return 0
 }
 
 # Run main function

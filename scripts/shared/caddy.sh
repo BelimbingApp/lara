@@ -5,7 +5,7 @@
 
 # Source colors if not already loaded
 CADDY_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -z "$RED" ]; then
+if [[ -z "$RED" ]]; then
     source "$CADDY_SCRIPT_DIR/colors.sh"
 fi
 
@@ -30,7 +30,7 @@ ensure_blb_caddy_dirs() {
 # Create the main Caddyfile that imports all site fragments.
 create_main_caddyfile() {
     ensure_blb_caddy_dirs
-    if [ ! -f "$BLB_CADDY_MAIN" ]; then
+    if [[ ! -f "$BLB_CADDY_MAIN" ]]; then
         cat > "$BLB_CADDY_MAIN" <<EOF
 {
 	admin unix/$BLB_CADDY_ADMIN_SOCK
@@ -39,6 +39,7 @@ create_main_caddyfile() {
 import $BLB_CADDY_SITES/*.caddy
 EOF
     fi
+    return 0
 }
 
 # Resolve Caddy {$VAR:default} placeholders using exported env vars.
@@ -55,7 +56,7 @@ resolve_caddyfile_vars() {
         local token_prefix='{$'"${var}"':'
         local token_bare='{$'"${var}"'}'
 
-        if [ -n "$val" ]; then
+        if [[ -n "$val" ]]; then
             # {$VAR:default} → val
             while [[ "$content" == *"${token_prefix}"* ]]; do
                 local before="${content%%"${token_prefix}"*}"
@@ -80,12 +81,14 @@ resolve_caddyfile_vars() {
     done
 
     printf '%s\n' "$content"
+    return 0
 }
 
 # Derive a slug from FRONTEND_DOMAIN (safe for filenames).
 site_fragment_slug() {
     local domain="${1:-${FRONTEND_DOMAIN:-blb}}"
     echo "$domain" | tr '.' '-'
+    return 0
 }
 
 # Write resolved site fragment for this instance.
@@ -98,13 +101,14 @@ write_site_fragment() {
 
     ensure_blb_caddy_dirs
 
-    if [ ! -f "$project_root/Caddyfile" ]; then
+    if [[ ! -f "$project_root/Caddyfile" ]]; then
         echo -e "${RED}✗${NC} No Caddyfile template found in project root" >&2
         return 1
     fi
 
     resolve_caddyfile_vars "$project_root/Caddyfile" > "$fragment_file"
     echo "$fragment_file"
+    return 0
 }
 
 # Remove this instance's site fragment.
@@ -113,6 +117,7 @@ remove_site_fragment() {
     slug=$(site_fragment_slug "${FRONTEND_DOMAIN:-${1:-}}")
     local fragment_file="$BLB_CADDY_SITES/${slug}.caddy"
     rm -f "$fragment_file"
+    return 0
 }
 
 # Start the shared Caddy if not running, or reload if already running.
@@ -128,7 +133,7 @@ ensure_shared_caddy() {
     if pgrep -x "caddy" > /dev/null; then
         caddy reload --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null
         local rc=$?
-        if [ $rc -eq 0 ]; then
+        if [[ $rc -eq 0 ]]; then
             echo -e "${GREEN}✓${NC} Caddy reloaded with updated sites"
         else
             echo -e "${YELLOW}⚠${NC} Caddy reload failed (rc=$rc); attempting restart..." >&2
@@ -140,23 +145,25 @@ ensure_shared_caddy() {
         echo -e "${GREEN}Starting shared Caddy on :443...${NC}"
         caddy start --config "$BLB_CADDY_MAIN" --adapter caddyfile 2>/dev/null
         local rc=$?
-        if [ $rc -eq 0 ]; then
+        if [[ $rc -eq 0 ]]; then
             echo -e "${GREEN}✓${NC} Caddy started"
         else
             echo -e "${RED}✗${NC} Failed to start Caddy (rc=$rc)" >&2
             return 1
         fi
     fi
+    return 0
 }
 
 # Stop the shared Caddy only if no site fragments remain.
 maybe_stop_shared_caddy() {
     local remaining
     remaining=$(find "$BLB_CADDY_SITES" -name '*.caddy' 2>/dev/null | wc -l)
-    if [ "$remaining" -eq 0 ] && pgrep -x "caddy" > /dev/null; then
+    if [[ "$remaining" -eq 0 ]] && pgrep -x "caddy" > /dev/null; then
         echo -e "${CYAN}No BLB sites remaining; stopping Caddy...${NC}"
         caddy stop 2>/dev/null || true
     fi
+    return 0
 }
 
 # Install Caddy if needed
@@ -235,7 +242,7 @@ ensure_caddy_privileges() {
 # Usage: is_caddy_enabled ["proxy_type_value"]
 is_caddy_enabled() {
     local proxy_type=${1:-"${PROXY_TYPE:-}"}
-    [ "$proxy_type" = "caddy" ]
+    [[ "$proxy_type" = "caddy" ]]
 }
 
 # Setup SSL certificate trust for self-signed certificates (TLS_MODE=internal)
@@ -259,7 +266,7 @@ setup_ssl_trust() {
     local is_docker=false
 
     # Detect if Caddy is in Docker or native
-    if [ -n "$container_name" ] && docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
+    if [[ -n "$container_name" ]] && docker ps --format "{{.Names}}" | grep -q "^${container_name}$"; then
         # Docker Caddy
         is_docker=true
         root_ca_source="/data/caddy/pki/authorities/local/root.crt"
@@ -267,7 +274,7 @@ setup_ssl_trust() {
         # Wait for Caddy to generate certificates (up to 10 seconds)
         local attempts=0
         local max_attempts=10
-        while [ $attempts -lt $max_attempts ]; do
+        while [[ $attempts -lt $max_attempts ]]; do
             if docker exec "$container_name" test -f "$root_ca_source" 2>/dev/null; then
                 break
             fi
@@ -290,13 +297,13 @@ setup_ssl_trust() {
         )
 
         for location in "${native_locations[@]}"; do
-            if [ -f "$location" ]; then
+            if [[ -f "$location" ]]; then
                 root_ca_source="$location"
                 break
             fi
         done
 
-        if [ -z "$root_ca_source" ] || [ ! -f "$root_ca_source" ]; then
+        if [[ -z "$root_ca_source" ]] || [[ ! -f "$root_ca_source" ]]; then
             echo -e "${YELLOW}⚠${NC} Could not find Caddy root CA (certificate may not be generated yet)"
             echo -e "  Expected locations:"
             for location in "${native_locations[@]}"; do
@@ -314,7 +321,7 @@ setup_ssl_trust() {
     fi
 
     # Check if certificate was exported successfully
-    if [ ! -s "$root_ca_file" ]; then
+    if [[ ! -s "$root_ca_file" ]]; then
         echo -e "${YELLOW}⚠${NC} Root CA file is empty"
         return 1
     fi
@@ -328,13 +335,13 @@ setup_ssl_trust() {
         local system_cert_path="/usr/local/share/ca-certificates/caddy-blb-root.crt"
 
         # Check if already installed and matches current certificate
-        if [ -f "$system_cert_path" ]; then
+        if [[ -f "$system_cert_path" ]]; then
             if diff -q "$root_ca_file" "$system_cert_path" >/dev/null 2>&1; then
                 echo -e "${GREEN}✓${NC} Certificate already installed in system trust store"
                 installed=true
             else
                 echo -e "${YELLOW}ℹ${NC} Certificate changed, updating system trust store..."
-                if [ -t 0 ]; then
+                if [[ -t 0 ]]; then
                     if sudo cp "$root_ca_file" "$system_cert_path" 2>/dev/null && \
                        sudo update-ca-certificates 2>/dev/null; then
                         echo -e "${GREEN}✓${NC} Certificate updated in system trust store"
@@ -342,7 +349,7 @@ setup_ssl_trust() {
                     fi
                 fi
             fi
-        elif [ -t 0 ]; then
+        elif [[ -t 0 ]]; then
             # Not installed yet - install it
             echo -e "${CYAN}Installing certificate to system trust store...${NC}"
             if sudo cp "$root_ca_file" "$system_cert_path" 2>/dev/null && \
@@ -357,7 +364,7 @@ setup_ssl_trust() {
         if trust list | grep -q "caddy-blb-root" 2>/dev/null; then
             echo -e "${GREEN}✓${NC} Certificate already installed in system trust store"
             installed=true
-        elif [ -t 0 ]; then
+        elif [[ -t 0 ]]; then
             echo -e "${CYAN}Installing certificate to system trust store...${NC}"
             if sudo trust anchor --store "$root_ca_file" 2>/dev/null; then
                 echo -e "${GREEN}✓${NC} Certificate installed to system trust store"
@@ -382,7 +389,7 @@ setup_ssl_trust() {
         echo ""
     fi
 
-    if [ "$installed" = false ]; then
+    if [[ "$installed" = false ]]; then
         echo -e "${YELLOW}Note:${NC} Certificate not auto-installed to system trust store"
         echo -e "  You can manually install: ${CYAN}$root_ca_file${NC}"
         echo -e "  Or accept the browser warning (safe for self-signed development certificates)"
@@ -400,7 +407,7 @@ ensure_ssl_trust() {
     local container_name="${3:-}"
 
     # Production environments with real certificates (TLS_MODE != "internal") don't need this
-    if [ "${tls_mode}" != "internal" ]; then
+    if [[ "${tls_mode}" != "internal" ]]; then
         if command -v log >/dev/null 2>&1; then
             log "Using TLS mode: $tls_mode (real certificates, skipping SSL trust setup)"
         fi
@@ -417,7 +424,7 @@ ensure_ssl_trust() {
 
     if command -v update-ca-certificates >/dev/null 2>&1; then
         # Debian/Ubuntu - check if already installed
-        if [ -f "/usr/local/share/ca-certificates/caddy-blb-root.crt" ]; then
+        if [[ -f "/usr/local/share/ca-certificates/caddy-blb-root.crt" ]]; then
             ssl_already_installed=true
         fi
     elif command -v trust >/dev/null 2>&1; then
@@ -427,7 +434,7 @@ ensure_ssl_trust() {
         fi
     fi
 
-    if [ "$ssl_already_installed" = true ]; then
+    if [[ "$ssl_already_installed" = true ]]; then
         # Already installed - skip setup
         return 0
     fi

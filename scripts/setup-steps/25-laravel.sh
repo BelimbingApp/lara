@@ -34,7 +34,7 @@ APP_ENV="${1:-local}"
 
 # Check if .env file exists
 check_env_file() {
-    if [ ! -f "$PROJECT_ROOT/.env" ]; then
+    if [[ ! -f "$PROJECT_ROOT/.env" ]]; then
         echo -e "${RED}✗${NC} .env file not found" >&2
         echo -e "  Run ${CYAN}./scripts/setup-steps/00-environment.sh${NC} first" >&2
         return 1
@@ -44,7 +44,7 @@ check_env_file() {
 
 # Install Composer dependencies
 install_dependencies() {
-    if [ -d "$PROJECT_ROOT/vendor" ]; then
+    if [[ -d "$PROJECT_ROOT/vendor" ]]; then
         echo -e "${GREEN}✓${NC} Composer dependencies already installed"
         return 0
     fi
@@ -74,7 +74,7 @@ generate_app_key() {
     # Check if APP_KEY is already set and valid
     local app_key
     app_key=$(get_env_var "APP_KEY" "")
-    if [ -n "$app_key" ] && [[ "$app_key" =~ ^base64:[A-Za-z0-9+/=]+$ ]]; then
+    if [[ -n "$app_key" ]] && [[ "$app_key" =~ ^base64:[A-Za-z0-9+/=]+$ ]]; then
         echo -e "${GREEN}✓${NC} APP_KEY already set"
         return 0
     fi
@@ -86,7 +86,7 @@ generate_app_key() {
         return 1
     fi
 
-    if [ ! -d "$PROJECT_ROOT/vendor" ]; then
+    if [[ ! -d "$PROJECT_ROOT/vendor" ]]; then
         echo -e "${YELLOW}⚠${NC} Composer dependencies not installed" >&2
         echo -e "  Installing dependencies first..." >&2
         if ! install_dependencies; then
@@ -156,7 +156,7 @@ main() {
     # Save state
     local app_key
     app_key=$(get_env_var "APP_KEY" "")
-    if [ -n "$app_key" ]; then
+    if [[ -n "$app_key" ]]; then
         save_to_setup_state "APP_KEY_GENERATED" "true"
     fi
     save_to_setup_state "LARAVEL_CONFIGURED" "true"
@@ -165,6 +165,7 @@ main() {
     echo ""
     echo -e "${GREEN}✓ Laravel application configuration complete!${NC}"
     echo ""
+    return 0
 }
 
 # Run main function

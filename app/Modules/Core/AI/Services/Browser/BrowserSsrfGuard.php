@@ -32,50 +32,137 @@ class BrowserSsrfGuard
     {
         $parsed = parse_url($url);
 
+        $structureError = $this->checkUrlStructure($parsed);
+        if ($structureError !== null) {
+            return $structureError;
+        }
+
+        /** @var array{scheme: string, host: string} $parsed */
+        $host = strtolower($parsed['host']);
+
+        $policyError = $this->checkHostPolicy($host);
+
+        return $policyError ?? true;
+    }
+
+    /**
+     * Validate the structural components of a parsed URL.
+     *
+     * Checks that the URL is parseable, uses http/https, and has a non-empty hostname.
+     *
+     * @param  array<string, mixed>|false  $parsed  Result of parse_url()
+     * @return string|null Error message, or null if valid
+     */
+    private function checkUrlStructure(array|false $parsed): ?string
+    {
         if ($parsed === false || ! isset($parsed['scheme'], $parsed['host'])) {
             return 'Invalid URL: unable to parse.';
         }
 
         $scheme = strtolower($parsed['scheme']);
+
         if ($scheme !== 'http' && $scheme !== 'https') {
             return 'Only http and https URLs are allowed.';
         }
 
-        $host = strtolower($parsed['host']);
+        return strtolower($parsed['host']) === '' ? 'Invalid URL: empty hostname.' : null;
+    }
 
-        if ($host === '') {
-            return 'Invalid URL: empty hostname.';
-        }
-
-        if ($host === 'localhost' || $host === '0.0.0.0' || $host === '::1') {
-            return "Blocked: requests to {$host} are not allowed.";
-        }
-
-        if (str_ends_with($host, '.local')) {
-            return 'Blocked: requests to .local domains are not allowed.';
+    /**
+     * Check the hostname and IP policy for SSRF risks.
+     *
+     * Applies blocklist checks, allowlist bypass, private-network bypass,
+     * and finally IP range validation.
+     *
+     * @param  string  $host  Lowercase hostname extracted from the URL
+     * @return string|null Error message if blocked, null if allowed
+     */
+    private function checkHostPolicy(string $host): ?string
+    {
+        $blockReason = $this->checkBlockedHostname($host);
+        if ($blockReason !== null) {
+            return $blockReason;
         }
 
         $allowlist = (array) config('ai.tools.browser.ssrf_policy.hostname_allowlist', []);
 
-        if ($this->matchesAllowlist($host, $allowlist)) {
-            return true;
+        if ($this->matchesAllowlist($host, $allowlist)
+            || config('ai.tools.browser.ssrf_policy.allow_private_network', false)) {
+            return null;
         }
 
-        if (config('ai.tools.browser.ssrf_policy.allow_private_network', false)) {
-            return true;
+        return $this->checkIpRange($host);
+    }
+
+    /**
+     * Check whether the hostname is on the explicit blocklist.
+     *
+     * Blocks loopback aliases (localhost, 0.0.0.0, ::1) and .local domains.
+     *
+     * @param  string  $host  Lowercase hostname to check
+     * @return string|null Error message if blocked, null if not on blocklist
+     */
+    private function checkBlockedHostname(string $host): ?string
+    {
+        if ($host === 'localhost' || $host === '0.0.0.0' || $host === '::1') {
+            return "Blocked: requests to {$host} are not allowed.";
         }
 
-        $ip = gethostbyname($host);
+        return str_ends_with($host, '.local')
+            ? 'Blocked: requests to .local domains are not allowed.'
+            : null;
+    }
 
-        if ($ip === $host && ! filter_var($host, FILTER_VALIDATE_IP)) {
-            return "Blocked: unable to resolve hostname {$host}.";
+    /**
+     * Resolve and validate the IP address range for the given hostname.
+     *
+     * Blocks unresolvable hostnames and IPs in private or reserved ranges.
+     *
+     * @param  string  $host  Lowercase hostname to resolve and check
+     * @return string|null Error message if blocked, null if IP is acceptable
+     */
+    private function checkIpRange(string $host): ?string
+    {
+        $error = null;
+
+        // If the host is already a literal IP address, validate it directly.
+        if (filter_var($host, FILTER_VALIDATE_IP)) {
+            if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                $error = "Blocked: {$host} is a private or reserved IP address.";
+            }
+        } else {
+            // Resolve all A and AAAA records for the hostname.
+            $records = @dns_get_record($host, DNS_A + DNS_AAAA);
+
+            if ($records === false || $records === []) {
+                $error = "Blocked: unable to resolve hostname {$host}.";
+            } else {
+                $ips = [];
+
+                foreach ($records as $record) {
+                    if (isset($record['ip'])) {
+                        $ips[] = $record['ip'];
+                    }
+                    if (isset($record['ipv6'])) {
+                        $ips[] = $record['ipv6'];
+                    }
+                }
+
+                if ($ips === []) {
+                    $error = "Blocked: unable to resolve hostname {$host}.";
+                } else {
+                    // Block if any resolved IP is in a private or reserved range.
+                    foreach ($ips as $ip) {
+                        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+                            $error = "Blocked: {$host} resolves to a private or reserved IP address ({$ip}).";
+                            break;
+                        }
+                    }
+                }
+            }
         }
 
-        if (filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
-            return "Blocked: {$host} resolves to a private or reserved IP address ({$ip}).";
-        }
-
-        return true;
+        return $error;
     }
 
     /**

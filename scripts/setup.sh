@@ -80,7 +80,7 @@ ROLLBACK_POINTS=()
 
 # Setup dependencies function
 setup_dependencies() {
-    if [ "$AUTO_INSTALL" = false ]; then
+    if [[ "$AUTO_INSTALL" = false ]]; then
         return 0
     fi
 
@@ -111,7 +111,7 @@ setup_dependencies() {
         missing_packages+=("js-runtime")
     fi
 
-    if [ ${#missing_packages[@]} -eq 0 ]; then
+    if [[ ${#missing_packages[@]} -eq 0 ]]; then
         echo -e "${GREEN}✓${NC} All dependencies available"
         return 0
     fi
@@ -119,6 +119,7 @@ setup_dependencies() {
     echo -e "${YELLOW}Missing dependencies detected: ${missing_packages[*]}${NC}"
     echo -e "${CYAN}These will be installed by the setup steps.${NC}"
     echo ""
+    return 0
 }
 
 # Validate system requirements
@@ -126,13 +127,13 @@ validate_system_requirements() {
     echo -e "${CYAN}Running pre-flight system check...${NC}"
     echo ""
 
-    if [ -f "$SCRIPT_DIR/check-requirements.sh" ]; then
+    if [[ -f "$SCRIPT_DIR/check-requirements.sh" ]]; then
         if bash "$SCRIPT_DIR/check-requirements.sh" "$APP_ENV"; then
             echo ""
             return 0
         else
             echo ""
-            if [ "$QUICK_MODE" = false ] && [ -t 0 ]; then
+            if [[ "$QUICK_MODE" = false ]] && [[ -t 0 ]]; then
                 if ! ask_yes_no "Some requirements are missing. Continue anyway?" "n"; then
                     exit 1
                 fi
@@ -180,7 +181,7 @@ show_progress() {
     percent=$((current * 100 / total))
     local eta=0
 
-    if [ "$current" -gt 0 ]; then
+    if [[ "$current" -gt 0 ]]; then
         local avg_time
         avg_time=$((elapsed / current))
         eta=$((avg_time * (total - current)))
@@ -188,11 +189,12 @@ show_progress() {
 
     printf "\r${CYAN}Progress:${NC} [%3d%%] Step %d/%d: %s (Elapsed: %ds, ETA: %ds)" \
         "$percent" "$current" "$total" "$description" "$elapsed" "$eta"
+    return 0
 }
 
 # Generate installation report
 generate_installation_report() {
-    if [ "$GENERATE_REPORT" = false ] && [ ${#INSTALLED_PACKAGES[@]} -eq 0 ]; then
+    if [[ "$GENERATE_REPORT" = false ]] && [[ ${#INSTALLED_PACKAGES[@]} -eq 0 ]]; then
         return 0
     fi
 
@@ -221,10 +223,11 @@ generate_installation_report() {
     } > "$report_file"
 
     echo -e "${CYAN}Installation report saved to: ${report_file}${NC}"
+    return 0
 }
 
 # If check-only mode, run validation and exit
-if [ "$CHECK_ONLY" = true ]; then
+if [[ "$CHECK_ONLY" = true ]]; then
     validate_system_requirements
     exit 0
 fi
@@ -252,7 +255,7 @@ while IFS= read -r step_file; do
     # Extract title from "# Title: ..." line in the file
     title=$(grep "^# Title:" "$step_file" | head -1 | sed 's/^# Title: //')
 
-    if [ -z "$title" ]; then
+    if [[ -z "$title" ]]; then
         # Fallback if no Title line found
         title="Setup Step"
     fi
@@ -261,7 +264,7 @@ while IFS= read -r step_file; do
 done < <(find "$SCRIPT_DIR/setup-steps" -name "*.sh" -type f | sort)
 
 # Verify we found steps
-if [ ${#STEPS[@]} -eq 0 ]; then
+if [[ ${#STEPS[@]} -eq 0 ]]; then
     echo -e "${RED}✗ No setup steps found in $SCRIPT_DIR/setup-steps/${NC}"
     exit 1
 fi
@@ -280,7 +283,7 @@ for step in "${STEPS[@]}"; do
 done
 echo ""
 
-if [ "$QUICK_MODE" = false ] && [ -t 0 ]; then
+if [[ "$QUICK_MODE" = false ]] && [[ -t 0 ]]; then
     read -r -p "Press Enter to begin, or Ctrl+C to cancel... "
     echo ""
 fi
@@ -292,7 +295,7 @@ for step in "${STEPS[@]}"; do
     IFS=':' read -r script description <<< "$step"
 
     step_script="$SCRIPT_DIR/setup-steps/$script"
-    if [ ! -f "$step_script" ]; then
+    if [[ ! -f "$step_script" ]]; then
         echo -e "${RED}✗${NC} Step script not found: $step_script"
         FAILED+=("$description")
         ((step_num++))
@@ -315,7 +318,7 @@ for step in "${STEPS[@]}"; do
         FAILED+=("$description")
 
         # Ask if user wants to continue
-        if [ "$QUICK_MODE" = false ] && [ -t 0 ]; then
+        if [[ "$QUICK_MODE" = false ]] && [[ -t 0 ]]; then
             echo ""
             if ! ask_yes_no "Continue with remaining steps?" "n"; then
                 echo ""
@@ -336,7 +339,7 @@ done
 echo ""
 print_section_banner "Setup Summary"
 
-if [ ${#COMPLETED[@]} -gt 0 ]; then
+if [[ ${#COMPLETED[@]} -gt 0 ]]; then
     echo -e "${GREEN}✓ Completed (${#COMPLETED[@]}):${NC}"
     for step in "${COMPLETED[@]}"; do
         echo -e "  • $step"
@@ -344,7 +347,7 @@ if [ ${#COMPLETED[@]} -gt 0 ]; then
     echo ""
 fi
 
-if [ ${#FAILED[@]} -gt 0 ]; then
+if [[ ${#FAILED[@]} -gt 0 ]]; then
     echo -e "${RED}✗ Failed (${#FAILED[@]}):${NC}"
     for step in "${FAILED[@]}"; do
         echo -e "  • $step"
@@ -356,7 +359,7 @@ fi
 generate_installation_report
 
 # Final status
-if [ ${#FAILED[@]} -eq 0 ] && [ ${#COMPLETED[@]} -eq ${#STEPS[@]} ]; then
+if [[ ${#FAILED[@]} -eq 0 ]] && [[ ${#COMPLETED[@]} -eq ${#STEPS[@]} ]]; then
     total_time=$(($(date +%s) - INSTALL_START_TIME))
     echo -e "${GREEN}✓ Setup Complete! 🎉${NC}"
     echo ""
@@ -372,16 +375,16 @@ if [ ${#FAILED[@]} -eq 0 ] && [ ${#COMPLETED[@]} -eq ${#STEPS[@]} ]; then
     source "$SCRIPT_DIR/shared/config.sh" 2>/dev/null || true
     if command -v get_setup_state_file >/dev/null 2>&1; then
         state_file=$(get_setup_state_file)
-        if [ -f "$state_file" ]; then
+        if [[ -f "$state_file" ]]; then
             rm -f "$state_file"
         fi
-    elif [ -f "$PROJECT_ROOT/storage/app/.devops/setup.env" ]; then
+    elif [[ -f "$PROJECT_ROOT/storage/app/.devops/setup.env" ]]; then
         # Fallback to direct path if function not available
         rm -f "$PROJECT_ROOT/storage/app/.devops/setup.env"
     fi
 
     # Offer to start the app
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         echo ""
         if read -r -p "Start Belimbing now? (y/n) [y]: " -n 1; then
             echo ""
@@ -404,7 +407,7 @@ else
     for step in "${STEPS[@]}"; do
         IFS=':' read -r script description <<< "$step"
         for failed in "${FAILED[@]}"; do
-            if [ "$failed" = "$description" ]; then
+            if [[ "$failed" = "$description" ]]; then
                 echo -e "  ${CYAN}./scripts/setup-steps/$script $APP_ENV${NC}"
             fi
         done

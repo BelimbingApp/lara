@@ -70,12 +70,12 @@ check_disk_space() {
         # Get available space in GB (POSIX compatible)
         available_gb=$(df -BG "$PROJECT_ROOT" 2>/dev/null | awk 'NR==2 {print $4}' | sed 's/G//' || echo "0")
 
-        if [ -z "$available_gb" ] || [ "$available_gb" = "0" ]; then
+        if [[ -z "$available_gb" ]] || [[ "$available_gb" = "0" ]]; then
             # Fallback: try without -BG flag
             available_gb=$(df "$PROJECT_ROOT" 2>/dev/null | awk 'NR==2 {print int($4/1024/1024)}' || echo "0")
         fi
 
-        if [ "$available_gb" -ge "$MIN_DISK_GB" ]; then
+        if [[ "$available_gb" -ge "$MIN_DISK_GB" ]]; then
             echo -e "${GREEN}✓${NC} Disk Space: ${available_gb}GB available (${MIN_DISK_GB}GB required)"
             PASSED+=("Disk Space: ${available_gb}GB")
             return 0
@@ -99,7 +99,7 @@ check_ram() {
 
     case "$os_type" in
         linux|wsl2)
-            if [ -f /proc/meminfo ]; then
+            if [[ -f /proc/meminfo ]]; then
                 total_ram_gb=$(awk '/MemTotal/ {print int($2/1024/1024)}' /proc/meminfo 2>/dev/null || echo "0")
             else
                 total_ram_gb=0
@@ -117,11 +117,11 @@ check_ram() {
             ;;
     esac
 
-    if [ "$total_ram_gb" -ge "$MIN_RAM_GB" ]; then
+    if [[ "$total_ram_gb" -ge "$MIN_RAM_GB" ]]; then
         echo -e "${GREEN}✓${NC} RAM: ${total_ram_gb}GB available (${MIN_RAM_GB}GB required)"
         PASSED+=("RAM: ${total_ram_gb}GB")
         return 0
-    elif [ "$total_ram_gb" -gt 0 ]; then
+    elif [[ "$total_ram_gb" -gt 0 ]]; then
         echo -e "${YELLOW}⚠${NC} RAM: ${total_ram_gb}GB available (${MIN_RAM_GB}GB recommended)"
         WARNINGS+=("RAM: ${total_ram_gb}GB may be insufficient")
         return 0
@@ -208,7 +208,7 @@ check_port() {
                     proxy_detected="caddy"
                 fi
 
-                if [ -n "$proxy_detected" ]; then
+                if [[ -n "$proxy_detected" ]]; then
                     echo -e "${CYAN}ℹ${NC} Port $port: In use ($proxy_detected detected)"
                     echo -e "${CYAN}  ℹ${NC} Conflicts will be handled automatically if using Caddy"
                 else
@@ -280,12 +280,12 @@ check_js_runtime() {
         local bun_version
         bun_version=$(bun --version 2>/dev/null || echo "unknown")
         echo -e "${GREEN}✓${NC} Bun: $bun_version (preferred)"
-        if [ "$has_node" = true ]; then
+        if [[ "$has_node" = true ]]; then
             echo -e "${YELLOW}  ℹ${NC} Node.js $node_version is also installed but won't be used"
         fi
         PASSED+=("JavaScript Runtime: Bun $bun_version")
         return 0
-    elif [ "$has_node" = true ]; then
+    elif [[ "$has_node" = true ]]; then
         local npm_version
         npm_version=$(npm --version 2>/dev/null || echo "unknown")
         echo -e "${GREEN}✓${NC} Node.js: $node_version, npm: $npm_version"
@@ -309,7 +309,7 @@ check_git() {
         git_version=$(git --version 2>/dev/null | awk '{print $3}' || echo "unknown")
 
         # Use version comparison helper from versions.sh
-        if [ "$git_version" != "unknown" ]; then
+        if [[ "$git_version" != "unknown" ]]; then
             if check_git_version_meets_latest "$git_version"; then
                 echo -e "${GREEN}✓${NC} Git: $git_version (latest: ${latest_git_version})"
                 PASSED+=("Git: $git_version")
@@ -352,6 +352,7 @@ check_postgresql() {
             WARNINGS+=("PostgreSQL: Service not running")
         fi
     fi
+    return 0
 }
 
 # Check Redis
@@ -374,6 +375,7 @@ check_redis() {
             WARNINGS+=("Redis: Service not running")
         fi
     fi
+    return 0
 }
 
 # Main function
@@ -394,7 +396,7 @@ main() {
     echo -e "${CYAN}Checking required ports...${NC}"
     check_port 80 "HTTP"
     check_port 443 "HTTPS"
-    if [ "$DB_CONNECTION" = "pgsql" ]; then
+    if [[ "$DB_CONNECTION" = "pgsql" ]]; then
         check_port 5432 "PostgreSQL"
     fi
     check_port 6379 "Redis"
@@ -408,7 +410,7 @@ main() {
 
     echo ""
     echo -e "${CYAN}Checking database services...${NC}"
-    if [ "$DB_CONNECTION" = "pgsql" ]; then
+    if [[ "$DB_CONNECTION" = "pgsql" ]]; then
         check_postgresql
     fi
     check_redis
@@ -424,7 +426,7 @@ main() {
     echo -e "  ${RED}✗ Failed: ${#FAILED[@]}${NC}"
     echo ""
 
-    if [ ${#FAILED[@]} -gt 0 ]; then
+    if [[ ${#FAILED[@]} -gt 0 ]]; then
         echo -e "${RED}Critical issues found:${NC}"
         for issue in "${FAILED[@]}"; do
             echo -e "  ${BULLET} $issue"
@@ -434,7 +436,7 @@ main() {
         exit 1
     fi
 
-    if [ ${#WARNINGS[@]} -gt 0 ]; then
+    if [[ ${#WARNINGS[@]} -gt 0 ]]; then
         echo -e "${YELLOW}Warnings (will be handled automatically):${NC}"
         for warning in "${WARNINGS[@]}"; do
             echo -e "  ${BULLET} $warning"
@@ -443,11 +445,12 @@ main() {
         echo -e "${CYAN}These will be installed/configured during setup.${NC}"
     fi
 
-    if [ ${#FAILED[@]} -eq 0 ]; then
+    if [[ ${#FAILED[@]} -eq 0 ]]; then
         echo -e "${GREEN}✓ All critical requirements met!${NC}"
         echo -e "${CYAN}You can proceed with: ${GREEN}./scripts/setup.sh $APP_ENV${NC}"
         exit 0
     fi
+    return 0
 }
 
 # Run main function

@@ -50,7 +50,7 @@ add_bun_to_path_permanently() {
         bash)
             shell_config="$HOME/.bashrc"
             # Also check .bash_profile on macOS
-            if [[ "$OSTYPE" == "darwin"* ]] && [ -f "$HOME/.bash_profile" ]; then
+            if [[ "$OSTYPE" == "darwin"* ]] && [[ -f "$HOME/.bash_profile" ]]; then
                 shell_config="$HOME/.bash_profile"
             fi
             ;;
@@ -58,7 +58,7 @@ add_bun_to_path_permanently() {
             shell_config="$HOME/.config/fish/config.fish"
             path_export="set -gx PATH \$HOME/.bun/bin \$PATH"
             # Create fish config directory if it doesn't exist
-            if [ ! -d "$HOME/.config/fish" ]; then
+            if [[ ! -d "$HOME/.config/fish" ]]; then
                 mkdir -p "$HOME/.config/fish"
             fi
             ;;
@@ -69,7 +69,7 @@ add_bun_to_path_permanently() {
     esac
 
     # Check if PATH entry already exists
-    if [ -f "$shell_config" ]; then
+    if [[ -f "$shell_config" ]]; then
         if grep -q "\.bun/bin" "$shell_config" 2>/dev/null; then
             echo -e "${CYAN}ℹ${NC} Bun PATH entry already exists in ${CYAN}$shell_config${NC}"
             return 0
@@ -77,9 +77,9 @@ add_bun_to_path_permanently() {
     fi
 
     # Add PATH entry to config file
-    if [ -n "$shell_config" ]; then
+    if [[ -n "$shell_config" ]]; then
         # Create config file if it doesn't exist
-        if [ ! -f "$shell_config" ]; then
+        if [[ ! -f "$shell_config" ]]; then
             touch "$shell_config"
         fi
 
@@ -100,7 +100,7 @@ add_bun_to_path_permanently() {
 # Install Bun
 install_bun() {
     # Check if Bun is already installed at default location
-    if [ -f "$HOME/.bun/bin/bun" ]; then
+    if [[ -f "$HOME/.bun/bin/bun" ]]; then
         echo -e "${GREEN}✓${NC} Bun already installed at ~/.bun/bin/bun"
         # Add to PATH for this session
         export PATH="$HOME/.bun/bin:$PATH"
@@ -169,7 +169,7 @@ install_bun() {
         echo ""
         echo -e "${GREEN}✓${NC} Bun installed successfully: $bun_version"
         return 0
-    elif [ -f "$HOME/.bun/bin/bun" ]; then
+    elif [[ -f "$HOME/.bun/bin/bun" ]]; then
         # Bun installed but not in PATH - add it permanently
         export PATH="$HOME/.bun/bin:$PATH"
         local bun_version
@@ -190,11 +190,12 @@ install_bun() {
 get_bun_version() {
     if command_exists bun; then
         bun --version 2>/dev/null || echo "unknown"
-    elif [ -f "$HOME/.bun/bin/bun" ]; then
+    elif [[ -f "$HOME/.bun/bin/bun" ]]; then
         "$HOME/.bun/bin/bun" --version 2>/dev/null || echo "unknown"
     else
         echo "unknown"
     fi
+    return 0
 }
 
 # Handle successful Bun setup/installation
@@ -329,7 +330,7 @@ main() {
         echo -e "${CYAN}ℹ${NC} Bun will be used (replaces Node.js and npm)"
         echo ""
         handle_bun_success
-    elif [ -f "$HOME/.bun/bin/bun" ]; then
+    elif [[ -f "$HOME/.bun/bin/bun" ]]; then
         # Bun installed but not in PATH - add it
         export PATH="$HOME/.bun/bin:$PATH"
         add_bun_to_path_permanently
@@ -350,7 +351,7 @@ main() {
         has_node=true
     fi
 
-    if [ "$has_node" = true ]; then
+    if [[ "$has_node" = true ]]; then
         local node_version
         node_version=$(node --version 2>/dev/null || echo "unknown")
         echo -e "${GREEN}✓${NC} Node.js already installed: $node_version"
@@ -370,7 +371,7 @@ main() {
     echo -e "     • Faster than Node.js"
     echo -e "     • Built-in package manager (replaces npm)"
     echo -e "     • Modern JavaScript runtime"
-    if [ "$has_node" = true ]; then
+    if [[ "$has_node" = true ]]; then
         echo -e "     • ${YELLOW}Note:${NC} Bun will replace Node.js for this project"
     fi
     echo ""
@@ -381,14 +382,14 @@ main() {
     echo -e "     • ${YELLOW}Note:${NC} Bun is preferred and can be installed later"
     echo ""
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         # Interactive mode
         local choice
         choice=$(ask_input "Choose JavaScript runtime (1 for Bun, 2 for Node.js)" "1")
 
         case "$choice" in
             1|bun|Bun)
-                if [ "$has_node" = true ]; then
+                if [[ "$has_node" = true ]]; then
                     local node_version
                     node_version=$(node --version 2>/dev/null || echo "unknown")
                     echo -e "${YELLOW}ℹ${NC} Node.js $node_version detected"
@@ -404,7 +405,7 @@ main() {
                     echo -e "${RED}✗${NC} Bun installation failed"
                     echo ""
                     # Fallback to Node.js if available
-                    if [ "$has_node" = true ]; then
+                    if [[ "$has_node" = true ]]; then
                         echo -e "${YELLOW}Falling back to Node.js...${NC}"
                         echo ""
                         handle_node_success
@@ -416,7 +417,7 @@ main() {
                 fi
                 ;;
             2|node|Node.js|npm)
-                if [ "$has_node" = true ]; then
+                if [[ "$has_node" = true ]]; then
                     # Node.js already installed
                     handle_node_success
                 else
@@ -440,7 +441,7 @@ main() {
         esac
     else
         # Non-interactive mode - default to Bun
-        if [ "$has_node" = true ]; then
+        if [[ "$has_node" = true ]]; then
             local node_version
             node_version=$(node --version 2>/dev/null || echo "unknown")
             echo -e "${YELLOW}ℹ${NC} Node.js $node_version detected"
@@ -454,7 +455,7 @@ main() {
         else
             echo -e "${YELLOW}Falling back to Node.js...${NC}"
             echo ""
-            if [ "$has_node" = true ]; then
+            if [[ "$has_node" = true ]]; then
                 handle_node_success
             elif install_nodejs; then
                 handle_node_success
@@ -463,6 +464,7 @@ main() {
             fi
         fi
     fi
+    return 0
 }
 
 # Run main function

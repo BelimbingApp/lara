@@ -19,6 +19,8 @@ use App\Modules\Core\User\Models\User;
  */
 class DigitalWorkerToolRegistry
 {
+    private const ERROR_PREFIX = 'Error: ';
+
     /** @var array<string, DigitalWorkerTool> */
     private array $tools = [];
 
@@ -72,17 +74,17 @@ class DigitalWorkerToolRegistry
         $tool = $this->tools[$toolName] ?? null;
 
         if ($tool === null) {
-            return 'Error: Unknown tool "'.$toolName.'".';
+            return self::ERROR_PREFIX.'Unknown tool "'.$toolName.'".';
         }
 
         if (! $this->currentUserCanUse($tool)) {
-            return 'Error: You do not have permission to use the "'.$toolName.'" tool.';
+            return self::ERROR_PREFIX.'You do not have permission to use the "'.$toolName.'" tool.';
         }
 
         try {
             return $tool->execute($arguments);
         } catch (\Throwable $e) {
-            return 'Error executing '.$toolName.': '.$e->getMessage();
+            return self::ERROR_PREFIX.'Error executing "'.$toolName.'": '.$e->getMessage();
         }
     }
 

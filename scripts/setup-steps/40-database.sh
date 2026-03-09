@@ -44,6 +44,7 @@ generate_password() {
         head -c 24 /dev/urandom 2>/dev/null | base64 | tr -d "=+/" | cut -c1-24 || \
         head -c 24 /dev/urandom 2>/dev/null | xxd -p | tr -d '\n' | cut -c1-24
     fi
+    return 0
 }
 
 # Check if PostgreSQL is installed and running
@@ -66,7 +67,7 @@ fix_postgresql_repo_key() {
     local pg_key_file="/etc/apt/trusted.gpg.d/postgresql-repo.gpg"
 
     # Check if legacy key exists in trusted.gpg
-    if [ -f "/etc/apt/trusted.gpg" ] && command_exists apt-key; then
+    if [[ -f "/etc/apt/trusted.gpg" ]] && command_exists apt-key; then
         # Try to export PostgreSQL key from legacy keyring and save to modern location
         if apt-key list 2>/dev/null | grep -q "PostgreSQL"; then
             echo -e "${CYAN}Migrating PostgreSQL GPG key from legacy storage...${NC}"
@@ -84,7 +85,7 @@ fix_postgresql_repo_key() {
     fi
 
     # Ensure key file exists in modern location
-    if ! [ -f "$pg_key_file" ]; then
+    if ! [[ -f "$pg_key_file" ]]; then
         echo -e "${CYAN}Downloading PostgreSQL repository GPG key (modern method)...${NC}"
         sudo wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | \
             sudo gpg --dearmor -o "$pg_key_file" 2>/dev/null || {
@@ -93,6 +94,7 @@ fix_postgresql_repo_key() {
         }
         sudo chmod 644 "$pg_key_file" 2>/dev/null || true
     fi
+    return 0
 }
 
 # Install PostgreSQL
@@ -131,7 +133,7 @@ install_postgresql() {
                 if command_exists psql; then
                     local current_pg_version
                     current_pg_version=$(psql --version 2>/dev/null | awk '{print $3}' | cut -d. -f1 || echo "0")
-                    if [ "$current_pg_version" -lt "$postgresql_version" ]; then
+                    if [[ "$current_pg_version" -lt "$postgresql_version" ]]; then
                         needs_official_repo=true
                     fi
                 else
@@ -140,7 +142,7 @@ install_postgresql() {
                 fi
 
                 # Add PostgreSQL official repository using modern GPG key method
-                if [ "$needs_official_repo" = true ]; then
+                if [[ "$needs_official_repo" = true ]]; then
                     echo -e "${CYAN}Adding PostgreSQL official repository (modern method)...${NC}"
 
                     # Install prerequisites
@@ -151,12 +153,12 @@ install_postgresql() {
                     local distro_codename
                     distro_codename=$(lsb_release -cs 2>/dev/null || echo "")
 
-                    if [ -z "$distro_codename" ]; then
+                    if [[ -z "$distro_codename" ]]; then
                         # Fallback: try to detect from /etc/os-release
                         distro_codename=$(grep -E "^VERSION_CODENAME=" /etc/os-release 2>/dev/null | cut -d= -f2 || echo "")
                     fi
 
-                    if [ -n "$distro_codename" ]; then
+                    if [[ -n "$distro_codename" ]]; then
                         # Fix/migrate GPG key using modern method
                         fix_postgresql_repo_key
 
@@ -164,7 +166,7 @@ install_postgresql() {
 
                         # Add/update repository using modern signed-by method
                         local pg_sources_file="/etc/apt/sources.list.d/pgdg.list"
-                        if [ -f "$pg_sources_file" ]; then
+                        if [[ -f "$pg_sources_file" ]]; then
                             # Update existing file to use signed-by if it doesn't already
                             if ! grep -q "signed-by" "$pg_sources_file"; then
                                 echo -e "${CYAN}Updating repository file to use modern signed-by method...${NC}"
@@ -185,7 +187,7 @@ install_postgresql() {
                 echo -e "${CYAN}Installing PostgreSQL ${postgresql_version}...${NC}"
 
                 # Try to install specific version from official repo, fallback to default
-                if [ "$needs_official_repo" = true ]; then
+                if [[ "$needs_official_repo" = true ]]; then
                     sudo apt-get install -y -qq "postgresql-${postgresql_version}" "postgresql-client-${postgresql_version}" "postgresql-contrib-${postgresql_version}" || \
                     sudo apt-get install -y -qq "postgresql-${postgresql_version}" || \
                     sudo apt-get install -y -qq postgresql postgresql-contrib || {
@@ -236,7 +238,7 @@ install_postgresql() {
     echo -e "${CYAN}Waiting for PostgreSQL to start...${NC}"
     local max_attempts=30
     local attempt=0
-    while [ $attempt -lt $max_attempts ]; do
+    while [[ $attempt -lt $max_attempts ]]; do
         if check_postgresql; then
             echo -e "${GREEN}✓${NC} PostgreSQL is ready"
             return 0
@@ -258,18 +260,16 @@ verify_postgresql_connection() {
     local db_password="${5:-}"
 
     # If credentials not provided, try to read from .env
-    if [ -z "$db_name" ] || [ -z "$db_user" ] || [ -z "$db_password" ]; then
-        if [ -f "$PROJECT_ROOT/.env" ]; then
-            db_host=$(get_env_var "DB_HOST" "127.0.0.1")
-            db_port=$(get_env_var "DB_PORT" "5432")
-            db_name=$(get_env_var "DB_DATABASE" "")
-            db_user=$(get_env_var "DB_USERNAME" "")
-            db_password=$(get_env_var "DB_PASSWORD" "")
-        fi
+    if [[ (-z "$db_name" || -z "$db_user" || -z "$db_password") && -f "$PROJECT_ROOT/.env" ]]; then
+        db_host=$(get_env_var "DB_HOST" "127.0.0.1")
+        db_port=$(get_env_var "DB_PORT" "5432")
+        db_name=$(get_env_var "DB_DATABASE" "")
+        db_user=$(get_env_var "DB_USERNAME" "")
+        db_password=$(get_env_var "DB_PASSWORD" "")
     fi
 
     # Check if we have all required credentials
-    if [ -z "$db_name" ] || [ -z "$db_user" ] || [ -z "$db_password" ]; then
+    if [[ -z "$db_name" ]] || [[ -z "$db_user" ]] || [[ -z "$db_password" ]]; then
         echo -e "${YELLOW}⚠${NC} Cannot verify connection: missing database credentials" >&2
         return 1
     fi
@@ -308,7 +308,7 @@ setup_postgresql_database() {
         echo -e "${GREEN}✓${NC} Database '$db_name' and user '$db_user' created"
 
         # Save to .env
-        if [ -f "$PROJECT_ROOT/.env" ]; then
+        if [[ -f "$PROJECT_ROOT/.env" ]]; then
             update_env_file "DB_CONNECTION" "pgsql"
             update_env_file "DB_HOST" "127.0.0.1"
             update_env_file "DB_PORT" "5432"
@@ -355,7 +355,7 @@ setup_sqlite() {
     echo -e "${CYAN}Configuring SQLite...${NC}"
 
     # Ensure .env has DB_CONNECTION=sqlite and DB_DATABASE
-    if [ -f "$PROJECT_ROOT/.env" ]; then
+    if [[ -f "$PROJECT_ROOT/.env" ]]; then
         update_env_file "DB_CONNECTION" "sqlite"
         update_env_file_if_missing "DB_DATABASE" "$db_file"
         db_file=$(get_env_var "DB_DATABASE" "$db_file")
@@ -365,7 +365,7 @@ setup_sqlite() {
     fi
 
     # Skip filesystem setup for in-memory
-    if [ "$db_file" = ":memory:" ]; then
+    if [[ "$db_file" = ":memory:" ]]; then
         echo -e "${GREEN}✓${NC} SQLite configured (in-memory)"
         return 0
     fi
@@ -378,19 +378,19 @@ setup_sqlite() {
     local dir_path
     dir_path=$(dirname "$full_path")
 
-    if [ ! -d "$dir_path" ]; then
+    if [[ ! -d "$dir_path" ]]; then
         mkdir -p "$dir_path"
         echo -e "${GREEN}✓${NC} Created directory $dir_path"
     fi
 
-    if [ ! -f "$full_path" ]; then
+    if [[ ! -f "$full_path" ]]; then
         touch "$full_path"
         echo -e "${GREEN}✓${NC} Created database file $db_file"
     else
         echo -e "${GREEN}✓${NC} Database file $db_file exists"
     fi
 
-    if [ -w "$full_path" ] && [ -w "$dir_path" ]; then
+    if [[ -w "$full_path" ]] && [[ -w "$dir_path" ]]; then
         echo -e "${GREEN}✓${NC} SQLite path is writable"
     else
         echo -e "${YELLOW}⚠${NC} Ensure $dir_path and $db_file are writable by the app" >&2
@@ -406,6 +406,7 @@ setup_sqlite() {
     fi
 
     echo -e "${GREEN}✓${NC} SQLite setup complete"
+    return 0
 }
 
 # Install Redis
@@ -472,7 +473,7 @@ install_redis() {
     echo -e "${CYAN}Waiting for Redis to start...${NC}"
     local max_attempts=10
     local attempt=0
-    while [ $attempt -lt $max_attempts ]; do
+    while [[ $attempt -lt $max_attempts ]]; do
         if check_redis; then
             echo -e "${GREEN}✓${NC} Redis is ready"
             return 0
@@ -491,7 +492,7 @@ ensure_postgresql_database() {
 
     local db_name
     db_name=$(get_env_var "DB_DATABASE" "")
-    if [ -z "$db_name" ]; then
+    if [[ -z "$db_name" ]]; then
         echo -e "${CYAN}Creating database and user...${NC}"
         setup_postgresql_database
     else
@@ -504,6 +505,7 @@ ensure_postgresql_database() {
             echo -e "  ${YELLOW}Note:${NC} Please check database credentials in .env" >&2
         fi
     fi
+    return 0
 }
 
 # PostgreSQL is installed but not running: start service then create/verify database.
@@ -532,13 +534,14 @@ start_postgresql_service_then_setup() {
         echo -e "${RED}✗${NC} Failed to start PostgreSQL" >&2
         exit 1
     fi
+    return 0
 }
 
 # PostgreSQL not installed: prompt (interactive) or install (non-interactive), then setup.
 install_postgresql_if_needed() {
     echo -e "${YELLOW}ℹ${NC} PostgreSQL not found"
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         if ask_yes_no "Install PostgreSQL?" "y"; then
             if install_postgresql; then
                 setup_postgresql_database
@@ -562,6 +565,7 @@ install_postgresql_if_needed() {
             exit 1
         fi
     fi
+    return 0
 }
 
 # Redis is installed but not running: start service then verify.
@@ -587,13 +591,14 @@ start_redis_service_then_check() {
         echo -e "${RED}✗${NC} Failed to start Redis" >&2
         exit 1
     fi
+    return 0
 }
 
 # Redis not installed: prompt (interactive) or install (non-interactive).
 install_redis_if_needed() {
     echo -e "${YELLOW}ℹ${NC} Redis not found"
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         if ask_yes_no "Install Redis?" "y"; then
             if ! install_redis; then
                 echo -e "${RED}✗${NC} Redis installation failed"
@@ -613,6 +618,7 @@ install_redis_if_needed() {
             exit 1
         fi
     fi
+    return 0
 }
 
 # Main setup function
@@ -625,7 +631,7 @@ main() {
     local db_connection
     db_connection=$(get_db_connection)
 
-    if [ "$db_connection" = "sqlite" ]; then
+    if [[ "$db_connection" = "sqlite" ]]; then
         # SQLite: no server install, just .env and file path
         print_subsection_header "SQLite"
         setup_sqlite "database/database.sqlite"
@@ -657,7 +663,7 @@ main() {
 
     # Save state
     save_to_setup_state "REDIS_INSTALLED" "true"
-    if [ "$db_connection" = "pgsql" ]; then
+    if [[ "$db_connection" = "pgsql" ]]; then
         save_to_setup_state "POSTGRESQL_INSTALLED" "true"
     fi
 
@@ -665,10 +671,11 @@ main() {
     echo ""
     echo -e "${GREEN}✓ Database & Redis setup complete!${NC}"
     echo ""
-    if [ -f "$PROJECT_ROOT/.env" ]; then
+    if [[ -f "$PROJECT_ROOT/.env" ]]; then
         echo -e "${CYAN}Database configuration saved to .env${NC}"
     fi
     echo ""
+    return 0
 }
 
 # Run main function

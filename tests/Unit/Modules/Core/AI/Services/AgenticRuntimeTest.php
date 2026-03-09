@@ -46,10 +46,103 @@ function buildAllowAllAuthzMock(): AuthorizationService
     return $mock;
 }
 
+function buildResolvedConfigResolverMock(): ConfigResolver
+{
+    $configResolver = Mockery::mock(ConfigResolver::class);
+    $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+
+    return $configResolver;
+}
+
+function buildToolRegistry(DigitalWorkerTool ...$tools): DigitalWorkerToolRegistry
+{
+    $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
+
+    foreach ($tools as $tool) {
+        $registry->register($tool);
+    }
+
+    return $registry;
+}
+
+function buildRuntime(
+    LlmClient $llmClient,
+    ?ConfigResolver $configResolver = null,
+    ?DigitalWorkerToolRegistry $registry = null,
+): AgenticRuntime {
+    return new AgenticRuntime(
+        $configResolver ?? buildResolvedConfigResolverMock(),
+        $llmClient,
+        Mockery::mock(GithubCopilotAuthService::class),
+        $registry ?? buildToolRegistry(),
+    );
+}
+
+function buildEchoTool(): DigitalWorkerTool
+{
+    return new class implements DigitalWorkerTool
+    {
+        public function name(): string
+        {
+            return 'echo_tool';
+        }
+
+        public function description(): string
+        {
+            return 'Echoes input';
+        }
+
+        public function parametersSchema(): array
+        {
+            return ['type' => 'object', 'properties' => ['input' => ['type' => 'string']]];
+        }
+
+        public function requiredCapability(): ?string
+        {
+            return null;
+        }
+
+        public function execute(array $arguments): string
+        {
+            return 'executed:echo_tool:'.($arguments['input'] ?? 'none');
+        }
+    };
+}
+
+function buildNavigateActionTool(): DigitalWorkerTool
+{
+    return new class implements DigitalWorkerTool
+    {
+        public function name(): string
+        {
+            return 'navigate_tool';
+        }
+
+        public function description(): string
+        {
+            return 'Returns Lara actions';
+        }
+
+        public function parametersSchema(): array
+        {
+            return ['type' => 'object'];
+        }
+
+        public function requiredCapability(): ?string
+        {
+            return null;
+        }
+
+        public function execute(array $arguments): string
+        {
+            return '<lara-action>Livewire.navigate(\'/dashboard\')</lara-action>';
+        }
+    };
+}
+
 describe('AgenticRuntime', function () {
     it('returns direct response when LLM produces no tool calls', function () {
-        $configResolver = Mockery::mock(ConfigResolver::class);
-        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+        $configResolver = buildResolvedConfigResolverMock();
 
         $llmClient = Mockery::mock(LlmClient::class);
         $llmClient->shouldReceive('chat')->once()->andReturn([
@@ -58,10 +151,7 @@ describe('AgenticRuntime', function () {
             'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 8],
         ]);
 
-        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
-        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
-
-        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $runtime = buildRuntime($llmClient, $configResolver);
         $result = $runtime->run([buildTestMessage('Hi')], 1, 'You are Lara.');
 
         expect($result['content'])->toBe('Hello, I am Lara!');
@@ -72,8 +162,7 @@ describe('AgenticRuntime', function () {
     });
 
     it('executes tool calls and feeds results back to LLM', function () {
-        $configResolver = Mockery::mock(ConfigResolver::class);
-        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+        $configResolver = buildResolvedConfigResolverMock();
 
         $llmClient = Mockery::mock(LlmClient::class);
 
@@ -101,43 +190,45 @@ describe('AgenticRuntime', function () {
             'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 10],
         ]);
 
-        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
-        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
-        $registry->register(new class implements DigitalWorkerTool
-        {
-            public function name(): string
-            {
-                return 'echo_tool';
-            }
-
-            public function description(): string
-            {
-                return 'Echoes input';
-            }
-
-            public function parametersSchema(): array
-            {
-                return ['type' => 'object', 'properties' => ['input' => ['type' => 'string']]];
-            }
-
-            public function requiredCapability(): ?string
-            {
-                return null;
-            }
-
-            public function execute(array $arguments): string
-            {
-                return 'executed:echo_tool:'.($arguments['input'] ?? 'none');
-            }
-        });
-
-        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $runtime = buildRuntime($llmClient, $configResolver, buildToolRegistry(buildEchoTool()));
         $result = $runtime->run([buildTestMessage('Echo world')], 1, 'You are Lara.');
 
         expect($result['content'])->toContain('executed:echo_tool:world');
         expect($result['meta']['tool_actions'])->toHaveCount(1);
         expect($result['meta']['tool_actions'][0]['tool'])->toBe('echo_tool');
         expect($result['meta']['tool_actions'][0]['arguments'])->toBe(['input' => 'world']);
+    });
+
+    it('prepends client actions collected from tool results to final content', function () {
+        $configResolver = buildResolvedConfigResolverMock();
+
+        $llmClient = Mockery::mock(LlmClient::class);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => null,
+            'latency_ms' => 200,
+            'usage' => ['prompt_tokens' => 20, 'completion_tokens' => 15],
+            'tool_calls' => [
+                [
+                    'id' => 'call_002',
+                    'type' => 'function',
+                    'function' => [
+                        'name' => 'navigate_tool',
+                        'arguments' => '{}',
+                    ],
+                ],
+            ],
+        ]);
+        $llmClient->shouldReceive('chat')->once()->andReturn([
+            'content' => 'Navigated successfully.',
+            'latency_ms' => 150,
+            'usage' => ['prompt_tokens' => 30, 'completion_tokens' => 10],
+        ]);
+
+        $runtime = buildRuntime($llmClient, $configResolver, buildToolRegistry(buildNavigateActionTool()));
+        $result = $runtime->run([buildTestMessage('Go to dashboard')], 1, 'You are Lara.');
+
+        expect($result['content'])->toStartWith('<lara-action>Livewire.navigate(\'/dashboard\')</lara-action>')
+            ->and($result['content'])->toContain('Navigated successfully.');
     });
 
     it('returns error when no LLM configuration is available', function () {
@@ -148,10 +239,7 @@ describe('AgenticRuntime', function () {
         $configResolver->shouldReceive('resolveDefault')->andReturn(null);
 
         $llmClient = Mockery::mock(LlmClient::class);
-        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
-        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
-
-        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $runtime = buildRuntime($llmClient, $configResolver);
 
         // Employee ID 1 doesn't exist in test DB, so company lookup fails gracefully
         $result = $runtime->run([buildTestMessage('Hello')], 1, 'Prompt');
@@ -161,8 +249,7 @@ describe('AgenticRuntime', function () {
     });
 
     it('returns error when LLM call fails', function () {
-        $configResolver = Mockery::mock(ConfigResolver::class);
-        $configResolver->shouldReceive('resolve')->andReturn([buildMockConfig()]);
+        $configResolver = buildResolvedConfigResolverMock();
 
         $llmClient = Mockery::mock(LlmClient::class);
         $llmClient->shouldReceive('chat')->once()->andReturn([
@@ -171,10 +258,7 @@ describe('AgenticRuntime', function () {
             'latency_ms' => 50,
         ]);
 
-        $copilotAuth = Mockery::mock(GithubCopilotAuthService::class);
-        $registry = new DigitalWorkerToolRegistry(buildAllowAllAuthzMock());
-
-        $runtime = new AgenticRuntime($configResolver, $llmClient, $copilotAuth, $registry);
+        $runtime = buildRuntime($llmClient, $configResolver);
         $result = $runtime->run([buildTestMessage('Hello')], 1, 'Prompt');
 
         expect($result['content'])->toContain('⚠');

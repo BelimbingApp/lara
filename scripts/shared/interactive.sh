@@ -4,7 +4,7 @@
 
 # Source colors if not already loaded
 INTERACTIVE_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -z "$RED" ]; then
+if [[ -z "$RED" ]]; then
     source "$INTERACTIVE_SCRIPT_DIR/colors.sh"
 fi
 
@@ -14,7 +14,7 @@ ask_yes_no() {
     local default=${2:-y}
 
     local choices
-    if [ "$default" = "y" ]; then
+    if [[ "$default" = "y" ]]; then
         choices="[Y/n]"
     else
         choices="[y/N]"
@@ -29,6 +29,7 @@ ask_yes_no() {
             *) echo -e "${YELLOW}Please answer y or n${NC}" >&2 ;;
         esac
     done
+    return 0
 }
 
 # Ask for input with default and optional validator
@@ -38,19 +39,19 @@ ask_input() {
     local validator=${3:-}
 
     while true; do
-        if [ -n "$default" ]; then
+        if [[ -n "$default" ]]; then
             read -r -p "$(echo -e "${prompt} ${DIM}[${default}]${NC}: ")" response
             response=${response:-$default}
         else
             read -r -p "$(echo -e "${prompt}: ")" response
         fi
 
-        if [ -z "$response" ]; then
+        if [[ -z "$response" ]]; then
             echo -e "${YELLOW}This field is required${NC}" >&2
             continue
         fi
 
-        if [ -n "$validator" ]; then
+        if [[ -n "$validator" ]]; then
             if $validator "$response"; then
                 echo "$response"
                 return 0
@@ -63,6 +64,7 @@ ask_input() {
         echo "$response"
         return 0
     done
+    return 0
 }
 
 # Ask for password (hidden input)
@@ -73,4 +75,5 @@ ask_password() {
     read -s -p "$(echo -e "${prompt}: ")" response
     echo "" >&2 # Add newline to stderr so it doesn't mess up captured stdout
     echo "$response"
+    return 0
 }

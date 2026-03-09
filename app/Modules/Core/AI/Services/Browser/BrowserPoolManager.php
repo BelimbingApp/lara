@@ -32,36 +32,19 @@ class BrowserPoolManager
      */
     public function acquireContext(int $companyId, string $sessionId): string|false
     {
-        if (! config('ai.tools.browser.enabled', false)) {
+        if (! config('ai.tools.browser.enabled', false) || ! $this->contextFactory->isAvailable()) {
             return false;
         }
 
-        if (! $this->contextFactory->isAvailable()) {
+        $existing = $this->findExistingContext($companyId, $sessionId);
+        $atLimit = $existing === null
+            && $this->getActiveContextCount($companyId) >= config('ai.tools.browser.max_contexts_per_company', 3);
+
+        if ($atLimit) {
             return false;
         }
 
-        // Return existing context for this company+session pair.
-        foreach ($this->activeContexts as $contextId => $entry) {
-            if ($entry['company_id'] === $companyId && $entry['session_id'] === $sessionId) {
-                return $contextId;
-            }
-        }
-
-        $maxContexts = config('ai.tools.browser.max_contexts_per_company', 3);
-
-        if ($this->getActiveContextCount($companyId) >= $maxContexts) {
-            return false;
-        }
-
-        $contextId = $this->contextFactory->createContextId($companyId, $sessionId);
-
-        $this->activeContexts[$contextId] = [
-            'company_id' => $companyId,
-            'session_id' => $sessionId,
-            'created_at' => microtime(true),
-        ];
-
-        return $contextId;
+        return $existing ?? $this->createAndRegisterContext($companyId, $sessionId);
     }
 
     /**
@@ -110,5 +93,43 @@ class BrowserPoolManager
     public function isAvailable(): bool
     {
         return config('ai.tools.browser.enabled', false) && $this->contextFactory->isAvailable();
+    }
+
+    /**
+     * Find an existing context for the given company and session.
+     *
+     * @param  int  $companyId  Company to search for
+     * @param  string  $sessionId  Session to search for
+     * @return string|null The context ID if found, null otherwise
+     */
+    private function findExistingContext(int $companyId, string $sessionId): ?string
+    {
+        foreach ($this->activeContexts as $contextId => $entry) {
+            if ($entry['company_id'] === $companyId && $entry['session_id'] === $sessionId) {
+                return $contextId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Create and register a new browser context for the given company and session.
+     *
+     * @param  int  $companyId  Company scope for isolation
+     * @param  string  $sessionId  DW session identifier
+     * @return string Newly created context ID
+     */
+    private function createAndRegisterContext(int $companyId, string $sessionId): string
+    {
+        $contextId = $this->contextFactory->createContextId($companyId, $sessionId);
+
+        $this->activeContexts[$contextId] = [
+            'company_id' => $companyId,
+            'session_id' => $sessionId,
+            'created_at' => microtime(true),
+        ];
+
+        return $contextId;
     }
 }

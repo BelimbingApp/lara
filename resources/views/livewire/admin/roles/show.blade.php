@@ -521,6 +521,7 @@ new class extends Component
                                                         wire:click="removeCapability({{ $cap->id }})"
                                                         class="ml-1 text-current opacity-60 hover:opacity-100 transition-opacity"
                                                         title="{{ __('Remove capability') }}"
+                                                        aria-label="{{ __('Remove capability') }}"
                                                     >
                                                         <x-icon name="heroicon-o-x-mark" class="w-3.5 h-3.5 stroke-[2.5]" />
                                                     </button>
@@ -610,6 +611,7 @@ new class extends Component
                                             wire:confirm="{{ __('Remove :name from this role?', ['name' => $assignedUser->name]) }}"
                                             class="text-muted hover:text-status-danger transition-colors"
                                             title="{{ __('Remove user') }}"
+                                            aria-label="{{ __('Remove user') }}"
                                         >
                                             <x-icon name="heroicon-o-x-mark" class="w-4 h-4" />
                                         </button>

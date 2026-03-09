@@ -9,12 +9,12 @@
 VALIDATION_SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Source config.sh for defaults (if not already loaded)
-if [ -z "${DEFAULT_DB_USER:-}" ]; then
+if [[ -z "${DEFAULT_DB_USER:-}" ]]; then
     source "$VALIDATION_SCRIPT_DIR/config.sh" 2>/dev/null || true
 fi
 
 # Source colors if not already loaded
-if [ -z "${RED:-}" ]; then
+if [[ -z "${RED:-}" ]]; then
     source "$VALIDATION_SCRIPT_DIR/colors.sh" 2>/dev/null || true
 fi
 
@@ -36,7 +36,7 @@ next_free_port() {
     local max_attempts=100
     local attempt=0
 
-    while [ $attempt -lt $max_attempts ]; do
+    while [[ $attempt -lt $max_attempts ]]; do
         if is_port_available "$port"; then
             echo "$port"
             return 0
@@ -51,7 +51,7 @@ next_free_port() {
 # Check if a port is valid (1-65535)
 is_valid_port() {
     local port=$1
-    [[ "$port" =~ ^[0-9]+$ ]] && [ "$port" -ge 1 ] && [ "$port" -le 65535 ]
+    [[ "$port" =~ ^[0-9]+$ ]] && [[ "$port" -ge 1 ]] && [[ "$port" -le 65535 ]]
 }
 
 # Check if a domain is valid format
@@ -62,7 +62,7 @@ is_valid_domain() {
 
 # Check if running as root
 is_root() {
-    [ "$(id -u)" -eq 0 ]
+    [[ "$(id -u)" -eq 0 ]]
 }
 
 # Detect if running in WSL2 (Windows Subsystem for Linux)
@@ -73,6 +73,7 @@ is_wsl2() {
 # Get Windows hosts file path (via WSL mount)
 get_windows_hosts_path() {
     echo "/mnt/c/Windows/System32/drivers/etc/hosts"
+    return 0
 }
 
 # Get WSL2 IP address (for Windows hosts file configuration)
@@ -81,17 +82,18 @@ get_wsl2_ip() {
     local wsl_ip
     wsl_ip=$(ip addr show eth0 2>/dev/null | grep -oP 'inet \K[\d.]+' | head -1)
 
-    if [ -z "$wsl_ip" ]; then
+    if [[ -z "$wsl_ip" ]]; then
         # Fallback: try other common interfaces
         wsl_ip=$(ip addr show 2>/dev/null | grep -oP 'inet \K172\.\d+\.\d+\.\d+' | head -1)
     fi
 
-    if [ -z "$wsl_ip" ]; then
+    if [[ -z "$wsl_ip" ]]; then
         # Last resort: use hostname -I
         wsl_ip=$(hostname -I 2>/dev/null | awk '{print $1}')
     fi
 
     echo "$wsl_ip"
+    return 0
 }
 
 # Check if sudo is available and working
@@ -202,7 +204,7 @@ install_chromium() {
 
     local os_type
     os_type=$(detect_os)
-    if [ "$os_type" = "macos" ]; then
+    if [[ "$os_type" = "macos" ]]; then
         if has_macos_app "Google Chrome" || has_macos_app "Chromium" || has_macos_app "Firefox"; then
             echo -e "${GREEN}${CHECK_MARK}${NC} Browser installed"
             return 0
@@ -271,7 +273,7 @@ validate_required_tools() {
     local os_type
     os_type=$(detect_os)
 
-    if [ "$os_type" = "macos" ]; then
+    if [[ "$os_type" = "macos" ]]; then
         if has_macos_app "Google Chrome"; then
             tools_checked+=("google-chrome")
             has_browser=true
@@ -314,7 +316,7 @@ validate_required_tools() {
         esac
     done
 
-    if [ ${#missing[@]} -eq 0 ]; then
+    if [[ ${#missing[@]} -eq 0 ]]; then
         return 0  # All tools present
     fi
 
@@ -326,7 +328,7 @@ validate_required_tools() {
     done
 
     # Offer to install if auto_install is true or interactive mode
-    if [ "$auto_install" = "true" ] || [ -t 0 ]; then
+    if [[ "$auto_install" = "true" ]] || [[ -t 0 ]]; then
         echo ""
 
         if ! ask_yes_no "Install missing tools?" "n"; then
@@ -382,7 +384,7 @@ validate_required_tools() {
         # Verify all tools are now available
         if command_exists git && command_exists cargo && command_exists trunk && command_exists mkcert; then
             # Check browser separately for macOS
-            if [ "$os_type" = "macos" ]; then
+            if [[ "$os_type" = "macos" ]]; then
                 if ! ($has_browser || has_macos_app "Google Chrome" || has_macos_app "Chromium" || has_macos_app "Firefox"); then
                     return 1
                 fi
@@ -407,7 +409,7 @@ validate_required_tools() {
 validate_env_file() {
     local env_file=${1:-.env}
 
-    if [ ! -f "$env_file" ]; then
+    if [[ ! -f "$env_file" ]]; then
         echo -e "${RED}${CROSS_MARK} File not found: $env_file${NC}"
         return 1
     fi
@@ -429,11 +431,11 @@ validate_env_file() {
         local uncommented_line
         uncommented_line=$(grep -E "^[[:space:]]*$var=" "$env_file" | grep -vE "^[[:space:]]*#" | head -1)
 
-        if [ -n "$uncommented_line" ]; then
+        if [[ -n "$uncommented_line" ]]; then
             # Variable exists and is not commented - check if it has a value
             local value
             value=$(echo "$uncommented_line" | cut -d'=' -f2- | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
-            if [ -z "$value" ]; then
+            if [[ -z "$value" ]]; then
                 missing+=("$var (empty)")
             fi
         else
@@ -446,7 +448,7 @@ validate_env_file() {
         fi
     done
 
-    if [ ${#missing[@]} -gt 0 ]; then
+    if [[ ${#missing[@]} -gt 0 ]]; then
         echo -e "${RED}${CROSS_MARK} Missing required variables in $env_file:${NC}"
         for var in "${missing[@]}"; do
             echo -e "  ${BULLET} $var"
@@ -466,6 +468,7 @@ detect_os() {
     else
         echo "unknown"
     fi
+    return 0
 }
 
 # Detect existing reverse proxy
@@ -481,6 +484,7 @@ detect_proxy() {
     else
         echo "none"
     fi
+    return 0
 }
 
 # Validate manual proxy configuration
@@ -493,14 +497,14 @@ validate_manual_proxy() {
     # Check if proxy is running
     local detected_proxy
     detected_proxy=$(detect_proxy)
-    if [ "$detected_proxy" = "none" ]; then
+    if [[ "$detected_proxy" = "none" ]]; then
         echo -e "${YELLOW}${WARNING_MARK} No reverse proxy detected as running${NC}"
         echo -e "  Expected: $proxy_type"
         return 1
     fi
 
     # Check if detected proxy matches expected type
-    if [ "$proxy_type" != "manual" ] && [ "$detected_proxy" != "$proxy_type" ]; then
+    if [[ "$proxy_type" != "manual" ]] && [[ "$detected_proxy" != "$proxy_type" ]]; then
         echo -e "${YELLOW}${WARNING_MARK} Proxy type mismatch${NC}"
         echo -e "  Expected: $proxy_type"
         echo -e "  Detected: $detected_proxy"
@@ -519,7 +523,7 @@ validate_manual_proxy() {
     fi
 
     # Check if HTTPS port is accessible (basic check)
-    if [ "$https_port" -lt 1024 ] && ! is_root; then
+    if [[ "$https_port" -lt 1024 ]] && ! is_root; then
         # Can't check privileged ports without root, but warn
         echo -e "${CYAN}${INFO_MARK} Using privileged port $https_port${NC}"
         echo -e "  Ensure $proxy_type is configured to listen on this port"
@@ -550,7 +554,7 @@ add_domains_to_hosts() {
     done
 
     # If all domains are present, nothing to do
-    if [ ${#missing_domains[@]} -eq 0 ]; then
+    if [[ ${#missing_domains[@]} -eq 0 ]]; then
         return 0
     fi
 
@@ -586,7 +590,7 @@ domain_in_windows_hosts() {
     local win_hosts
     win_hosts=$(get_windows_hosts_path)
 
-    if [ -f "$win_hosts" ]; then
+    if [[ -f "$win_hosts" ]]; then
         # Check using extended regex, handling Windows line endings and any IP
         tr -d '\r' < "$win_hosts" 2>/dev/null | grep -E -q "^[[:space:]]*[^#[:space:]]+[[:space:]]+([^#]*[[:space:]]+)?${domain//./\\.}([[:space:]]|$)"
     else
@@ -606,7 +610,7 @@ add_domains_to_windows_hosts() {
     local wsl_ip
     wsl_ip=$(get_wsl2_ip)
 
-    if [ -z "$wsl_ip" ]; then
+    if [[ -z "$wsl_ip" ]]; then
         echo -e "${RED}✗${NC} Could not determine WSL2 IP address" >&2
         echo -e "${YELLOW}Please manually configure Windows hosts file with your WSL2 IP address${NC}" >&2
         return 1
@@ -626,7 +630,7 @@ add_domains_to_windows_hosts() {
     done
 
     # If all domains are present and correct, nothing to do
-    if [ ${#missing_domains[@]} -eq 0 ]; then
+    if [[ ${#missing_domains[@]} -eq 0 ]]; then
         echo -e "${GREEN}${CHECK_MARK}${NC} Domains already configured correctly in Windows hosts file"
         return 0
     fi
@@ -684,7 +688,7 @@ ensure_domains_in_hosts() {
     fi
 
     # Add to Linux /etc/hosts if needed (failure is fatal)
-    if [ ${#domains_to_add[@]} -gt 0 ]; then
+    if [[ ${#domains_to_add[@]} -gt 0 ]]; then
         add_domains_to_hosts "${domains_to_add[@]}" || result=1
     fi
 
@@ -719,7 +723,7 @@ has_macos_app() {
     local check_path="/Applications/$app_name.app"
     local check_user_path="$HOME/Applications/$app_name.app"
 
-    if [ -d "$check_path" ] || [ -d "$check_user_path" ]; then
+    if [[ -d "$check_path" ]] || [[ -d "$check_user_path" ]]; then
         return 0
     fi
     # Check if installed via homebrew cask
@@ -734,7 +738,7 @@ has_macos_app() {
 test_database_connection() {
     local database_url=$1
 
-    if [ -z "$database_url" ]; then
+    if [[ -z "$database_url" ]]; then
         return 1
     fi
 

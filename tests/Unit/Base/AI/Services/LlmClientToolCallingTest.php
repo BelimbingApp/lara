@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Http;
 
 uses(TestCase::class);
 
+const TEST_API_BASE_URL = 'https://api.example.com/v1';
+
 describe('LlmClient tool calling', function () {
     it('sends tools and tool_choice in request payload when provided', function () {
         Http::fake([
@@ -38,7 +40,7 @@ describe('LlmClient tool calling', function () {
         ];
 
         $result = $client->chat(
-            baseUrl: 'https://api.example.com/v1',
+            baseUrl: TEST_API_BASE_URL,
             apiKey: 'test-key',
             model: 'gpt-4',
             messages: [['role' => 'user', 'content' => 'Hi']],
@@ -68,7 +70,7 @@ describe('LlmClient tool calling', function () {
 
         $client = new LlmClient;
         $client->chat(
-            baseUrl: 'https://api.example.com/v1',
+            baseUrl: TEST_API_BASE_URL,
             apiKey: 'test-key',
             model: 'gpt-4',
             messages: [['role' => 'user', 'content' => 'Hello']],
@@ -108,7 +110,7 @@ describe('LlmClient tool calling', function () {
 
         $client = new LlmClient;
         $result = $client->chat(
-            baseUrl: 'https://api.example.com/v1',
+            baseUrl: TEST_API_BASE_URL,
             apiKey: 'test-key',
             model: 'gpt-4',
             messages: [['role' => 'user', 'content' => 'List routes']],
@@ -131,7 +133,7 @@ describe('LlmClient tool calling', function () {
 
         $client = new LlmClient;
         $result = $client->chat(
-            baseUrl: 'https://api.example.com/v1',
+            baseUrl: TEST_API_BASE_URL,
             apiKey: 'test-key',
             model: 'gpt-4',
             messages: [['role' => 'user', 'content' => 'Hello']],

@@ -36,6 +36,7 @@ source "$SCRIPT_DIR/shared/caddy.sh" 2>/dev/null || true
 
 # Environment (default to local if not provided)
 APP_ENV="${1:-local}"
+readonly PRODUCTION_ENV="production"
 
 # Check if Docker Desktop is providing Docker (WSL2)
 check_docker_desktop() {
@@ -44,7 +45,7 @@ check_docker_desktop() {
     fi
 
     # Check if Docker Desktop socket exists (Docker Desktop uses this path)
-    if [ -S "/var/run/docker.sock" ] || [ -S "$HOME/.docker/run/docker.sock" ]; then
+    if [[ -S "/var/run/docker.sock" ]] || [[ -S "$HOME/.docker/run/docker.sock" ]]; then
         # Try to connect to Docker daemon
         if docker info >/dev/null 2>&1; then
             return 0
@@ -78,7 +79,7 @@ install_docker() {
     local os_type
     os_type=$(detect_os)
 
-    if [ "$os_type" != "linux" ] && [ "$os_type" != "wsl2" ]; then
+    if [[ "$os_type" != "linux" ]] && [[ "$os_type" != "wsl2" ]]; then
         echo -e "${RED}✗${NC} Docker auto-install only supported on Linux" >&2
         echo -e "  Please install Docker manually:" >&2
         echo -e "  ${CYAN}https://docs.docker.com/get-docker/${NC}" >&2
@@ -131,7 +132,7 @@ install_docker() {
 
     echo -e "${RED}✗${NC} Docker installation verification failed" >&2
     echo -e "  Docker daemon may not be running. Try:" >&2
-    if [ "$os_type" = "wsl2" ]; then
+    if [[ "$os_type" = "wsl2" ]]; then
         echo -e "  ${CYAN}sudo service docker start${NC}" >&2
     else
         echo -e "  ${CYAN}sudo systemctl start docker${NC}" >&2
@@ -157,7 +158,7 @@ next_free_port() {
     local max_attempts=100
     local attempt=0
 
-    while [ $attempt -lt $max_attempts ]; do
+    while [[ $attempt -lt $max_attempts ]]; do
         # Skip reserved ports
         if ! is_reserved_port "$port" && is_port_available "$port"; then
             echo "$port"
@@ -176,17 +177,17 @@ setup_docker_compose() {
     local compose_file="$PROJECT_ROOT/docker/docker-compose.yml"
     local docker_env_file="$PROJECT_ROOT/docker/.env"
 
-    if [ ! -f "$compose_file" ]; then
+    if [[ ! -f "$compose_file" ]]; then
         echo -e "${RED}✗${NC} docker-compose.yml not found at $compose_file" >&2
         return 1
     fi
     echo -e "${GREEN}✓${NC} Found docker-compose.yml"
 
     # Create .env file for Docker if it doesn't exist
-    if [ ! -f "$docker_env_file" ]; then
+    if [[ ! -f "$docker_env_file" ]]; then
         echo -e "${CYAN}Creating .env file for Docker...${NC}"
         local docker_env_example="$PROJECT_ROOT/docker/.env.example"
-        if [ -f "$docker_env_example" ]; then
+        if [[ -f "$docker_env_example" ]]; then
             cp "$docker_env_example" "$docker_env_file"
             echo -e "${GREEN}✓${NC} Docker .env file created at $docker_env_file"
         else
@@ -210,17 +211,17 @@ setup_docker_compose() {
 
     # Show port mappings if any changed from defaults
     local ports_changed=false
-    if [ "$DOCKER_DB_PORT" != "5432" ] || [ "$DOCKER_REDIS_PORT" != "6379" ] || \
-       [ "$DOCKER_APP_PORT" != "8000" ] || [ "$DOCKER_VITE_PORT" != "5173" ] || \
-       [ "$DOCKER_HTTP_PORT" != "80" ] || [ "$DOCKER_HTTPS_PORT" != "443" ]; then
+    if [[ "$DOCKER_DB_PORT" != "5432" ]] || [[ "$DOCKER_REDIS_PORT" != "6379" ]] || \
+       [[ "$DOCKER_APP_PORT" != "8000" ]] || [[ "$DOCKER_VITE_PORT" != "5173" ]] || \
+       [[ "$DOCKER_HTTP_PORT" != "80" ]] || [[ "$DOCKER_HTTPS_PORT" != "443" ]]; then
         ports_changed=true
         echo -e "${YELLOW}⚠${NC} Some default ports are in use, using alternatives:"
-        [ "$DOCKER_DB_PORT" != "5432" ] && echo -e "  PostgreSQL: ${CYAN}$DOCKER_DB_PORT${NC} (default 5432 in use)"
-        [ "$DOCKER_REDIS_PORT" != "6379" ] && echo -e "  Redis: ${CYAN}$DOCKER_REDIS_PORT${NC} (default 6379 in use)"
-        [ "$DOCKER_APP_PORT" != "8000" ] && echo -e "  App: ${CYAN}$DOCKER_APP_PORT${NC} (default 8000 in use)"
-        [ "$DOCKER_VITE_PORT" != "5173" ] && echo -e "  Vite: ${CYAN}$DOCKER_VITE_PORT${NC} (default 5173 in use)"
-        [ "$DOCKER_HTTP_PORT" != "80" ] && echo -e "  HTTP: ${CYAN}$DOCKER_HTTP_PORT${NC} (default 80 in use)"
-        [ "$DOCKER_HTTPS_PORT" != "443" ] && echo -e "  HTTPS: ${CYAN}$DOCKER_HTTPS_PORT${NC} (default 443 in use)"
+        [[ "$DOCKER_DB_PORT" != "5432" ]] && echo -e "  PostgreSQL: ${CYAN}$DOCKER_DB_PORT${NC} (default 5432 in use)"
+        [[ "$DOCKER_REDIS_PORT" != "6379" ]] && echo -e "  Redis: ${CYAN}$DOCKER_REDIS_PORT${NC} (default 6379 in use)"
+        [[ "$DOCKER_APP_PORT" != "8000" ]] && echo -e "  App: ${CYAN}$DOCKER_APP_PORT${NC} (default 8000 in use)"
+        [[ "$DOCKER_VITE_PORT" != "5173" ]] && echo -e "  Vite: ${CYAN}$DOCKER_VITE_PORT${NC} (default 5173 in use)"
+        [[ "$DOCKER_HTTP_PORT" != "80" ]] && echo -e "  HTTP: ${CYAN}$DOCKER_HTTP_PORT${NC} (default 80 in use)"
+        [[ "$DOCKER_HTTPS_PORT" != "443" ]] && echo -e "  HTTPS: ${CYAN}$DOCKER_HTTPS_PORT${NC} (default 443 in use)"
 
         # Persist non-default ports to Docker .env for future restarts
         local docker_env_file="$PROJECT_ROOT/docker/.env"
@@ -228,7 +229,7 @@ setup_docker_compose() {
             local key=$1
             local value=$2
             local default=$3
-            if [ "$value" != "$default" ]; then
+            if [[ "$value" != "$default" ]]; then
                 if grep -q "^${key}=" "$docker_env_file" 2>/dev/null; then
                     # Update existing entry
                     if [[ "$OSTYPE" == "darwin"* ]]; then
@@ -272,11 +273,12 @@ setup_docker_compose() {
 
 # Get Docker Compose profile based on environment
 get_compose_profile() {
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "$PRODUCTION_ENV" ]]; then
         echo "prod"
     else
         echo "dev"
     fi
+    return 0
 }
 
 # Run docker compose with correct profile and ports
@@ -293,7 +295,7 @@ run_compose() {
     local cmd_args=(-f "$compose_file" --env-file "$env_file" --profile "$profile" -p "$project_name")
 
     # Add --remove-orphans for 'up' command to clean up old containers
-    if [ "${1:-}" = "up" ]; then
+    if [[ "${1:-}" = "up" ]]; then
         cmd_args+=("$1" --remove-orphans)
         shift
     fi
@@ -303,7 +305,7 @@ run_compose() {
     frontend_domain=$(get_frontend_domain)
     local app_url="https://${frontend_domain}"
     local https_port="${DOCKER_HTTPS_PORT:-443}"
-    if [ "$https_port" != "443" ]; then
+    if [[ "$https_port" != "443" ]]; then
         app_url="https://${frontend_domain}:${https_port}"
     fi
 
@@ -327,7 +329,7 @@ wait_for_services() {
 
     # Service name depends on profile (app-dev or app-prod)
     local app_service
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "$PRODUCTION_ENV" ]]; then
         app_service="app-prod"
     else
         app_service="app-dev"
@@ -335,7 +337,7 @@ wait_for_services() {
 
     echo -e "${CYAN}Waiting for services to be healthy...${NC}"
 
-    while [ $attempt -lt $max_attempts ]; do
+    while [[ $attempt -lt $max_attempts ]]; do
         # Check if app container is running (container name is blb-app)
         if docker ps --format "{{.Names}}" | grep -q "^${project_name}-app$"; then
             # Try to check if app is responding
@@ -346,7 +348,7 @@ wait_for_services() {
         fi
 
         attempt=$((attempt + 1))
-        if [ $((attempt % 10)) -eq 0 ]; then
+        if [[ $((attempt % 10)) -eq 0 ]]; then
             echo -e "${YELLOW}  Still waiting... (${attempt}/${max_attempts})${NC}"
         fi
         sleep 1
@@ -380,11 +382,11 @@ create_admin_if_needed() {
 
     echo -e "${CYAN}Setting up admin user...${NC}"
 
-    if [ -t 0 ]; then
+    if [[ -t 0 ]]; then
         # Interactive mode: prompt for email, then run create-user (command will prompt for password)
         echo -e "${CYAN}Create admin user (email required; password will be prompted by the command).${NC}"
         read -r -p "Admin email: " admin_email
-        if [ -z "$admin_email" ]; then
+        if [[ -z "$admin_email" ]]; then
             echo -e "${YELLOW}⚠${NC} No email provided, skipping"
             return 1
         fi
@@ -405,12 +407,12 @@ get_frontend_domain() {
     local docker_env_file="$PROJECT_ROOT/docker/.env"
 
     # Read FRONTEND_DOMAIN from Docker .env
-    if [ -f "$docker_env_file" ]; then
+    if [[ -f "$docker_env_file" ]]; then
         frontend_domain=$(grep -E "^FRONTEND_DOMAIN=" "$docker_env_file" | cut -d '=' -f2 | tr -d '[:space:]"'"'" || echo "")
     fi
 
     # Use defaults if not set
-    if [ -z "$frontend_domain" ]; then
+    if [[ -z "$frontend_domain" ]]; then
         if command -v get_default_domains >/dev/null 2>&1; then
             frontend_domain=$(get_default_domains "$APP_ENV" | cut -d'|' -f1)
         else
@@ -419,6 +421,7 @@ get_frontend_domain() {
     fi
 
     echo "$frontend_domain"
+    return 0
 }
 
 # Get compose file arguments based on environment
@@ -427,19 +430,21 @@ get_compose_args() {
     local base_file="$PROJECT_ROOT/docker/docker-compose.yml"
     local prod_file="$PROJECT_ROOT/docker/docker-compose.prod.yml"
 
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "$PRODUCTION_ENV" ]]; then
         # Production: base + prod override (no auto-load of override.yml)
         echo "-f $base_file -f $prod_file"
     else
         # Development: just base file, auto-loads docker-compose.override.yml
         echo "-f $base_file"
     fi
+    return 0
 }
 
 # Get Docker Compose project name
 get_compose_project_name() {
     # Use consistent project name matching codebase convention
     echo "blb"
+    return 0
 }
 
 # Clean up problematic volumes (real issue we encountered)
@@ -457,21 +462,21 @@ cleanup_volumes() {
     local conflicting_volumes
     conflicting_volumes=$(docker volume ls --format "{{.Name}}" | grep -E "(^docker_(postgres|redis|caddy)_data|^belimbing_(postgres|redis|caddy)_data|^docker_(postgres|redis|caddy)_config|^belimbing_(postgres|redis|caddy)_config)" || true)
 
-    if [ -n "$conflicting_volumes" ]; then
+    if [[ -n "$conflicting_volumes" ]]; then
         echo -e "${YELLOW}⚠${NC} Found volumes from previous installations of this project"
         echo -e "${CYAN}These volumes are from old project names (docker/belimbing) and are not used by the current setup:${NC}"
         echo "$conflicting_volumes" | while read -r volume; do
-            if [ -n "$volume" ]; then
+            if [[ -n "$volume" ]]; then
                 local created
                 created=$(docker volume inspect "$volume" --format '{{.CreatedAt}}' 2>/dev/null | cut -d'T' -f1 || echo "unknown")
                 echo -e "  • ${CYAN}${volume}${NC} (created: ${created})"
             fi
         done
         echo ""
-        if [ -t 0 ]; then
+        if [[ -t 0 ]]; then
             if ask_yes_no "Remove these old volumes? (This will delete data from previous installations)" "n"; then
                 echo "$conflicting_volumes" | while read -r volume; do
-                    if [ -n "$volume" ]; then
+                    if [[ -n "$volume" ]]; then
                         echo -e "  Removing: ${CYAN}${volume}${NC}"
                         docker volume rm "$volume" 2>/dev/null || true
                     fi
@@ -499,15 +504,15 @@ cleanup_volumes() {
 
         if echo "$postgres_logs" | grep -q "Permission denied\|can't create directory"; then
             has_permission_issue=true
-        elif [ -n "$mountpoint" ] && [ ! -w "$mountpoint" ] 2>/dev/null; then
+        elif [[ -n "$mountpoint" ]] && [[ ! -w "$mountpoint" ]] 2>/dev/null; then
             # Check if mountpoint directory is writable (if accessible)
             has_permission_issue=true
         fi
 
-        if [ "$has_permission_issue" = true ]; then
+        if [[ "$has_permission_issue" = true ]]; then
             echo -e "${YELLOW}⚠${NC} Current PostgreSQL volume has permission issues"
             echo -e "${CYAN}Volume: ${postgres_volume}${NC}"
-            if [ -t 0 ]; then
+            if [[ -t 0 ]]; then
                 if ask_yes_no "Remove and recreate postgres volume? (This will delete current database data)" "n"; then
                     echo -e "  Removing: ${CYAN}${postgres_volume}${NC}"
                     docker volume rm "$postgres_volume" 2>/dev/null || true
@@ -520,6 +525,7 @@ cleanup_volumes() {
             fi
         fi
     fi
+    return 0
 }
 
 # Clean up orphaned containers and networks
@@ -534,9 +540,9 @@ cleanup_orphans() {
     orphaned_containers=$(docker ps -a --filter "name=${project_name}-" --format "{{.Names}}\t{{.Status}}" | \
         grep -E "(Created|Exited|Restarting)" | cut -f1 || true)
 
-    if [ -n "$orphaned_containers" ]; then
+    if [[ -n "$orphaned_containers" ]]; then
         echo "$orphaned_containers" | while read -r container; do
-            if [ -n "$container" ]; then
+            if [[ -n "$container" ]]; then
                 echo -e "  Removing orphaned container: ${CYAN}${container}${NC}"
                 docker rm -f "$container" 2>/dev/null || true
             fi
@@ -549,11 +555,12 @@ cleanup_orphans() {
         # Check if it has compose labels - if not, remove it so compose can recreate
         local compose_label
         compose_label=$(docker network inspect "$network_name" --format '{{index .Labels "com.docker.compose.network"}}' 2>/dev/null || echo "")
-        if [ -z "$compose_label" ] || [ "$compose_label" != "belimbing-network" ]; then
+        if [[ -z "$compose_label" ]] || [[ "$compose_label" != "belimbing-network" ]]; then
             echo -e "  Removing network with incorrect labels: ${CYAN}${network_name}${NC}"
             docker network rm "$network_name" 2>/dev/null || true
         fi
     fi
+    return 0
 }
 
 # Start Docker services
@@ -561,7 +568,7 @@ start_services() {
     local project_name
     project_name=$(get_compose_project_name)
 
-    if [ "$APP_ENV" = "production" ]; then
+    if [[ "$APP_ENV" = "$PRODUCTION_ENV" ]]; then
         echo -e "${CYAN}Starting production services...${NC}"
     else
         echo -e "${CYAN}Starting development services...${NC}"
@@ -601,6 +608,7 @@ start_services() {
     echo ""
     echo -e "${CYAN}Service status:${NC}"
     run_compose ps
+    return 0
 }
 
 # Main function
@@ -644,7 +652,7 @@ main() {
 
         echo -e "${YELLOW}⚠${NC} Docker not found"
 
-        if [ -t 0 ]; then
+        if [[ -t 0 ]]; then
             if ask_yes_no "Install Docker?" "y"; then
                 if ! install_docker; then
                     echo -e "${RED}✗${NC} Docker installation failed"
@@ -717,7 +725,7 @@ main() {
     local access_url="https://${frontend_domain}"
 
     # Include port in URL if HTTPS isn't on 443
-    if [ "${DOCKER_HTTPS_PORT:-443}" != "443" ]; then
+    if [[ "${DOCKER_HTTPS_PORT:-443}" != "443" ]]; then
         access_url="https://${frontend_domain}:${DOCKER_HTTPS_PORT}"
     fi
 
@@ -728,17 +736,17 @@ main() {
     echo ""
 
     # Show port info if non-default ports were used
-    if [ "${DOCKER_DB_PORT:-5432}" != "5432" ] || \
-       [ "${DOCKER_REDIS_PORT:-6379}" != "6379" ] || \
-       [ "${DOCKER_APP_PORT:-8000}" != "8000" ] || \
-       [ "${DOCKER_HTTP_PORT:-80}" != "80" ] || \
-       [ "${DOCKER_HTTPS_PORT:-443}" != "443" ]; then
+    if [[ "${DOCKER_DB_PORT:-5432}" != "5432" ]] || \
+       [[ "${DOCKER_REDIS_PORT:-6379}" != "6379" ]] || \
+       [[ "${DOCKER_APP_PORT:-8000}" != "8000" ]] || \
+       [[ "${DOCKER_HTTP_PORT:-80}" != "80" ]] || \
+       [[ "${DOCKER_HTTPS_PORT:-443}" != "443" ]]; then
         echo -e "${CYAN}Service ports:${NC}"
-        [ "${DOCKER_HTTP_PORT:-80}" != "80" ] && echo -e "  • HTTP: ${CYAN}${DOCKER_HTTP_PORT:-80}${NC}"
-        [ "${DOCKER_HTTPS_PORT:-443}" != "443" ] && echo -e "  • HTTPS: ${CYAN}${DOCKER_HTTPS_PORT:-443}${NC}"
-        [ "${DOCKER_DB_PORT:-5432}" != "5432" ] && echo -e "  • PostgreSQL: ${CYAN}${DOCKER_DB_PORT:-5432}${NC}"
-        [ "${DOCKER_REDIS_PORT:-6379}" != "6379" ] && echo -e "  • Redis: ${CYAN}${DOCKER_REDIS_PORT:-6379}${NC}"
-        [ "${DOCKER_APP_PORT:-8000}" != "8000" ] && echo -e "  • App: ${CYAN}${DOCKER_APP_PORT:-8000}${NC}"
+        [[ "${DOCKER_HTTP_PORT:-80}" != "80" ]] && echo -e "  • HTTP: ${CYAN}${DOCKER_HTTP_PORT:-80}${NC}"
+        [[ "${DOCKER_HTTPS_PORT:-443}" != "443" ]] && echo -e "  • HTTPS: ${CYAN}${DOCKER_HTTPS_PORT:-443}${NC}"
+        [[ "${DOCKER_DB_PORT:-5432}" != "5432" ]] && echo -e "  • PostgreSQL: ${CYAN}${DOCKER_DB_PORT:-5432}${NC}"
+        [[ "${DOCKER_REDIS_PORT:-6379}" != "6379" ]] && echo -e "  • Redis: ${CYAN}${DOCKER_REDIS_PORT:-6379}${NC}"
+        [[ "${DOCKER_APP_PORT:-8000}" != "8000" ]] && echo -e "  • App: ${CYAN}${DOCKER_APP_PORT:-8000}${NC}"
         echo ""
     fi
 
@@ -761,6 +769,7 @@ main() {
     echo -e "  • Restart:   ${CYAN}docker compose --profile $profile -p $project_name restart${NC}"
     echo -e "  • Status:    ${CYAN}docker compose --profile $profile -p $project_name ps${NC}"
     echo ""
+    return 0
 }
 
 # Run main function

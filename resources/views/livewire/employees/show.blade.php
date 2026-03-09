@@ -230,7 +230,7 @@ new class extends Component
         <x-ui.card>
             <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-4">{{ __('Employee Details') }}</h3>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div x-data="{ editing: false, val: '{{ addslashes($employee->full_name) }}' }">
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Full Name') }}</dt>
                         <dd class="text-sm text-ink">
@@ -364,13 +364,13 @@ new class extends Component
                             />
                         </dd>
                     </div>
-                </div>
+                </dl>
         </x-ui.card>
 
         <x-ui.card>
             <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted mb-4">{{ __('Employment Information') }}</h3>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <dl class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Company') }}</dt>
                         <dd class="text-sm text-ink px-1 -mx-1 py-0.5">{{ $employee->company?->name ?? '-' }}</dd>
@@ -391,7 +391,7 @@ new class extends Component
                             <select
                                 x-show="editing"
                                 x-model="val"
-                                @change="editing = false; $wire.saveDepartment(val ? parseInt(val) : null)"
+                                @change="editing = false; $wire.saveDepartment(val ? parseInt(val, 10) : null)"
                                 @keydown.escape="editing = false; val = '{{ $employee->department_id ?? '' }}'"
                                 @blur="editing = false"
                                 class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
@@ -419,7 +419,7 @@ new class extends Component
                             <select
                                 x-show="editing"
                                 x-model="val"
-                                @change="editing = false; $wire.saveSupervisor(val ? parseInt(val) : null)"
+                                @change="editing = false; $wire.saveSupervisor(val ? parseInt(val, 10) : null)"
                                 @keydown.escape="editing = false; val = '{{ $employee->supervisor_id ?? '' }}'"
                                 @blur="editing = false"
                                 class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
@@ -508,7 +508,7 @@ new class extends Component
                             <select
                                 x-show="editing"
                                 x-model="val"
-                                @change="editing = false; $wire.saveUser(val ? parseInt(val) : null)"
+                                @change="editing = false; $wire.saveUser(val ? parseInt(val, 10) : null)"
                                 @keydown.escape="editing = false; val = '{{ $employee->user_id ?? '' }}'"
                                 @blur="editing = false"
                                 class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
@@ -529,7 +529,7 @@ new class extends Component
                         <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Employment End') }}</dt>
                         <dd class="text-sm text-ink px-1 -mx-1 py-0.5 tabular-nums">{{ $employee->employment_end?->format('Y-m-d') ?? '-' }}</dd>
                     </div>
-                </div>
+                </dl>
         </x-ui.card>
 
         <x-ui.card>
@@ -553,7 +553,7 @@ new class extends Component
                                 <option value="{{ $avail->id }}">{{ $avail->full_name }}</option>
                             @endforeach
                         </select>
-                        <x-ui.button variant="primary" size="sm" @click="if (selected) { $wire.addSubordinate(parseInt(selected)); selected = ''; adding = false; }">
+                        <x-ui.button variant="primary" size="sm" @click="if (selected) { $wire.addSubordinate(parseInt(selected, 10)); selected = ''; adding = false; }">
                             {{ __('Assign') }}
                         </x-ui.button>
                         <x-ui.button variant="ghost" size="sm" @click="adding = false; selected = ''">
@@ -675,6 +675,7 @@ new class extends Component
                                         wire:click="updateAddressPivot({{ $address->id }}, 'is_primary', {{ $address->pivot->is_primary ? '0' : '1' }})"
                                         class="cursor-pointer"
                                         title="{{ __('Toggle primary') }}"
+                                        aria-label="{{ __('Toggle primary') }}"
                                     >
                                         @if($address->pivot->is_primary)
                                             <x-ui.badge variant="success">{{ __('Yes') }}</x-ui.badge>
