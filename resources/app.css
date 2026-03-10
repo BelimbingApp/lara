@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+@source './core/views';
+@source '../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Core tokens and components */
+@import './core/css/tokens.css';
+@import './core/css/components.css';
+
+/*
+ * Licensee overrides (loaded after core, wins by cascade).
+ *
+ * To enable licensee customization:
+ * 1. Set VITE_THEME_DIR=<name> in .env (default: custom)
+ * 2. Create resources/<name>/css/tokens.css and/or components.css
+ * 3. Uncomment the imports below (or use the blb:theme:init command)
+ *
+ * @import './{licensee}/css/tokens.css';
+ * @import './{licensee}/css/components.css';
+ */

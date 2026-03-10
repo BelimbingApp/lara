@@ -15,7 +15,7 @@ This tutorial explains **Volt** (Livewire’s single-file component API) and **B
 
 ## 1. One file, two parts
 
-A Volt component is a single file under `resources/views/livewire/`. The file has two clear parts:
+A Volt component is a single file under `resources/core/views/livewire/`. The file has two clear parts:
 
 | Part | Role | Contents |
 |------|------|----------|
@@ -213,7 +213,7 @@ You can use any Blade component (e.g. icons, layout, custom UI):
 <x-slot name="title">...</x-slot>
 ```
 
-- Components live in `resources/views/components/` or are registered in the app; Volt doesn’t change how they work.
+- Components live in `resources/core/views/components/` or are registered in the app; Volt doesn’t change how they work.
 
 ---
 
@@ -229,8 +229,8 @@ The important idea: **state lives in the component (top); the view (bottom) only
 
 ## 5. File location and routing
 
-- **Path:** `resources/views/livewire/{area}/{feature}/{name}.blade.php`  
-  Example: `resources/views/livewire/admin/geonames/admin1/index.blade.php`
+- **Path:** `resources/core/views/livewire/{area}/{feature}/{name}.blade.php`  
+  Example: `resources/core/views/livewire/admin/geonames/admin1/index.blade.php`
 - **Route:** Usually one route that returns a Livewire component by name, e.g. `Livewire::volt('admin.geonames.admin1.index')` or a route that renders a layout and that layout includes the component. Component name is derived from the path (directory + file name without extension).
 
 So: **one Volt file = one full-screen (or self-contained) component.** Keep logic in the top and template in the bottom; if the file gets too large, consider splitting into a class-based Livewire component (separate PHP class + Blade view) or extracting sub-components.

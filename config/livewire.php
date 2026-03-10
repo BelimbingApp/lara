@@ -14,8 +14,8 @@ return [
     */
 
     'component_locations' => [
-        resource_path('views/components'),
-        resource_path('views/livewire'),
+        resource_path('core/views/components'),
+        resource_path('core/views/livewire'),
     ],
 
     /*
@@ -30,8 +30,8 @@ return [
     */
 
     'component_namespaces' => [
-        'layouts' => resource_path('views/components/layouts'),
-        'pages' => resource_path('views/pages'),
+        'layouts' => resource_path('core/views/components/layouts'),
+        'pages' => resource_path('core/views/pages'),
     ],
 
     /*
@@ -115,7 +115,7 @@ return [
     |
     */
 
-    'view_path' => resource_path('views/livewire'),
+    'view_path' => resource_path('core/views/livewire'),
 
     /*
     |---------------------------------------------------------------------------

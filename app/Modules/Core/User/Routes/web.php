@@ -5,6 +5,7 @@
 
 use App\Modules\Core\User\Actions\Logout;
 use App\Modules\Core\User\Controllers\Auth\VerifyEmailController;
+use App\Modules\Core\User\Controllers\PinnedMenuItemController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -56,6 +57,12 @@ Route::middleware('auth')->group(function () {
     Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
     Volt::route('settings/password', 'settings.password')->name('password.edit');
     Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
+
+    // Pinned menu items (JSON API for sidebar Alpine component)
+    Route::post('api/pinned-menu-items/toggle', [PinnedMenuItemController::class, 'toggle'])
+        ->name('pinned-menu-items.toggle');
+    Route::post('api/pinned-menu-items/reorder', [PinnedMenuItemController::class, 'reorder'])
+        ->name('pinned-menu-items.reorder');
 });
 
 Route::post('logout', Logout::class)

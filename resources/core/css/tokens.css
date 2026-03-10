@@ -1,10 +1,3 @@
-@import 'tailwindcss';
-
-@source '../views';
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-
-@custom-variant dark (&:where(.dark, .dark *));
-
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
 
@@ -52,7 +45,7 @@
     /*
      * Semantic colors (usage-based). Use these in views; primitives above are internal.
      * Generated classes: bg-surface-page, text-ink, border-border-default, etc.
-     * User palette preference (e.g. Arid vs Neutral): see docs/development/palette-preference.md.
+     * User palette preference (e.g. Arid vs Neutral): see docs/guides/theming.md.
      *
      * surface-page   — page/main background (layout body, main content)
      * surface-card   — cards, modals, inputs, dropdowns, table body
@@ -151,51 +144,4 @@
     --color-status-info-border: #1e40af;
     --color-surface-secondary: var(--color-zinc-600);
     --color-surface-secondary-hover: var(--color-zinc-500);
-}
-
-@layer components {
-    .nav-link {
-        @apply flex items-center gap-3 px-3 py-2 text-sm font-medium rounded-xl transition-all duration-200 ease-in-out;
-        @apply text-muted hover:text-ink hover:bg-surface-subtle;
-    }
-
-    .nav-link.active {
-        @apply text-ink bg-surface-card shadow-sm ring-1 ring-border-default/50;
-    }
-
-    .nav-link svg {
-        @apply transition-transform duration-200;
-    }
-
-    .nav-link:hover svg {
-        @apply scale-110;
-    }
-
-    .divider {
-        @apply h-px bg-border-default/50;
-    }
-}
-
-@layer base {
-    * {
-        border-color: rgb(203 197 187 / 0.5);
-    }
-
-    .dark * {
-        border-color: rgb(63 63 70);
-    }
-
-    html {
-        scroll-behavior: smooth;
-    }
-
-    body {
-        overflow-x: hidden;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .combobox-dropdown {
-        transition: none !important;
-    }
 }

@@ -6,8 +6,8 @@
 namespace App\Base\Menu;
 
 use App\Base\Menu\Contracts\MenuAccessChecker;
-use App\Base\Menu\Services\MenuDiscoveryService;
 use App\Base\Menu\Services\DefaultMenuAccessChecker;
+use App\Base\Menu\Services\MenuDiscoveryService;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
@@ -83,7 +83,39 @@ class ServiceProvider extends BaseServiceProvider
 
             $menuTree = $builder->build($filteredItems, $currentRoute);
 
+            // Flat map of all navigable items for pinned section lookup.
+            // Keyed by item ID, value is a simple array with label, icon, route/url.
+            $menuItemsFlat = $filteredItems
+                ->filter(fn (MenuItem $item) => $item->hasRoute())
+                ->mapWithKeys(fn (MenuItem $item) => [
+                    $item->id => [
+                        'label' => $item->label,
+                        'icon' => $item->icon ?? 'heroicon-o-squares-2x2',
+                        'href' => $item->route ? route($item->route) : $item->url,
+                        'route' => $item->route,
+                    ],
+                ])
+                ->all();
+
             $view->with('menuTree', $menuTree);
+            $view->with('menuItemsFlat', $menuItemsFlat);
+
+            // Load user's pinned menu item IDs (ordered by sort_order).
+            // Uses duck-typing: calls getPinnedMenuItemIds() on the User model
+            // without importing it (Base cannot depend on Modules). Falls back
+            // to empty array if the method doesn't exist (e.g., during tests
+            // with a stub user) or if the table hasn't been migrated yet.
+            $pinnedIds = [];
+
+            try {
+                $pinnedIds = method_exists($user, 'getPinnedMenuItemIds')
+                    ? $user->getPinnedMenuItemIds()
+                    : [];
+            } catch (\Throwable) {
+                // Table may not exist yet (pre-migration). Degrade gracefully.
+            }
+
+            $view->with('pinnedMenuItemIds', $pinnedIds);
         });
     }
 }

@@ -112,6 +112,27 @@ class User extends Authenticatable implements CompanyScoped
     }
 
     /**
+     * Get this user's pinned menu items, ordered by sort_order.
+     */
+    public function pinnedMenuItems(): HasMany
+    {
+        return $this->hasMany(UserPinnedMenuItem::class, 'user_id')
+            ->orderBy('sort_order');
+    }
+
+    /**
+     * Get the ordered list of pinned menu item IDs for the sidebar.
+     *
+     * @return list<string>
+     */
+    public function getPinnedMenuItemIds(): array
+    {
+        return $this->pinnedMenuItems()
+            ->pluck('menu_item_id')
+            ->all();
+    }
+
+    /**
      * Get active Digital Workers directly supervised by this user's employee.
      *
      * @return EloquentCollection<int, Employee>

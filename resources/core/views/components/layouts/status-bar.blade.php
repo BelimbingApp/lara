@@ -1,4 +1,6 @@
 @php
+    $isImpersonating = session('impersonation.original_user_id') !== null;
+
     $licenseeExists = \App\Modules\Core\Company\Models\Company::query()->where('id', \App\Modules\Core\Company\Models\Company::LICENSEE_ID)->exists();
 
     $laraExists = \App\Modules\Core\Employee\Models\Employee::query()->where('id', \App\Modules\Core\Employee\Models\Employee::LARA_ID)->exists();
@@ -16,13 +18,23 @@
 @endphp
 
 <div class="h-6 bg-surface-bar border-t border-border-default flex items-center justify-between px-4 text-xs text-muted shrink-0">
-    {{-- Left: Environment Info + Warnings --}}
+    {{-- Left: Environment Info + Warnings (highest severity first) --}}
     <div class="flex items-center gap-4">
         <span>{{ config('app.env') }}</span>
         @if(config('app.debug'))
-            <span>Debug Mode</span>
+            <span>{{ __('Debug Mode') }}</span>
         @endif
         @auth
+            @if ($isImpersonating)
+                <form method="POST" action="{{ route('admin.impersonate.stop') }}" class="inline-flex items-center gap-1 text-status-danger">
+                    @csrf
+                    <x-icon name="heroicon-o-eye" class="w-3.5 h-3.5" />
+                    <span>{{ __('Viewing as :name', ['name' => auth()->user()->name]) }}</span>
+                    <button type="submit" class="font-medium hover:underline ml-1">
+                        {{ __('Stop') }}
+                    </button>
+                </form>
+            @endif
             @if (!$licenseeExists)
                 <a href="{{ route('admin.setup.licensee') }}" wire:navigate class="text-status-danger hover:underline flex items-center gap-1">
                     <x-icon name="heroicon-o-exclamation-triangle" class="w-3.5 h-3.5" />
@@ -43,7 +55,7 @@
         @endauth
     </div>
 
-    {{-- Right: Lara/Version/Time --}}
+    {{-- Right: Lara + Version --}}
     <div class="flex items-center gap-4">
         @auth
             <button
@@ -56,7 +68,6 @@
                 <x-ai.lara-identity compact :show-role="false" />
             </button>
         @endauth
-        <span>{{ now()->format('H:i') }}</span>
         <span>v1.0.0</span>
     </div>
 </div>

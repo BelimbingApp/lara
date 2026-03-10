@@ -12,20 +12,53 @@ new class extends Component
 
     public string $search = '';
 
+    public string $sortBy = 'country';
+
+    public string $sortDir = 'asc';
+
+    /** Allowed sort columns mapped to their DB column names. */
+    private const SORTABLE = [
+        'country' => 'country',
+        'population' => 'population',
+    ];
+
+    /** Default sort direction per column (omitted = 'asc'). */
+    private const SORT_DEFAULT_DIR = [
+        'population' => 'desc',
+    ];
+
     public function updatedSearch(): void
     {
         $this->resetPage();
     }
 
+    public function sort(string $column): void
+    {
+        if (! array_key_exists($column, self::SORTABLE)) {
+            return;
+        }
+
+        if ($this->sortBy === $column) {
+            $this->sortDir = $this->sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            $this->sortBy = $column;
+            $this->sortDir = self::SORT_DEFAULT_DIR[$column] ?? 'asc';
+        }
+
+        $this->resetPage();
+    }
+
     public function with(): array
     {
+        $dbColumn = self::SORTABLE[$this->sortBy] ?? 'country';
+
         return [
             'countries' => Country::query()
                 ->when($this->search, function ($query, $search) {
-                    $query->where('country', 'like', '%'.$search.'%')
-                        ->orWhere('iso', 'like', '%'.$search.'%');
+                    $query->where('country', 'ilike', '%'.$search.'%')
+                        ->orWhere('iso', 'ilike', '%'.$search.'%');
                 })
-                ->orderBy('country')
+                ->orderBy($dbColumn, $this->sortDir)
                 ->paginate(20),
         ];
     }
@@ -88,11 +121,29 @@ new class extends Component
                     <thead class="bg-surface-subtle/80">
                         <tr>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('ISO') }}</th>
-                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Country') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">
+                                <button type="button" wire:click="sort('country')" class="inline-flex items-center gap-1 hover:text-ink transition-colors">
+                                    {{ __('Country') }}
+                                    @if($sortBy === 'country')
+                                        <x-icon name="{{ $sortDir === 'asc' ? 'heroicon-m-chevron-up' : 'heroicon-m-chevron-down' }}" class="w-3 h-3" />
+                                    @else
+                                        <x-icon name="heroicon-m-chevron-up-down" class="w-3 h-3 opacity-40" />
+                                    @endif
+                                </button>
+                            </th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Capital') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Phone') }}</th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider">{{ __('Currency') }}</th>
-                            <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider pr-3">{{ __('Population') }}</th>
+                            <th class="px-table-cell-x py-table-header-y text-right text-[11px] font-semibold text-muted uppercase tracking-wider pr-3">
+                                <button type="button" wire:click="sort('population')" class="inline-flex items-center gap-1 ml-auto hover:text-ink transition-colors">
+                                    @if($sortBy === 'population')
+                                        <x-icon name="{{ $sortDir === 'asc' ? 'heroicon-m-chevron-up' : 'heroicon-m-chevron-down' }}" class="w-3 h-3" />
+                                    @else
+                                        <x-icon name="heroicon-m-chevron-up-down" class="w-3 h-3 opacity-40" />
+                                    @endif
+                                    {{ __('Population') }}
+                                </button>
+                            </th>
                             <th class="px-table-cell-x py-table-header-y text-left text-[11px] font-semibold text-muted uppercase tracking-wider pl-3">{{ __('Updated') }}</th>
                         </tr>
                     </thead>

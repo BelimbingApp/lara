@@ -1,6 +1,6 @@
 @props([
     'placeholder' => 'Search...',
-    'id' => 'search-input-' . \Illuminate\Support\Str::random(8),
+    'id' => null,
     'name' => null,
 ])
 
@@ -11,7 +11,7 @@
     />
     <input
         type="search"
-        id="{{ $id }}"
+        @if($id) id="{{ $id }}" @endif
         @if($name) name="{{ $name }}" @endif
         placeholder="{{ $placeholder }}"
         {{ $attributes->class([

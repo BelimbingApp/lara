@@ -96,7 +96,7 @@ app/Modules/{Layer1}/{Module}/
 └── Tests/
 ```
 
-**Views:** Centralized in `resources/views/` (not in modules) - follows Laravel convention, easier asset compilation.
+**Views:** Centralized in `resources/core/views/` (not in modules) -- split into `core/` (BLB framework) and `{licensee}/` (customizations) directories.
 
 ### Layer Hierarchy
 
@@ -209,8 +209,8 @@ When creating implementation plans:
 ## Key Decisions Made
 
 ### Views Placement
-- **Decision:** Centralized in `resources/views/` (traditional Laravel)
-- **Rationale:** Easier asset compilation, follows framework conventions
+- **Decision:** Centralized in `resources/core/views/` (core/licensee split)
+- **Rationale:** Clear ownership boundary; safe upgrades; licensee overrides via view path precedence
 - **Not in modules** (too difficult for self-contained module ideal)
 
 ### Migration Philosophy

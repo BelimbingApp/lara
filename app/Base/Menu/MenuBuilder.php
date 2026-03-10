@@ -37,6 +37,11 @@ class MenuBuilder
     /**
      * Build tree recursively.
      *
+     * Items at each level are sorted alphabetically by label.
+     * The position field is retained for backward compatibility but no longer
+     * used as the primary sort — alphabetical ordering keeps the menu
+     * predictable as new items are added.
+     *
      * @param  Collection  $items  All menu items
      * @param  string|null  $parentId  Current parent ID (null = root level)
      */
@@ -44,7 +49,7 @@ class MenuBuilder
     {
         $children = $items
             ->filter(fn (MenuItem $item) => $item->parent === $parentId)
-            ->sortBy(fn (MenuItem $item) => $item->position)
+            ->sortBy(fn (MenuItem $item) => mb_strtolower($item->label))
             ->values();
 
         return $children->map(function (MenuItem $item) use ($items) {

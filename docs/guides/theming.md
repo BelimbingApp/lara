@@ -25,7 +25,7 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 
 ### Default Theme
 
-**File:** `resources/css/app.css`
+**File:** `resources/core/css/tokens.css`
 
 ```css
 @theme {
@@ -48,7 +48,7 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 
 ### Customization Example
 
-**Create:** `resources/css/theme-overrides.css` (adopter-specific)
+**Create:** `resources/{licensee}/css/tokens.css` (licensee-specific, e.g. `resources/custom/css/tokens.css`)
 
 ```css
 @theme {
@@ -65,11 +65,11 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 }
 ```
 
-**Import in:** `resources/css/app.css`
+**Import in:** `resources/app.css`
 
 ```css
 @import 'tailwindcss';
-@import './theme-overrides.css';  /* Adopter overrides */
+@import './{licensee}/css/tokens.css';  /* Licensee overrides */
 ```
 
 ### What Can Be Customized
@@ -110,7 +110,7 @@ Laravel's component resolution checks **adopter directories first**, then framew
 ### Resolution Order
 
 ```
-1. resources/views/components/ui/button.blade.php  (adopter)
+1. resources/{licensee}/views/components/ui/button.blade.php  (licensee)
 2. app/View/Components/Ui/Button.php               (adopter class-based)
 3. [BLB framework components]                      (fallback)
 ```
@@ -121,7 +121,7 @@ Laravel's component resolution checks **adopter directories first**, then framew
 
 **BLB Default:** Uses blue-600 for primary buttons
 
-**Adopter Override:** Create `resources/views/components/ui/button.blade.php`
+**Adopter Override:** Create `resources/{licensee}/views/components/ui/button.blade.php`
 
 ```blade
 @props([
@@ -159,20 +159,20 @@ $sizeClasses = match($size) {
 ### What Can Be Overridden
 
 **UI Components:**
-- `resources/views/components/ui/button.blade.php`
-- `resources/views/components/ui/card.blade.php`
-- `resources/views/components/ui/input.blade.php`
-- `resources/views/components/ui/modal.blade.php`
+- `resources/{licensee}/views/components/ui/button.blade.php`
+- `resources/{licensee}/views/components/ui/card.blade.php`
+- `resources/{licensee}/views/components/ui/input.blade.php`
+- `resources/{licensee}/views/components/ui/modal.blade.php`
 - All other `<x-ui.*>` components
 
 **Layout Components:**
-- `resources/views/components/layouts/top-bar.blade.php`
-- `resources/views/components/layouts/status-bar.blade.php`
-- `resources/views/components/menu/sidebar.blade.php`
+- `resources/core/views/components/layouts/top-bar.blade.php`
+- `resources/core/views/components/layouts/status-bar.blade.php`
+- `resources/core/views/components/menu/sidebar.blade.php`
 
 **Menu Rendering:**
-- `resources/views/components/menu/item.blade.php`
-- `resources/views/components/menu/tree.blade.php`
+- `resources/core/views/components/menu/item.blade.php`
+- `resources/core/views/components/menu/tree.blade.php`
 
 **Benefits:**
 - ✅ Complete control over component structure
@@ -219,7 +219,7 @@ BLB uses Tailwind's dark mode with class strategy (`class="dark"`).
 
 ### Customizing Dark Mode Colors
 
-Override dark mode colors in `resources/css/app.css`:
+Override dark mode colors in `resources/core/css/tokens.css`:
 
 ```css
 @theme {
@@ -249,7 +249,7 @@ Users can choose the **main palette** (e.g. Arid Camouflage vs Neutral) as a per
 
 ### How it works
 
-1. **One set of semantic tokens** — All UI uses the same names: `surface-page`, `surface-sidebar`, `surface-bar`, `accent`, `accent-hover`, `accent-on`, etc. (see `resources/css/app.css`).
+1. **One set of semantic tokens** — All UI uses the same names: `surface-page`, `surface-sidebar`, `surface-bar`, `accent`, `accent-hover`, `accent-on`, etc. (see `resources/core/css/tokens.css`).
 2. **Palette = different values for the same tokens** — Each palette (e.g. `arid`, `neutral`) defines the **same** CSS custom properties with **different** primitive values. No class names in Blade change.
 3. **Root attribute** — Apply the choice as a attribute on the root element (e.g. `data-palette="arid"` or `data-palette="neutral"` on `<html>`). CSS rules scoped to `[data-palette="…"]` override the default semantic token values.
 
@@ -283,7 +283,7 @@ Users can choose the **main palette** (e.g. Arid Camouflage vs Neutral) as a per
 ### Which tokens are palette-dependent
 
 - **Typically vary per palette:** `surface-page`, `surface-sidebar`, `surface-bar`, `accent`, `accent-hover`, `accent-on`. These define the "main" look (chrome + primary actions).
-- **Typically fixed or shared:** `ink`, `muted`, `link`, `surface-card`, `surface-subtle`, `border-default`, `border-input` — unless a palette is designed to change the whole UI (e.g. full neutral theme). Document in `app.css` which tokens each palette overrides.
+- **Typically fixed or shared:** `ink`, `muted`, `link`, `surface-card`, `surface-subtle`, `border-default`, `border-input` — unless a palette is designed to change the whole UI (e.g. full neutral theme). Document in `tokens.css` which tokens each palette overrides.
 
 ### Storing the preference
 
@@ -298,21 +298,21 @@ Ensure the root element has `data-palette` set before first paint when possible 
 
 - [ ] **Migration:** Add `preferred_palette` to users table (e.g. `arid`, `neutral`); default `arid`.
 - [ ] **Root attribute:** In the main layout, set `<html data-palette="{{ auth()->user()->preferred_palette ?? 'arid' }}" ...>` (and ensure dark class is also set if using dark mode preference).
-- [ ] **CSS:** In `resources/css/app.css`, add `[data-palette="neutral"] { ... }` (and any other palettes) with overrides for the palette-dependent semantic tokens. Add a short comment in `app.css` that palette options are documented in `docs/guides/theming.md`.
+- [ ] **CSS:** In `resources/core/css/tokens.css`, add `[data-palette="neutral"] { ... }` (and any other palettes) with overrides for the palette-dependent semantic tokens. Add a short comment in `tokens.css` that palette options are documented in `docs/guides/theming.md`.
 - [ ] **Settings UI:** Add a "Palette" or "Main theme" control (e.g. in appearance or profile settings). Options: Arid Camouflage, Neutral. On save, persist `preferred_palette` for logged-in users; for guest, persist to localStorage and set `data-palette` on `<html>`.
 - [ ] **Guest script:** If guests can change palette, add a tiny script that reads `localStorage.getItem('blb.palette')` and sets `document.documentElement.dataset.palette` on load, and updates both when the user changes the option.
 
 ### Adding a new palette later
 
-1. Define the new palette's primitive colors in `app.css` if needed (or reuse existing primitives).
+1. Define the new palette's primitive colors in `tokens.css` if needed (or reuse existing primitives).
 2. Add a new block `[data-palette="new-name"] { ... }` that overrides the same semantic tokens (surface-page, surface-sidebar, surface-bar, accent, accent-hover, accent-on, and any others that should change).
 3. Add the option to the settings UI and to the list of allowed values (e.g. in a config or enum).
 4. Update this doc with the new palette name and any special notes (e.g. "Ocean uses blue primitives; define `--color-ocean-*` in theme").
 
 ### Palette references
 
-- Semantic tokens and strategy: `resources/css/app.css` (comments), `.cursor/rules/ui-architect.mdc` (Semantic color strategy).
-- Dark mode: same `app.css`, `.dark` block; ensure palette and dark can combine without conflicts.
+- Semantic tokens and strategy: `resources/core/css/tokens.css` (comments), `.cursor/rules/ui-architect.mdc` (Semantic color strategy).
+- Dark mode: same `tokens.css`, `.dark` block; ensure palette and dark can combine without conflicts.
 
 ---
 
@@ -322,7 +322,7 @@ Ensure the root element has `data-palette` set before first paint when possible 
 
 ### Example: Purple Brand Theme
 
-**Step 1: Override colors** (`resources/css/theme-overrides.css`)
+**Step 1: Override colors** (`resources/{licensee}/css/tokens.css`)
 
 ```css
 @theme {
@@ -334,7 +334,7 @@ Ensure the root element has `data-palette` set before first paint when possible 
 }
 ```
 
-**Step 2: Override button component** (`resources/views/components/ui/button.blade.php`)
+**Step 2: Override button component** (`resources/{licensee}/views/components/ui/button.blade.php`)
 
 ```blade
 @props(['variant' => 'primary'])
@@ -394,8 +394,8 @@ Merge conflicts resolved
 ```
 
 **Customization files (adopter-owned):**
-- `resources/css/theme-overrides.css`
-- `resources/views/components/ui/*.blade.php` (overrides)
+- `resources/{licensee}/css/tokens.css`
+- `resources/{licensee}/views/components/ui/*.blade.php` (overrides)
 - `config/theme.php` (if created)
 
 **BLB framework files:**
@@ -451,7 +451,7 @@ php artisan vendor:publish --tag=acme-theme
 
 ### Example 3: Custom Button Style
 
-**Override:** `resources/views/components/ui/button.blade.php`
+**Override:** `resources/{licensee}/views/components/ui/button.blade.php`
 
 ```blade
 {{-- Adopter: Larger, pill-shaped buttons for accessibility --}}

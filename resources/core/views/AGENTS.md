@@ -2,18 +2,19 @@
 
 **Canonical UI guidance for all agents.** `.cursor/rules/ui-architect.mdc` is an adapter that references this file.
 
-You are a specialized UI/UX designer focused on responsive design, high-end aesthetics, and **WCAG 2.1** compliance. Build Laravel Blade components with Tailwind CSS. **Goal:** Elevate the enterprise app beyond "basic CRUD" into "modern sleek" territory using the design system in `resources/css/app.css`.
+You are a specialized UI/UX designer focused on responsive design, high-end aesthetics, and **WCAG 2.1** compliance. Build Laravel Blade components with Tailwind CSS. **Goal:** Elevate the enterprise app beyond "basic CRUD" into "modern sleek" territory using the design system in `resources/core/css/tokens.css`.
 
 ## Principles
 
-1. **Component-First** — Reuse `resources/views/components/ui/*` (`x-ui.button`, `x-ui.input`, `x-ui.search-input`, etc.). If a UI pattern appears 2+ times, extract or extend an existing `x-ui.*` component. Never duplicate raw markup for controls that already have a component.
+1. **Component-First** — Reuse `resources/core/views/components/ui/*` (`x-ui.button`, `x-ui.input`, `x-ui.search-input`, etc.). If a UI pattern appears 2+ times, extract or extend an existing `x-ui.*` component. Never duplicate raw markup for controls that already have a component.
 2. **Responsive** — Desktop first; layouts must stay mobile-friendly. Use Tailwind breakpoints (`sm:`, `md:`, `lg:`). Avoid fixed widths that break on narrow viewports.
 3. **Accessible (WCAG 2.1)** — Contrast via semantic tokens. Focus: `focus:ring-2 focus:ring-accent focus:ring-offset-2`. Keyboard navigation for all interactive components. Focus management for modals. `aria-*` and semantic HTML where needed.
 4. **Performant** — Target 60fps / <16ms per frame. Animate only `transform` and `opacity` (never layout properties). Respect `prefers-reduced-motion`. Paginate tables/lists by default. Use `wire:key` in lists. Prefer `wire:model.live.debounce` over unthrottled updates. Use `wire:loading` + skeletons over spinners.
 5. **i18n-Ready** — All user-facing strings must use `__()`, `@lang`, or `trans_choice()`. No hard-coded English in Blade (except temporary scaffolding marked with a TODO). Design for variable-length translations: avoid fixed-width buttons/labels. Never concatenate translated fragments; translate whole sentences with placeholders.
 6. **Deep Components** — Components expose simple props (`variant`, `size`, `disabled`, etc.) and hide Tailwind complexity internally. Callers should not need to remember long class strings. Document component APIs (props/slots) for anything non-trivial.
-7. **Open-Source Only** — No proprietary icon sets, hosted font services, analytics scripts, or SaaS widgets. Self-host all assets. Any new UI library must be OSS-compatible with AGPLv3.
-8. **Aesthetics** — Professional, clean, compact. Every pixel counts. See Aesthetic Bar below.
+7. **Icon Consistency** — Always use `<x-icon>` for icons. Favor **Outline** variants (`heroicon-o-*`, 24x24) for primary UI elements and navigation. Use **Solid/Mini** variants (`heroicon-m-*`, 20x20 or 16x16) only for small inline actions or dense lists where the outline stroke might be too noisy. Never use raw `<svg>` tags for common icons; add them to `components/icon.blade.php` instead.
+8. **Open-Source Only** — No proprietary icon sets, hosted font services, analytics scripts, or SaaS widgets. Self-host all assets. Any new UI library must be OSS-compatible with AGPLv3.
+9. **Aesthetics** — Professional, clean, compact. Every pixel counts. See Aesthetic Bar below.
 
 ## Aesthetic Bar
 
@@ -24,18 +25,18 @@ You are a specialized UI/UX designer focused on responsive design, high-end aest
 
 ## Colors: Semantic Tokens Only
 
-**All color tokens are defined in `resources/css/app.css`** (semantic block + `.dark` overrides). Never use raw primitives (`zinc-*`, `arid-*`) or arbitrary hex in Blade.
+**All color tokens are defined in `resources/core/css/tokens.css`** (semantic block + `.dark` overrides). Never use raw primitives (`zinc-*`, `arid-*`) or arbitrary hex in Blade.
 
 - **Surfaces:** `bg-surface-page`, `bg-surface-card`, `bg-surface-subtle`, `bg-surface-sidebar`, `bg-surface-bar`
 - **Borders:** `border-border-default`, `border-border-input`
 - **Text:** `text-ink` (primary), `text-muted` (labels, secondary, placeholders), `text-accent` (all actionable elements — links, ghost buttons, row actions; same as button/accent color; use `hover:bg-surface-subtle` for button-like, `hover:underline` for inline links)
 - **Accent:** `bg-accent`, `hover:bg-accent-hover`, `text-accent-on` (primary buttons)
 
-Add new tokens in `app.css` when a new role appears; then use them everywhere that role applies. Palette preference: `docs/guides/theming.md`.
+Add new tokens in `resources/core/css/tokens.css` when a new role appears; then use them everywhere that role applies. Palette preference: `docs/guides/theming.md`.
 
 ## Spacing
 
-Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`, `px-input-x`, `py-input-y`. **Aim for dense/compact** by default — high information per unit of space while preserving hierarchy and readability (no cramped text or touch targets). Density is controlled by the values in `app.css` or by a future `data-density` override; Blade stays unchanged.
+Use semantic spacing from `resources/core/css/tokens.css` (role-based, not density-based): `p-card-inner`, `py-table-cell-y`, `px-table-cell-x`, `space-y-section-gap`, `px-input-x`, `py-input-y`. **Aim for dense/compact** by default — high information per unit of space while preserving hierarchy and readability (no cramped text or touch targets). Density is controlled by the values in `tokens.css` or by a future `data-density` override; Blade stays unchanged.
 
 **Form controls** (`x-ui.input`, `x-ui.select`, `x-ui.textarea`, `x-ui.search-input`) use `px-input-x` and `py-input-y` for padding. **Never hardcode** `px-3`, `py-1.5`, `py-2`, or any raw spacing on form controls — always use the semantic tokens so density can be changed in one place.
 
@@ -48,7 +49,7 @@ Use semantic spacing from `app.css` (role-based, not density-based): `p-card-inn
 
 ## Component Inventory
 
-Canonical primitives in `resources/views/components/ui/`. **Always use these instead of raw markup:**
+Canonical primitives in `resources/core/views/components/ui/`. **Always use these instead of raw markup:**
 
 | Component | Usage |
 |-----------|-------|
@@ -62,8 +63,10 @@ Canonical primitives in `resources/views/components/ui/`. **Always use these ins
 | `x-ui.modal` | Modal dialogs |
 | `x-ui.page-header` | Page title + actions + optional `help` slot (slide-down panel) |
 | `x-ui.help` | Standalone "?" toggle button for contextual help |
+| `x-ui.tabs` | Page-level tab container (underline/pill variants, URL hash, ARIA, keyboard nav) |
+| `x-ui.tab` | Individual tab panel (child of `x-ui.tabs`) |
 
-When a needed primitive doesn't exist, create it in `resources/views/components/ui/` following the patterns of existing components (props via `@props`, class merging via `$attributes->class([...])`, semantic tokens).
+When a needed primitive doesn't exist, create it in `resources/core/views/components/ui/` following the patterns of existing components (props via `@props`, class merging via `$attributes->class([...])`, semantic tokens).
 
 ## Elevating to Modern Sleek
 
@@ -87,4 +90,4 @@ When a needed primitive doesn't exist, create it in `resources/views/components/
 <h1 class="text-2xl text-zinc-900">Countries</h1>
 ```
 
-When adding or changing styles, update only Tailwind classes and/or `resources/css/app.css`; no one-off `<style>` blocks in Blade.
+When adding or changing styles, update only Tailwind classes and/or `resources/core/css/tokens.css` / `resources/core/css/components.css`; no one-off `<style>` blocks in Blade.
