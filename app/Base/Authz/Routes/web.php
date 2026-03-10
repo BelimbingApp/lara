@@ -3,10 +3,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Base\Authz\Livewire\Capabilities\Index as CapabilitiesIndex;
+use App\Base\Authz\Livewire\DecisionLogs\Index as DecisionLogsIndex;
+use App\Base\Authz\Livewire\PrincipalCapabilities\Index as PrincipalCapabilitiesIndex;
+use App\Base\Authz\Livewire\PrincipalRoles\Index as PrincipalRolesIndex;
+use App\Base\Authz\Livewire\Roles\Create as RolesCreate;
+use App\Base\Authz\Livewire\Roles\Index as RolesIndex;
+use App\Base\Authz\Livewire\Roles\Show as RolesShow;
 use App\Base\Authz\Services\ImpersonationManager;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware('auth')->group(function () {
     Route::post('admin/impersonate/leave', function (ImpersonationManager $manager) {
@@ -24,27 +30,27 @@ Route::middleware('auth')->group(function () {
         ->name('admin.impersonate.start');
 
     // Role management
-    Volt::route('admin/roles', 'admin.roles.index')
+    Route::get('admin/roles', RolesIndex::class)
         ->middleware('authz:admin.role.list')
         ->name('admin.roles.index');
-    Volt::route('admin/roles/create', 'admin.roles.create')
+    Route::get('admin/roles/create', RolesCreate::class)
         ->middleware('authz:admin.role.create')
         ->name('admin.roles.create');
-    Volt::route('admin/roles/{role}', 'admin.roles.show')
+    Route::get('admin/roles/{role}', RolesShow::class)
         ->middleware('authz:admin.role.view')
         ->name('admin.roles.show');
 
     // Authz administration
-    Volt::route('admin/authz/capabilities', 'admin.authz.capabilities.index')
+    Route::get('admin/authz/capabilities', CapabilitiesIndex::class)
         ->middleware('authz:admin.capability.list')
         ->name('admin.authz.capabilities.index');
-    Volt::route('admin/authz/principal-roles', 'admin.authz.principal-roles.index')
+    Route::get('admin/authz/principal-roles', PrincipalRolesIndex::class)
         ->middleware('authz:admin.principal_role.list')
         ->name('admin.authz.principal-roles.index');
-    Volt::route('admin/authz/principal-capabilities', 'admin.authz.principal-capabilities.index')
+    Route::get('admin/authz/principal-capabilities', PrincipalCapabilitiesIndex::class)
         ->middleware('authz:admin.principal_capability.list')
         ->name('admin.authz.principal-capabilities.index');
-    Volt::route('admin/authz/decision-logs', 'admin.authz.decision-logs.index')
+    Route::get('admin/authz/decision-logs', DecisionLogsIndex::class)
         ->middleware('authz:admin.decision_log.list')
         ->name('admin.authz.decision-logs.index');
 });

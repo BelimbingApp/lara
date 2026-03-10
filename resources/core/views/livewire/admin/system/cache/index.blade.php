@@ -1,35 +1,3 @@
-<?php
-
-use App\Base\Menu\MenuRegistry;
-use Illuminate\Support\Facades\Cache;
-use Livewire\Volt\Component;
-
-new class extends Component
-{
-    public function flushAll(): void
-    {
-        Cache::flush();
-        session()->flash('success', __('All cache flushed successfully.'));
-    }
-
-    public function clearMenuCache(): void
-    {
-        app(MenuRegistry::class)->clear();
-        session()->flash('success', __('Menu cache cleared successfully.'));
-    }
-
-    public function with(): array
-    {
-        $driver = config('cache.default');
-        $storeConfig = config('cache.stores.' . $driver, []);
-
-        return [
-            'driver' => $driver,
-            'storeConfig' => $storeConfig,
-        ];
-    }
-}; ?>
-
 <div>
     <x-slot name="title">{{ __('Cache') }}</x-slot>
 

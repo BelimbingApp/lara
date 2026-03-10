@@ -1,28 +1,3 @@
-<?php
-
-use App\Modules\Core\User\Actions\Logout;
-use Illuminate\Support\Facades\Auth;
-use Livewire\Volt\Component;
-
-new class extends Component {
-    public string $password = '';
-    public bool $showDeleteModal = false;
-
-    /**
-     * Delete the currently authenticated user.
-     */
-    public function deleteUser(Logout $logout): void
-    {
-        $this->validate([
-            'password' => ['required', 'string', 'current_password'],
-        ]);
-
-        tap(Auth::user(), $logout(...))->delete();
-
-        $this->redirect('/', navigate: true);
-    }
-}; ?>
-
 <section class="mt-10 space-y-6">
     <div class="relative mb-5">
         <h2 class="text-2xl font-semibold">{{ __('Delete account') }}</h2>

@@ -3,14 +3,16 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Base\Queue\Livewire\FailedJobs\Index as FailedJobsIndex;
+use App\Base\Queue\Livewire\JobBatches\Index as JobBatchesIndex;
+use App\Base\Queue\Livewire\Jobs\Index as JobsIndex;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
-    Volt::route('admin/system/jobs', 'admin.system.jobs.index')
+    Route::get('admin/system/jobs', JobsIndex::class)
         ->name('admin.system.jobs.index');
-    Volt::route('admin/system/failed-jobs', 'admin.system.failed-jobs.index')
+    Route::get('admin/system/failed-jobs', FailedJobsIndex::class)
         ->name('admin.system.failed-jobs.index');
-    Volt::route('admin/system/job-batches', 'admin.system.job-batches.index')
+    Route::get('admin/system/job-batches', JobBatchesIndex::class)
         ->name('admin.system.job-batches.index');
 });

@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Base\Cache\Livewire\CacheManagement\Index;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
-    Volt::route('admin/system/cache', 'admin.system.cache.index')
+    Route::get('admin/system/cache', Index::class)
         ->name('admin.system.cache.index');
 });

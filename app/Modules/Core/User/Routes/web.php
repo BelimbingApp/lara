@@ -6,21 +6,32 @@
 use App\Modules\Core\User\Actions\Logout;
 use App\Modules\Core\User\Controllers\Auth\VerifyEmailController;
 use App\Modules\Core\User\Controllers\PinController;
+use App\Modules\Core\User\Livewire\Auth\ConfirmPassword;
+use App\Modules\Core\User\Livewire\Auth\ForgotPassword;
+use App\Modules\Core\User\Livewire\Auth\Login;
+use App\Modules\Core\User\Livewire\Auth\Register;
+use App\Modules\Core\User\Livewire\Auth\ResetPassword;
+use App\Modules\Core\User\Livewire\Auth\VerifyEmail;
+use App\Modules\Core\User\Livewire\Settings\Appearance;
+use App\Modules\Core\User\Livewire\Settings\Password;
+use App\Modules\Core\User\Livewire\Settings\Profile;
+use App\Modules\Core\User\Livewire\Users\Create;
+use App\Modules\Core\User\Livewire\Users\Index;
+use App\Modules\Core\User\Livewire\Users\Show;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 // Auth routes (guest)
 Route::middleware('guest')->group(function () {
-    Volt::route('login', 'auth.login')
+    Route::get('login', Login::class)
         ->name('login');
 
-    Volt::route('register', 'auth.register')
+    Route::get('register', Register::class)
         ->name('register');
 
-    Volt::route('forgot-password', 'auth.forgot-password')
+    Route::get('forgot-password', ForgotPassword::class)
         ->name('password.request');
 
-    Volt::route('reset-password/{token}', 'auth.reset-password')
+    Route::get('reset-password/{token}', ResetPassword::class)
         ->name('password.reset');
 });
 
@@ -31,32 +42,32 @@ Route::view('dashboard', 'dashboard')
 
 // Auth routes (authenticated)
 Route::middleware('auth')->group(function () {
-    Volt::route('verify-email', 'auth.verify-email')
+    Route::get('verify-email', VerifyEmail::class)
         ->name('verification.notice');
 
     Route::get('verify-email/{id}/{hash}', VerifyEmailController::class)
         ->middleware(['signed', 'throttle:6,1'])
         ->name('verification.verify');
 
-    Volt::route('confirm-password', 'auth.confirm-password')
+    Route::get('confirm-password', ConfirmPassword::class)
         ->name('password.confirm');
 
     // User admin
-    Volt::route('admin/users', 'users.index')
+    Route::get('admin/users', Index::class)
         ->middleware('authz:core.user.list')
         ->name('admin.users.index');
-    Volt::route('admin/users/create', 'users.create')
+    Route::get('admin/users/create', Create::class)
         ->middleware('authz:core.user.create')
         ->name('admin.users.create');
-    Volt::route('admin/users/{user}', 'users.show')
+    Route::get('admin/users/{user}', Show::class)
         ->middleware('authz:core.user.view')
         ->name('admin.users.show');
 
     // User settings
     Route::redirect('settings', 'settings/profile');
-    Volt::route('settings/profile', 'settings.profile')->name('profile.edit');
-    Volt::route('settings/password', 'settings.password')->name('password.edit');
-    Volt::route('settings/appearance', 'settings.appearance')->name('appearance.edit');
+    Route::get('settings/profile', Profile::class)->name('profile.edit');
+    Route::get('settings/password', Password::class)->name('password.edit');
+    Route::get('settings/appearance', Appearance::class)->name('appearance.edit');
 
     // Pinned items (JSON API for sidebar Alpine component)
     Route::post('api/pins/toggle', [PinController::class, 'toggle'])

@@ -1,10 +1,6 @@
 <?php
 
-use App\Base\Authz\Enums\PrincipalType;
-use App\Base\Authz\Models\PrincipalRole;
 use App\Base\Authz\Models\Role;
-use App\Modules\Core\Company\Models\Company;
-use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\DB;
 use Livewire\Livewire;
 
@@ -41,7 +37,7 @@ test('authenticated users can view employee index', function (): void {
     $this->get(route('admin.employees.index'))->assertOk();
 });
 
-test('employees.index Volt component resolves', function (): void {
+test('employees.index Livewire component resolves', function (): void {
     $user = createAdminUser();
     $this->actingAs($user);
 

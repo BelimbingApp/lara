@@ -1,39 +1,3 @@
-<?php
-
-use App\Modules\Core\Employee\Models\EmployeeType;
-use Illuminate\Validation\Rule;
-use Livewire\Volt\Component;
-
-new class extends Component
-{
-    public string $code = '';
-
-    public string $label = '';
-
-    public function createType(): void
-    {
-        $this->validate([
-            'code' => [
-                'required',
-                'string',
-                'max:255',
-                'regex:/^[a-z][a-z0-9_]*$/',
-                Rule::unique('employee_types', 'code')->whereNull('company_id'),
-            ],
-            'label' => ['required', 'string', 'max:255'],
-        ]);
-
-        EmployeeType::query()->create([
-            'code' => $this->code,
-            'label' => $this->label,
-            'is_system' => false,
-        ]);
-
-        session()->flash('success', __('Employee type created.'));
-        $this->redirect(route('admin.employee-types.index'), navigate: true);
-    }
-}; ?>
-
 <div>
     <x-slot name="title">{{ __('Add Employee Type') }}</x-slot>
 

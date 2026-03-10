@@ -1,12 +1,12 @@
 # UI Restructure -- Tracking
 
-> **Branch:** `ui-restructure`
+> **Branch:** `main` (backup: `ui-with-volt`)
 > **Architecture doc:** `docs/architecture/ui-layout.md`
 > **Created:** 2026-03-09
 
 ## Summary
 
-Major UI restructuring: core/licensee directory separation, Volt removal (already done -- no Volt pages exist), layout zone changes, and new components.
+Major UI restructuring: core/licensee directory separation, Volt→standard Livewire migration, layout zone changes, and new components.
 
 ## Phase 1: Structural Move (Foundation) ✅
 
@@ -74,13 +74,63 @@ Major UI restructuring: core/licensee directory separation, Volt removal (alread
 - [x] `docs/development/agent-context.md` -- view path refs
 - [x] `docs/guides/development-setup.md` -- Vite config refs
 - [x] `docs/tutorials/vite-roles.md` -- all path references
-- [x] `docs/tutorials/volt-and-blade.md` -- view path refs
+- [x] `docs/tutorials/volt-and-blade.md` -- view path refs (renamed to `livewire-and-blade.md`)
 - [x] `docs/Base/Menu/remove-maryui-daisyui.md` -- all 13 path refs
 - [x] `docs/Base/Menu/PRD.md` -- path ref
 - [x] `docs/modules/menu-prd.md` -- path ref
 - [x] `docs/todo/tool-workspace-ui.md` -- path ref
 - [x] `docs/architecture/caddy-development-setup.md` -- Vite config refs
 - [x] Regenerate IDE helper files (`.phpstorm.meta.php`, `_ide_helper.php`, `_ide_helper_models.php`)
+
+## Phase 5: Volt → Standard Livewire Migration ✅
+
+Migrated all 60 Volt single-file components to standard Livewire class+Blade pairs.
+PHP classes in module namespaces, Blade templates unchanged at `resources/core/views/livewire/`.
+
+### Component Migration (60 components across 8 batches) ✅
+
+- [x] Auth module (6): Login, Register, ForgotPassword, ResetPassword, VerifyEmail, ConfirmPassword
+- [x] Settings module (4): Profile, Password, Appearance, DeleteUserForm
+- [x] Users module (4): Index, Create, Show, Edit
+- [x] Companies module (7): Index, Create, Show, LegalEntityTypes, DepartmentTypes, Relationships, Departments
+- [x] Companies/Setup (1): Licensee
+- [x] Employees module (3): Index, Create, Show
+- [x] EmployeeTypes module (3): Index, Create, Edit
+- [x] Address module (3): Index, Create, Show
+- [x] Geonames module (3): Countries/Index, Admin1/Index, Postcodes/Index
+- [x] AI module (10): LaraChatOverlay, Playground, Providers, Tools, Providers/ConnectWizard, Providers/Catalog, Providers/Manager, Tools/Catalog, Tools/Workspace, Setup/Lara
+- [x] Authz module (5): Roles/Index, Roles/Create, Roles/Show, Capabilities/Index, PrincipalRoles/Index, PrincipalCapabilities/Index, DecisionLogs/Index
+- [x] System modules (9): Schedule/ScheduledTasks/Index, Session/Sessions/Index, System/Info/Index, Cache/CacheManagement/Index, Queue/Jobs/Index, Queue/FailedJobs/Index, Queue/JobBatches/Index, Log/Logs/Index, Database/Migrations/Index, Database/Seeders/Index
+
+### Route Migration ✅
+
+- [x] All 14 route files updated from `Volt::route(...)` to `Route::get(..., ClassName::class)`
+
+### Test Migration ✅
+
+- [x] 6 test files migrated from `Volt::test('name')` to `Livewire::test(ClassName::class)`
+- [x] Remaining tests use string-based `Livewire::test('name')` (resolved by discovery service)
+
+### Volt Package Removal ✅
+
+- [x] Delete `app/Providers/VoltServiceProvider.php`
+- [x] Remove `VoltServiceProvider` from `bootstrap/providers.php`
+- [x] `composer remove livewire/volt` + `composer require livewire/livewire` (re-add as direct dep)
+- [x] Update `config/livewire.php` (`make_command.type` → `'class'`, `emoji` → `false`)
+- [x] Update `composer.json` description/keywords
+- [x] Regenerate IDE helper files
+
+### Component Auto-Discovery Infrastructure ✅
+
+- [x] Create `app/Base/Livewire/ComponentDiscoveryService.php` — scans `app/Base/*/Livewire/` and `app/Modules/*/*/Livewire/`, maps component names to FQCNs via `view('livewire.xxx')` parsing
+- [x] Create `app/Base/Livewire/ServiceProvider.php` — registers singleton + calls `Livewire::component()` for each discovered component in `boot()`
+- [x] Auto-discovered by `ProviderRegistry` (follows `app/Base/*/ServiceProvider.php` convention)
+- [x] All 615 tests pass (0 failures)
+
+### Documentation Updates
+
+- [x] Update `docs/todo/ui-restructure.md` (this file)
+- [x] Rewrite `docs/tutorials/livewire-and-blade.md` for standard Livewire patterns (renamed from `volt-and-blade.md`)
 
 ## Decisions Log
 
@@ -97,3 +147,7 @@ Major UI restructuring: core/licensee directory separation, Volt removal (alread
 | Page-level tabs only | Solves complex model UX; no application-level multi-screen tabs |
 | Lara Chat mobile fullscreen | Floating overlay unusable on small screens |
 | Tabs use URL hash | `history.replaceState` with `#tab-id`; survives refresh; responds to back/forward via `hashchange` |
+| PHP classes in module namespaces | `app/Modules/Core/<Module>/Livewire/` or `app/Base/<Module>/Livewire/`; domain-aligned; licensees override Blade only |
+| Component name from `view()` call | `view('livewire.xxx')` → component name `xxx`; avoids brittle convention-based mapping |
+| Auto-discovery ServiceProvider | Follows `app/Base/*/ServiceProvider.php` pattern; no manual component registration needed |
+| Singleton discovery (no cache) | ~60 files scanned once per boot; bounded cost; caching deferred until production profiling |

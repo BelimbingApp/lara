@@ -18,7 +18,7 @@
 | Architecture specs (layers, database, domain model, broadcasting) | `docs/architecture/` |
 | How-to guides (setup, theming, extensions) | `docs/guides/` |
 | Module documentation (Company, User, Employee, Geonames) | `docs/modules/` |
-| Tutorials (Caddy, Vite, Volt, logging) | `docs/tutorials/` |
+| Tutorials (Caddy, Vite, Livewire, logging) | `docs/tutorials/` |
 | Reference (package evaluation) | `docs/reference/` |
 | Planning & TODO | `docs/todo/` |
 
@@ -31,7 +31,7 @@ docs/
 ├── guides/                # Task-oriented how-to guides
 │   └── extensions/        # Extension development guides (migrations, config)
 ├── modules/               # Per-module documentation (overviews, APIs, design decisions)
-├── tutorials/             # Learning-oriented tutorials (Caddy, Vite, Volt, logging)
+├── tutorials/             # Learning-oriented tutorials (Caddy, Vite, Livewire, logging)
 ├── reference/             # Lookup tables, evaluations
 ├── todo/                  # Active planning documents
 ├── scratch/               # Temporary agent workspace (discard after task)

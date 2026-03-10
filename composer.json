@@ -2,11 +2,10 @@
     "$schema": "https://getcomposer.org/schema.json",
     "name": "belimbing/blb",
     "type": "project",
-    "description": "Belimbing (BLB) - Laravel application with Livewire Volt and Tailwind CSS",
+    "description": "Belimbing (BLB) - Enterprise framework built on Laravel with Livewire and Tailwind CSS",
     "keywords": [
         "laravel",
         "livewire",
-        "volt",
         "tailwindcss",
         "tall-stack"
     ],
@@ -16,7 +15,7 @@
         "laravel/framework": "^12.53.0",
         "laravel/reverb": "^1.8.0",
         "laravel/tinker": "^2.11.2",
-        "livewire/volt": "^1.10.2"
+        "livewire/livewire": "^4.2"
     },
     "require-dev": {
         "barryvdh/laravel-ide-helper": "^3.6.1",

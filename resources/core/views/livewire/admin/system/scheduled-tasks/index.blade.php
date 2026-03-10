@@ -1,34 +1,3 @@
-<?php
-
-use Illuminate\Console\Scheduling\Schedule;
-use Livewire\Volt\Component;
-
-new class extends Component
-{
-    /**
-     * Clean the artisan command string for display.
-     *
-     * @param  string  $command  Full command string including php/artisan prefix
-     */
-    public function cleanCommand(string $command): string
-    {
-        $command = preg_replace('/^.*artisan\s+/', '', $command);
-
-        return trim($command, "'\"");
-    }
-
-    public function with(): array
-    {
-        $schedule = app(Schedule::class);
-        $events = $schedule->events();
-
-        return [
-            'events' => $events,
-            'totalCount' => count($events),
-        ];
-    }
-}; ?>
-
 <div>
     <x-slot name="title">{{ __('Scheduled Tasks') }}</x-slot>
 

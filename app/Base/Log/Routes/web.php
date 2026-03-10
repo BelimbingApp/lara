@@ -3,10 +3,10 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Base\Log\Livewire\Logs\Index;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
-    Volt::route('admin/system/logs', 'admin.system.logs.index')
+    Route::get('admin/system/logs', Index::class)
         ->name('admin.system.logs.index');
 });

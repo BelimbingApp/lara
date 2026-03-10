@@ -294,7 +294,7 @@ app/Modules/{Layer1}/{Module}/
 ├── Models/                   # Module internals: Eloquent models
 ├── Services/                 # Module internals: business logic
 ├── Controllers/              # Module internals: HTTP controllers
-├── Livewire/                 # Module internals: Livewire Volt components
+├── Livewire/                 # Module internals: Livewire component classes
 ├── Events/                   # Module internals: events
 ├── Listeners/                # Module internals: event listeners
 ├── Hooks/                    # Module internals: extension hooks
@@ -688,7 +688,7 @@ resources/
 │   │   ├── admin.blade.php
 │   │   └── auth.blade.php
 │   │
-│   ├── livewire/            # Livewire Volt components
+│   ├── livewire/            # Livewire component Blade templates
 │   │   ├── admin/
 │   │   ├── modules/
 │   │   └── extensions/

@@ -1,37 +1,3 @@
-<?php
-
-use App\Modules\Core\Employee\Models\EmployeeType;
-use Illuminate\Validation\Rule;
-use Livewire\Volt\Component;
-
-new class extends Component
-{
-    public EmployeeType $employeeType;
-
-    public string $label = '';
-
-    public function mount(EmployeeType $employeeType): void
-    {
-        $this->employeeType = $employeeType;
-        if ($employeeType->is_system) {
-            abort(403, __('System employee types cannot be edited.'));
-        }
-        $this->label = $employeeType->label;
-    }
-
-    public function save(): void
-    {
-        $this->validate([
-            'label' => ['required', 'string', 'max:255'],
-        ]);
-
-        $this->employeeType->update(['label' => $this->label]);
-
-        session()->flash('success', __('Employee type updated.'));
-        $this->redirect(route('admin.employee-types.index'), navigate: true);
-    }
-}; ?>
-
 <div>
     <x-slot name="title">{{ __('Edit Employee Type') }}</x-slot>
 

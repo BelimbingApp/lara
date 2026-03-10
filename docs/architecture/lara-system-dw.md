@@ -163,7 +163,7 @@ Lara's Employee record is created during the same flow that creates the Licensee
 
 ## 7. Setup Page (`admin/setup/lara`)
 
-A Volt component similar to the Licensee setup page. Two scenarios:
+A Livewire component similar to the Licensee setup page. Two scenarios:
 
 ### 6.1 Lara Record Missing (Fresh Install Without Script)
 
@@ -338,7 +338,7 @@ Lara is a critical-path component — unlike a regular DW (where downtime only a
 1. `Employee::LARA_ID` constant, `isLara()` helper, and delete protection in `Employee::boot()`.
 2. PostgreSQL sequence reset for `employees` table (same pattern as Licensee).
 3. Provisioning in `MigrateCommand` and setup script (after Licensee).
-4. `admin/setup/lara` Volt page (record creation + provider selection).
+4. `admin/setup/lara` Livewire page (record creation + provider selection).
 5. Status bar alert (two states: not provisioned, not activated).
 6. Route and navigation entry for setup page.
 
