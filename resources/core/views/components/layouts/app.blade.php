@@ -151,7 +151,7 @@
             class="hidden lg:flex shrink-0 relative"
             :style="'width: ' + sidebarWidth + 'px'"
         >
-            <x-menu.sidebar :menuTree="$menuTree" :menuItemsFlat="$menuItemsFlat ?? []" :pinnedMenuItemIds="$pinnedMenuItemIds ?? []" x-bind:data-rail="sidebarRail" />
+            <x-menu.sidebar :menuTree="$menuTree" :menuItemsFlat="$menuItemsFlat ?? []" :pins="$pins ?? []" x-bind:data-rail="sidebarRail" />
 
             {{-- Drag handle --}}
             <div
@@ -187,7 +187,7 @@
             class="lg:hidden fixed top-11 bottom-6 left-0 z-40 w-56"
             style="display: none;"
         >
-            <x-menu.sidebar :menuTree="$menuTree" :menuItemsFlat="$menuItemsFlat ?? []" :pinnedMenuItemIds="$pinnedMenuItemIds ?? []" />
+            <x-menu.sidebar :menuTree="$menuTree" :menuItemsFlat="$menuItemsFlat ?? []" :pins="$pins ?? []" />
         </div>
 
         <main class="flex-1 overflow-y-auto bg-surface-page p-3 sm:p-4">

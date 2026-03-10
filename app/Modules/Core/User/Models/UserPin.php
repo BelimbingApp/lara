@@ -9,24 +9,36 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A menu item pinned by a user for sidebar quick-access.
+ * A user-pinned item for sidebar quick-access.
  *
- * The menu_item_id is a string identifier matching MenuItem::$id from the
- * runtime menu registry (not a foreign key — menu items are discovered
- * from config files, not stored in the database).
+ * Supports two pin types:
+ * - menu_item: references a MenuItem::$id from the runtime menu registry
+ * - page: references an arbitrary page by URL (e.g. a tool workspace)
  *
  * @property int $id
  * @property int $user_id
- * @property string $menu_item_id
+ * @property string $type
+ * @property string $pinnable_id
+ * @property string $label
+ * @property string $url
+ * @property string|null $icon
  * @property int $sort_order
  */
-class UserPinnedMenuItem extends Model
+class UserPin extends Model
 {
-    protected $table = 'user_pinned_menu_items';
+    public const TYPE_MENU_ITEM = 'menu_item';
+
+    public const TYPE_PAGE = 'page';
+
+    protected $table = 'user_pins';
 
     protected $fillable = [
         'user_id',
-        'menu_item_id',
+        'type',
+        'pinnable_id',
+        'label',
+        'url',
+        'icon',
         'sort_order',
     ];
 

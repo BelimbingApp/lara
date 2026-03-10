@@ -88,10 +88,6 @@ new class extends Component
         ];
     }
 
-    public function openTool(string $toolName): void
-    {
-        $this->dispatch('tool-selected', toolName: $toolName);
-    }
 }; ?>
 
 <div>
@@ -214,7 +210,7 @@ new class extends Component
                         @endphp
                         <tr
                             wire:key="tool-{{ $name }}"
-                            wire:click="openTool('{{ $name }}')"
+                            @click="Livewire.navigate('{{ route('admin.ai.tools', ['toolName' => $name]) }}')"
                             class="hover:bg-surface-subtle/50 transition-colors cursor-pointer"
                         >
                             <td class="px-table-cell-x py-table-cell-y">

@@ -12,22 +12,29 @@ return new class extends Migration
     /**
      * Run the migrations.
      *
-     * Stores per-user pinned menu items for sidebar quick-access.
-     * Each row is a menu_item_id pinned by a user, with a sort_order
-     * for drag-reorder persistence. The menu_item_id is a string matching
-     * MenuItem::$id (not a foreign key to another table — menu items are
-     * discovered at runtime from config files, not stored in the database).
+     * Creates the user_pins table for per-user pinned sidebar items.
+     *
+     * Supports two pin types:
+     * - menu_item: references a MenuItem::$id from the runtime menu registry
+     * - page: references an arbitrary page by URL (e.g. a tool workspace)
+     *
+     * The pinnable_id is a string key (not a foreign key) since menu items
+     * are discovered at runtime and page pins use route-based identifiers.
      */
     public function up(): void
     {
-        Schema::create('user_pinned_menu_items', function (Blueprint $table): void {
+        Schema::create('user_pins', function (Blueprint $table): void {
             $table->id();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->string('menu_item_id', 100);
+            $table->string('type', 20);
+            $table->string('pinnable_id', 150);
+            $table->string('label', 150);
+            $table->string('url', 500);
+            $table->string('icon', 100)->nullable();
             $table->unsignedSmallInteger('sort_order')->default(0);
             $table->timestamps();
 
-            $table->unique(['user_id', 'menu_item_id']);
+            $table->unique(['user_id', 'type', 'pinnable_id']);
             $table->index(['user_id', 'sort_order']);
         });
     }
@@ -37,6 +44,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('user_pinned_menu_items');
+        Schema::dropIfExists('user_pins');
     }
 };

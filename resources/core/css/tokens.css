@@ -51,6 +51,7 @@
      * surface-card   — cards, modals, inputs, dropdowns, table body
      * surface-subtle — table header, row hover, nav active, ghost button hover
      * surface-sidebar— sidebar panel background
+     * surface-pinned — pinned/quick-access section in sidebar (slightly elevated vs sidebar)
      * surface-bar    — top bar, status bar
      * border-default — card border, dividers, sidebar border
      * border-input   — input/checkbox/radio border
@@ -66,6 +67,7 @@
     --color-surface-card: var(--color-arid-white);
     --color-surface-subtle: #ece8e0;
     --color-surface-sidebar: var(--color-arid-cream);
+    --color-surface-pinned: #dfd9cf;
     --color-surface-bar: var(--color-arid-taupe);
     /* Borders (warm-tinted to match the palette) */
     --color-border-default: var(--color-arid-border);
@@ -121,6 +123,7 @@
     --color-surface-card: var(--color-zinc-900);
     --color-surface-subtle: var(--color-zinc-800);
     --color-surface-sidebar: var(--color-zinc-950);
+    --color-surface-pinned: var(--color-zinc-900);
     --color-surface-bar: var(--color-zinc-950);
     --color-border-default: var(--color-zinc-800);
     --color-border-input: var(--color-zinc-700);

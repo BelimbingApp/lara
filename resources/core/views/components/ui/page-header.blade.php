@@ -3,13 +3,31 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 ?>
 
-@props(['title', 'subtitle' => null, 'actions' => null, 'help' => null])
+@props(['title', 'subtitle' => null, 'actions' => null, 'help' => null, 'pinnable' => null])
 
-<div @if($help) x-data="{ helpOpen: false }" @endif>
+@php
+    $hasInteractive = $help || $pinnable;
+    $alpineData = [];
+    if ($help) $alpineData[] = 'helpOpen: false';
+    if ($pinnable) $alpineData[] = 'pinData: ' . json_encode($pinnable, JSON_UNESCAPED_SLASHES);
+@endphp
+
+<div @if($hasInteractive) x-data="{ {{ implode(', ', $alpineData) }} }" @endif>
     <div class="flex items-center justify-between">
         <div>
             <div class="flex items-center gap-2">
                 <h1 class="text-xl font-medium tracking-tight text-ink">{{ $title }}</h1>
+                @if($pinnable)
+                    <button
+                        type="button"
+                        @click="$dispatch('toggle-page-pin', pinData)"
+                        class="inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted hover:text-accent transition-colors"
+                        :title="'{{ __('Pin to sidebar') }}'"
+                        aria-label="{{ __('Pin :page to sidebar', ['page' => $title]) }}"
+                    >
+                        <x-icon name="heroicon-o-pin" class="w-4 h-4" />
+                    </button>
+                @endif
                 @if($help)
                     <x-ui.help size="lg" @click="helpOpen = !helpOpen" ::aria-expanded="helpOpen" />
                 @endif

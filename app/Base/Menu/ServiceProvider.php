@@ -85,37 +85,57 @@ class ServiceProvider extends BaseServiceProvider
 
             // Flat map of all navigable items for pinned section lookup.
             // Keyed by item ID, value is a simple array with label, icon, route/url.
+            // pinLabel shows parent path but omits the level-0 (top-level) segment
+            // so pinned items read e.g. "Employees/Kiat" or "AI/Tools/Artisan".
+            $allItems = $registry->getAll();
             $menuItemsFlat = $filteredItems
                 ->filter(fn (MenuItem $item) => $item->hasRoute())
-                ->mapWithKeys(fn (MenuItem $item) => [
-                    $item->id => [
-                        'label' => $item->label,
-                        'icon' => $item->icon ?? 'heroicon-o-squares-2x2',
-                        'href' => $item->route ? route($item->route) : $item->url,
-                        'route' => $item->route,
-                    ],
-                ])
+                ->mapWithKeys(function (MenuItem $item) use ($allItems) {
+                    $segments = [];
+                    $current = $item;
+                    while ($current) {
+                        array_unshift($segments, $current->label);
+                        $current = $current->parent ? $allItems->get($current->parent) : null;
+                    }
+
+                    $pinLabel = implode('/', $segments);
+                    $firstSlash = strpos($pinLabel, '/');
+                    if ($firstSlash !== false) {
+                        $pinLabel = substr($pinLabel, $firstSlash + 1);
+                    }
+
+                    return [
+                        $item->id => [
+                            'label' => $item->label,
+                            'pinLabel' => $pinLabel,
+                            'icon' => $item->icon ?? 'heroicon-o-squares-2x2',
+                            'href' => $item->route ? route($item->route) : $item->url,
+                            'route' => $item->route,
+                        ],
+                    ];
+                })
                 ->all();
 
             $view->with('menuTree', $menuTree);
             $view->with('menuItemsFlat', $menuItemsFlat);
 
-            // Load user's pinned menu item IDs (ordered by sort_order).
-            // Uses duck-typing: calls getPinnedMenuItemIds() on the User model
-            // without importing it (Base cannot depend on Modules). Falls back
-            // to empty array if the method doesn't exist (e.g., during tests
+            // Load user's pinned items (ordered by sort_order).
+            // Uses duck-typing: calls getPins() on the User model without
+            // importing it (Base cannot depend on Modules). Falls back to
+            // empty array if the method doesn't exist (e.g., during tests
             // with a stub user) or if the table hasn't been migrated yet.
-            $pinnedIds = [];
+            // Labels are stored in canonical form at save time (PinController::dropTopLevelSegment).
+            $pins = [];
 
             try {
-                $pinnedIds = method_exists($user, 'getPinnedMenuItemIds')
-                    ? $user->getPinnedMenuItemIds()
+                $pins = method_exists($user, 'getPins')
+                    ? $user->getPins()
                     : [];
             } catch (\Throwable) {
                 // Table may not exist yet (pre-migration). Degrade gracefully.
             }
 
-            $view->with('pinnedMenuItemIds', $pinnedIds);
+            $view->with('pins', $pins);
         });
     }
 }

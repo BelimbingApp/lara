@@ -15,6 +15,6 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.ai.playground');
     Volt::route('admin/ai/providers', 'ai.providers')
         ->name('admin.ai.providers');
-    Volt::route('admin/ai/tools', 'ai.tools')
+    Volt::route('admin/ai/tools/{toolName?}', 'ai.tools')
         ->name('admin.ai.tools');
 });

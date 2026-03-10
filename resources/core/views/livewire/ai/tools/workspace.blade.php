@@ -41,22 +41,19 @@ new class extends Component
         ];
     }
 
-    public function backToCatalog(): void
-    {
-        $this->dispatch('tool-back-to-catalog');
-    }
 }; ?>
 
 <div>
     {{-- Breadcrumb navigation --}}
     <div class="mb-4">
-        <button
-            wire:click="backToCatalog"
+        <a
+            href="{{ route('admin.ai.tools') }}"
+            wire:navigate
             class="inline-flex items-center gap-1.5 text-sm text-muted hover:text-ink transition-colors"
         >
             <x-icon name="heroicon-o-chevron-left" class="w-4 h-4" />
             {{ __('Back to Tools') }}
-        </button>
+        </a>
     </div>
 
     @if($metadata)
@@ -64,7 +61,19 @@ new class extends Component
         <div class="mb-6">
             <div class="flex items-start justify-between gap-4">
                 <div>
-                    <h2 class="text-xl font-semibold text-ink">{{ $metadata->displayName }}</h2>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-semibold text-ink">{{ $metadata->displayName }}</h2>
+                        <button
+                            type="button"
+                            x-data="{ pinData: {{ json_encode(['pinnableId' => 'ai.tools.' . $toolName, 'label' => __('Administration') . '/' . __('AI') . '/' . __('Tools') . '/' . $metadata->displayName, 'url' => route('admin.ai.tools', ['toolName' => $toolName])], JSON_UNESCAPED_SLASHES) }} }"
+                            @click="$dispatch('toggle-page-pin', pinData)"
+                            class="inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted hover:text-accent transition-colors"
+                            title="{{ __('Pin to sidebar') }}"
+                            aria-label="{{ __('Pin :page to sidebar', ['page' => $metadata->displayName]) }}"
+                        >
+                            <x-icon name="heroicon-o-pin" class="w-4 h-4" />
+                        </button>
+                    </div>
                     <p class="text-sm text-muted mt-1">{{ $metadata->summary }}</p>
                 </div>
                 <div class="flex items-center gap-2 shrink-0">

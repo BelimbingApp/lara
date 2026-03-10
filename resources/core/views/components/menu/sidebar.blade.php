@@ -1,62 +1,141 @@
-@props(['menuTree', 'menuItemsFlat' => [], 'pinnedMenuItemIds' => []])
+@props(['menuTree', 'menuItemsFlat' => [], 'pins' => []])
 
 <aside
     {{ $attributes->class([
         'shrink-0 bg-surface-sidebar h-full w-full flex flex-col border-r border-border-default',
     ]) }}
+    @toggle-page-pin.window="togglePagePin($event.detail)"
+    @pins-synced.window="pins = $event.detail.pins"
     x-data="{
-        pinnedIds: @js($pinnedMenuItemIds),
-        _pinBusy: false,
+        pins: @js($pins),
         _dragIdx: null,
         _dropIdx: null,
 
+        get pinnedIds() {
+            return this.pins.map(p => p.pinnable_id);
+        },
+
         isPinned(id) {
-            return this.pinnedIds.includes(id);
+            return this.pins.some(p => p.pinnable_id === id);
+        },
+
+        _acquireLock() {
+            if (window.__pinBusy) return false;
+            window.__pinBusy = true;
+            return true;
+        },
+        _releaseLock() { window.__pinBusy = false; },
+        _syncPins(pins) {
+            this.pins = pins;
+            window.dispatchEvent(new CustomEvent('pins-synced', { detail: { pins } }));
         },
 
         togglePin(id) {
-            if (this._pinBusy) return;
+            if (!this._acquireLock()) return;
 
             {{-- Optimistic UI: update Alpine state immediately --}}
             const wasPinned = this.isPinned(id);
+            const prevPins = [...this.pins];
             if (wasPinned) {
-                this.pinnedIds = this.pinnedIds.filter(i => i !== id);
+                this.pins = this.pins.filter(p => p.pinnable_id !== id);
             } else {
-                this.pinnedIds.push(id);
+                const item = this.menuItemsFlat[id];
+                if (item) {
+                    this.pins.push({
+                        type: 'menu_item',
+                        pinnable_id: id,
+                        label: item.pinLabel,
+                        url: item.href,
+                        icon: item.icon,
+                    });
+                }
             }
 
             {{-- Persist via API --}}
-            this._pinBusy = true;
-            fetch('{{ route('pinned-menu-items.toggle') }}', {
+            const item = this.menuItemsFlat[id];
+            fetch('{{ route('pins.toggle') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
                     'Accept': 'application/json',
                 },
-                body: JSON.stringify({ menu_item_id: id }),
+                body: JSON.stringify({
+                    type: 'menu_item',
+                    pinnable_id: id,
+                    label: item?.pinLabel ?? id,
+                    url: item?.href ?? '',
+                    icon: item?.icon ?? null,
+                }),
             })
             .then(r => r.ok ? r.json() : Promise.reject(r))
-            .then(data => {
-                {{-- Reconcile with server truth --}}
-                this.pinnedIds = data.pinnedIds;
+            .then(data => { this._syncPins(data.pins); })
+            .catch(() => { this._syncPins(prevPins); })
+            .finally(() => { this._releaseLock(); });
+        },
+
+        {{-- Unpin from sidebar: send the pin's type so the API finds the correct row (menu_item vs page). --}}
+        unpinFromSidebar(pin) {
+            if (!this._acquireLock()) return;
+
+            const prevPins = [...this.pins];
+            this.pins = this.pins.filter(p => p.pinnable_id !== pin.pinnable_id || p.type !== pin.type);
+
+            fetch('{{ route('pins.toggle') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({
+                    type: pin.type,
+                    pinnable_id: pin.pinnable_id,
+                    label: pin.label,
+                    url: pin.url,
+                    icon: pin.icon ?? null,
+                }),
             })
-            .catch(() => {
-                {{-- Rollback on failure --}}
-                if (wasPinned) {
-                    this.pinnedIds.push(id);
-                } else {
-                    this.pinnedIds = this.pinnedIds.filter(i => i !== id);
-                }
+            .then(r => r.ok ? r.json() : Promise.reject(r))
+            .then(data => { this._syncPins(data.pins); })
+            .catch(() => { this._syncPins(prevPins); })
+            .finally(() => { this._releaseLock(); });
+        },
+
+        togglePagePin(detail) {
+            if (!this._acquireLock()) return;
+
+            const { pinnableId, label, url, icon } = detail;
+            const wasPinned = this.isPinned(pinnableId);
+            const prevPins = [...this.pins];
+
+            if (wasPinned) {
+                this.pins = this.pins.filter(p => p.pinnable_id !== pinnableId);
+            } else {
+                this.pins.push({ type: 'page', pinnable_id: pinnableId, label, url, icon: icon ?? null });
+            }
+
+            fetch('{{ route('pins.toggle') }}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content ?? '',
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ type: 'page', pinnable_id: pinnableId, label, url, icon: icon ?? null }),
             })
-            .finally(() => { this._pinBusy = false; });
+            .then(r => r.ok ? r.json() : Promise.reject(r))
+            .then(data => { this._syncPins(data.pins); })
+            .catch(() => { this._syncPins(prevPins); })
+            .finally(() => { this._releaseLock(); });
         },
 
         reorderPins(orderedIds) {
-            {{-- Optimistic UI: update order immediately --}}
-            this.pinnedIds = orderedIds;
+            {{-- Optimistic UI: reorder pins array to match --}}
+            const pinMap = Object.fromEntries(this.pins.map(p => [p.pinnable_id, p]));
+            this.pins = orderedIds.map(id => pinMap[id]).filter(Boolean);
 
-            fetch('{{ route('pinned-menu-items.reorder') }}', {
+            fetch('{{ route('pins.reorder') }}', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -67,7 +146,7 @@
             })
             .then(r => r.ok ? r.json() : Promise.reject(r))
             .then(data => {
-                this.pinnedIds = data.pinnedIds;
+                this.pins = data.pins;
             })
             .catch(() => {
                 {{-- Silently keep optimistic order on failure --}}
@@ -107,11 +186,13 @@
     }"
 >
     {{-- Pinned section (above divider) --}}
-    <template x-if="pinnedIds.length > 0">
-        <div class="px-0.5 py-0.5">
-            <template x-for="(id, idx) in pinnedIds" :key="'pinned-' + id">
+    <template x-if="pins.length > 0">
+        <div class="px-0.5 py-0.5 bg-surface-pinned rounded-sm">
+            <div x-show="!sidebarRail" x-cloak class="px-1 pt-0.5 pb-px">
+                <span class="text-[10px] uppercase tracking-wider text-muted font-medium select-none">{{ __('Pinned') }}</span>
+            </div>
+            <template x-for="(pin, idx) in pins" :key="'pinned-' + pin.pinnable_id">
                     <div
-                        x-show="menuItemsFlat[id]"
                         :draggable="!sidebarRail"
                         @dragstart="!sidebarRail && pinDragStart(idx, $event)"
                         @dragover.prevent="!sidebarRail && pinDragOver(idx, $event)"
@@ -126,12 +207,11 @@
                         <a
                             x-show="sidebarRail"
                             x-cloak
-                            :href="menuItemsFlat[id]?.href"
-                            :title="menuItemsFlat[id]?.label"
-                            :aria-label="menuItemsFlat[id]?.label"
+                            :href="pin.url"
+                            :title="pin.label"
+                            :aria-label="pin.label"
                             class="flex items-center justify-center w-full h-8 rounded-none transition text-link hover:bg-surface-subtle"
                         >
-                            {{-- Dynamic icon not possible with x-icon server component; use pin icon as fallback --}}
                             <x-icon name="heroicon-o-pin" class="w-[1.125rem] h-[1.125rem]" />
                         </a>
 
@@ -148,14 +228,14 @@
                                 aria-hidden="true"
                             >&#x2801;&#x2801;</span>
                             <a
-                                :href="menuItemsFlat[id]?.href"
+                                :href="pin.url"
                                 class="truncate flex-1"
-                                x-text="menuItemsFlat[id]?.label"
+                                x-text="pin.label"
                                 @click.stop
                             ></a>
                             <button
                                 type="button"
-                                @click.prevent.stop="togglePin(id)"
+                                @click.prevent.stop="unpinFromSidebar(pin)"
                                 class="shrink-0 w-4 h-4 text-muted hover:text-ink opacity-0 group-hover:opacity-100 transition-opacity"
                                 :title="'{{ __('Unpin') }}'"
                             >

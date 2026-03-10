@@ -352,7 +352,7 @@ new class extends AbstractAddressForm
     <x-slot name="title">{{ $company->name }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="$company->name" :subtitle="$company->legal_name">
+        <x-ui.page-header :title="$company->name" :subtitle="$company->legal_name" :pinnable="['pinnableId' => 'companies.' . $company->id, 'label' => __('Administration') . '/' . __('Companies') . '/' . $company->name, 'url' => route('admin.companies.show', $company)]">
             <x-slot name="actions">
                 <a href="{{ route('admin.companies.index') }}" wire:navigate class="inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-accent hover:bg-surface-subtle transition-colors">
                     <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
