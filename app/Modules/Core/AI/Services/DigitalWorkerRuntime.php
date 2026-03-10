@@ -48,23 +48,11 @@ class DigitalWorkerRuntime
 
         // Fall back to company default when no workspace config exists
         if ($configs === []) {
-            $employee = \App\Modules\Core\Employee\Models\Employee::query()->find($employeeId);
-            $companyId = $employee?->company_id ? (int) $employee->company_id : null;
-
-            if ($companyId !== null) {
-                $default = $this->configResolver->resolveDefault($companyId);
-
-                if ($default !== null) {
-                    $configs = [$default];
-                }
-            }
+            $configs = $this->resolveDefaultConfigsForEmployee($employeeId);
         }
 
-        if (count($configs) === 0) {
-            $result = $this->errorResult($runId, 'unknown', 0, __('No LLM configuration available.'));
-            $result['meta']['fallback_attempts'] = [];
-
-            return $result;
+        if ($configs === []) {
+            return $this->noLlmConfigResult($runId);
         }
 
         $lastResult = null;
@@ -92,15 +80,43 @@ class DigitalWorkerRuntime
         }
 
         if ($lastResult === null) {
-            $result = $this->errorResult($runId, 'unknown', 0, __('No LLM configuration available.'));
-            $result['meta']['fallback_attempts'] = [];
-
-            return $result;
+            return $this->noLlmConfigResult($runId);
         }
 
         $lastResult['meta']['fallback_attempts'] = $fallbackAttempts;
 
         return $lastResult;
+    }
+
+    /**
+     * Resolve fallback configs using the employee's company default provider.
+     *
+     * Returns an empty list when employee lookup fails or no default exists.
+     *
+     * @param  int  $employeeId  Digital Worker employee ID
+     * @return list<array{api_key: string, base_url: string, model: string, max_tokens: int, temperature: float, timeout: int, provider_name: string|null}>
+     */
+    private function resolveDefaultConfigsForEmployee(int $employeeId): array
+    {
+        try {
+            $employee = \App\Modules\Core\Employee\Models\Employee::query()->find($employeeId);
+        } catch (\Throwable) {
+            return [];
+        }
+
+        $companyId = $employee?->company_id ? (int) $employee->company_id : null;
+
+        if ($companyId === null) {
+            return [];
+        }
+
+        $default = $this->configResolver->resolveDefault($companyId);
+
+        if ($default === null) {
+            return [];
+        }
+
+        return [$default];
     }
 
     /**

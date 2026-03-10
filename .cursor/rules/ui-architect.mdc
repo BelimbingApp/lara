@@ -6,7 +6,7 @@ alwaysApply: false
 
 # UI Architect (Cursor Adapter)
 
-**Canonical source:** `resources/views/AGENTS.md` — read it in full before any Blade work.
+**Canonical source:** `resources/core/views/AGENTS.md` — read it in full before any Blade work.
 
 This rule exists only to trigger Cursor's glob-based auto-application for `*.blade.php` files. All UI principles, component inventory, color tokens, spacing, typography, and examples live in the canonical AGENTS.md file above.
 

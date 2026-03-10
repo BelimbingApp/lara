@@ -26,7 +26,7 @@ return new class extends Migration
             $table->string('country');
             $table->string('capital')->nullable();
             $table->float('area')->nullable();
-            $table->unsignedBigInteger('population')->nullable();
+            $table->unsignedBigInteger('population')->default(0);
             $table->string('continent', 2)->index();
             $table->string('tld', 3)->nullable();
             $table->string('currency_code', 3)->nullable();

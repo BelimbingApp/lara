@@ -3,11 +3,13 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Modules\Core\Geonames\Livewire\Admin1\Index as Admin1Index;
+use App\Modules\Core\Geonames\Livewire\Countries\Index as CountriesIndex;
+use App\Modules\Core\Geonames\Livewire\Postcodes\Index as PostcodesIndex;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
-    Volt::route('admin/geonames/countries', 'admin.geonames.countries.index')->name('admin.geonames.countries.index');
-    Volt::route('admin/geonames/admin1', 'admin.geonames.admin1.index')->name('admin.geonames.admin1.index');
-    Volt::route('admin/geonames/postcodes', 'admin.geonames.postcodes.index')->name('admin.geonames.postcodes.index');
+    Route::get('admin/geonames/countries', CountriesIndex::class)->name('admin.geonames.countries.index');
+    Route::get('admin/geonames/admin1', Admin1Index::class)->name('admin.geonames.admin1.index');
+    Route::get('admin/geonames/postcodes', PostcodesIndex::class)->name('admin.geonames.postcodes.index');
 });

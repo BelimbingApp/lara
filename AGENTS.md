@@ -3,7 +3,7 @@
 ## 1. Project Context
 Belimbing (BLB) is an enterprise-grade **framework** built on Laravel, leveraging the TALL stack evolution:
 - **Framework:** Laravel 12+
-- **Frontend/Logic:** Livewire Volt + Tailwind CSS + Alpine.js
+- **Frontend/Logic:** Livewire + Tailwind CSS + Alpine.js
 - **Testing:** Pest PHP
 - **Linting:** Laravel Pint
 - **Dependencies:** Use the latest available versions for all packages and dependencies.
@@ -296,11 +296,11 @@ This project uses nested AGENTS.md files for specialized guidance. Agents should
 
 | Scope | File | Covers |
 |-------|------|--------|
-| UI / Blade | `resources/views/AGENTS.md` | Component-first design, semantic tokens, spacing, typography, accessibility, i18n, performance, component inventory |
+| UI / Blade | `resources/core/views/AGENTS.md` | Component-first design, semantic tokens, spacing, typography, accessibility, i18n, performance, component inventory |
 | Database | `app/Base/Database/AGENTS.md` | Module-aware migrations, seeder registry, ID standards, development workflow |
 | Docs | `docs/AGENTS.md` | Documentation directory structure and placement |
 
-**Cursor users:** `.cursor/rules/ui-architect.mdc` is a thin adapter that triggers on `*.blade.php` and references `resources/views/AGENTS.md`. The AGENTS.md file is the canonical source; do not duplicate rules in `.cursor/rules/`.
+**Cursor users:** `.cursor/rules/ui-architect.mdc` is a thin adapter that triggers on `*.blade.php` and references `resources/core/views/AGENTS.md`. The AGENTS.md file is the canonical source; do not duplicate rules in `.cursor/rules/`.
 
 ## 7. Worktree Strategy
 

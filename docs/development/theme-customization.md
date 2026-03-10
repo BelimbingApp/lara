@@ -25,7 +25,7 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 
 ### Default Theme
 
-**File:** `resources/css/app.css`
+**File:** `resources/core/css/tokens.css`
 
 ```css
 @theme {
@@ -48,7 +48,7 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 
 ### Customization Example
 
-**Create:** `resources/css/theme-overrides.css` (adopter-specific)
+**Create:** `resources/{licensee}/css/tokens.css` (adopter-specific, e.g. `resources/custom/css/tokens.css`)
 
 ```css
 @theme {
@@ -65,11 +65,11 @@ Tailwind CSS v4 uses CSS custom properties (`@theme`) for theming. BLB exposes t
 }
 ```
 
-**Import in:** `resources/css/app.css`
+**Import in:** `resources/app.css`
 
 ```css
 @import 'tailwindcss';
-@import './theme-overrides.css';  /* Adopter overrides */
+@import './{licensee}/css/tokens.css';  /* Adopter overrides */
 ```
 
 ### What Can Be Customized
@@ -110,9 +110,9 @@ Laravel's component resolution checks **adopter directories first**, then framew
 ### Resolution Order
 
 ```
-1. resources/views/components/ui/button.blade.php  (adopter)
-2. app/View/Components/Ui/Button.php               (adopter class-based)
-3. [BLB framework components]                      (fallback)
+1. resources/{licensee}/views/components/ui/button.blade.php  (adopter)
+2. app/View/Components/Ui/Button.php                          (adopter class-based)
+3. [BLB framework components]                                 (fallback)
 ```
 
 ### Customization Example
@@ -121,7 +121,7 @@ Laravel's component resolution checks **adopter directories first**, then framew
 
 **BLB Default:** Uses blue-600 for primary buttons
 
-**Adopter Override:** Create `resources/views/components/ui/button.blade.php`
+**Adopter Override:** Create `resources/{licensee}/views/components/ui/button.blade.php`
 
 ```blade
 @props([
@@ -159,20 +159,20 @@ $sizeClasses = match($size) {
 ### What Can Be Overridden
 
 **UI Components:**
-- `resources/views/components/ui/button.blade.php`
-- `resources/views/components/ui/card.blade.php`
-- `resources/views/components/ui/input.blade.php`
-- `resources/views/components/ui/modal.blade.php`
+- `resources/core/views/components/ui/button.blade.php`
+- `resources/core/views/components/ui/card.blade.php`
+- `resources/core/views/components/ui/input.blade.php`
+- `resources/core/views/components/ui/modal.blade.php`
 - All other `<x-ui.*>` components
 
 **Layout Components:**
-- `resources/views/components/layouts/top-bar.blade.php`
-- `resources/views/components/layouts/status-bar.blade.php`
-- `resources/views/components/menu/sidebar.blade.php`
+- `resources/core/views/components/layouts/top-bar.blade.php`
+- `resources/core/views/components/layouts/status-bar.blade.php`
+- `resources/core/views/components/menu/sidebar.blade.php`
 
 **Menu Rendering:**
-- `resources/views/components/menu/item.blade.php`
-- `resources/views/components/menu/tree.blade.php`
+- `resources/core/views/components/menu/item.blade.php`
+- `resources/core/views/components/menu/tree.blade.php`
 
 **Benefits:**
 - ✅ Complete control over component structure
@@ -219,7 +219,7 @@ BLB uses Tailwind's dark mode with class strategy (`class="dark"`).
 
 ### Customizing Dark Mode Colors
 
-Override dark mode colors in `resources/css/app.css`:
+Override dark mode colors in `resources/{licensee}/css/tokens.css`:
 
 ```css
 @theme {
@@ -242,7 +242,7 @@ Then use: `bg-dark-bg dark:bg-dark-bg` or `text-zinc-900 dark:text-dark-text`
 
 ### Example: Purple Brand Theme
 
-**Step 1: Override colors** (`resources/css/theme-overrides.css`)
+**Step 1: Override colors** (`resources/{licensee}/css/tokens.css`)
 
 ```css
 @theme {
@@ -254,7 +254,7 @@ Then use: `bg-dark-bg dark:bg-dark-bg` or `text-zinc-900 dark:text-dark-text`
 }
 ```
 
-**Step 2: Override button component** (`resources/views/components/ui/button.blade.php`)
+**Step 2: Override button component** (`resources/{licensee}/views/components/ui/button.blade.php`)
 
 ```blade
 @props(['variant' => 'primary'])
@@ -314,8 +314,8 @@ Merge conflicts resolved
 ```
 
 **Customization files (adopter-owned):**
-- `resources/css/theme-overrides.css`
-- `resources/views/components/ui/*.blade.php` (overrides)
+- `resources/{licensee}/css/tokens.css`
+- `resources/{licensee}/views/components/ui/*.blade.php` (overrides)
 - `config/theme.php` (if created)
 
 **BLB framework files:**
@@ -371,7 +371,7 @@ php artisan vendor:publish --tag=acme-theme
 
 ### Example 3: Custom Button Style
 
-**Override:** `resources/views/components/ui/button.blade.php`
+**Override:** `resources/{licensee}/views/components/ui/button.blade.php`
 
 ```blade
 {{-- Adopter: Larger, pill-shaped buttons for accessibility --}}

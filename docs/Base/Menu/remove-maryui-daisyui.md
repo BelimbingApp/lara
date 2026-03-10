@@ -101,7 +101,7 @@ Implemented auto-discovered menu system while removing UI library dependencies.
 
 ### 3. New UI Component Library
 
-**Created:** `resources/views/components/ui/`
+**Created:** `resources/core/views/components/ui/`
 
 - `button.blade.php` - Variants: primary, secondary, danger, ghost, outline
 - `card.blade.php` - Card containers with optional title
@@ -136,17 +136,17 @@ Implemented auto-discovered menu system while removing UI library dependencies.
 ```
 
 **Files Created:**
-- `resources/views/components/layouts/top-bar.blade.php`
-- `resources/views/components/layouts/status-bar.blade.php`
+- `resources/core/views/components/layouts/top-bar.blade.php`
+- `resources/core/views/components/layouts/status-bar.blade.php`
 
 **Files Modified:**
-- `resources/views/components/layouts/app.blade.php` - Complete restructure
+- `resources/core/views/components/layouts/app.blade.php` - Complete restructure
 
 ---
 
 ### 5. Menu Components
 
-**Created:** `resources/views/components/menu/`
+**Created:** `resources/core/views/components/menu/`
 
 - `sidebar.blade.php` - Sidebar container with menu tree and footer
 - `tree.blade.php` - Recursive tree renderer
@@ -187,17 +187,17 @@ Implemented auto-discovered menu system while removing UI library dependencies.
 ### 7. Views Updated
 
 **Layouts:**
-- `resources/views/components/layouts/app.blade.php` - Full restructure
-- `resources/views/components/layouts/auth.blade.php` - Tailwind classes
+- `resources/core/views/components/layouts/app.blade.php` - Full restructure
+- `resources/core/views/components/layouts/auth.blade.php` - Tailwind classes
 
 **Pages:**
-- `resources/views/dashboard.blade.php` - Plain Tailwind cards
-- `resources/views/placeholder.blade.php` - Created for menu testing
+- `resources/core/views/dashboard.blade.php` - Plain Tailwind cards
+- `resources/core/views/placeholder.blade.php` - Created for menu testing
 
 **Livewire Components:**
-- `resources/views/livewire/users/*.blade.php` - All user management views
-- `resources/views/livewire/settings/*.blade.php` - All settings views
-- `resources/views/livewire/auth/*.blade.php` - All auth views
+- `resources/core/views/livewire/users/*.blade.php` - All user management views
+- `resources/core/views/livewire/settings/*.blade.php` - All settings views
+- `resources/core/views/livewire/auth/*.blade.php` - All auth views
 
 **All replaced:** MaryUI components → plain Tailwind or `<x-ui.*>` components
 
@@ -205,7 +205,7 @@ Implemented auto-discovered menu system while removing UI library dependencies.
 
 ### 8. CSS Cleanup
 
-**File:** `resources/css/app.css`
+**Files:** `resources/app.css` (entry point), `resources/core/css/tokens.css`, `resources/core/css/components.css`
 
 **Removed:**
 - `@plugin "daisyui"`

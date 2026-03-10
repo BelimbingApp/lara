@@ -5,14 +5,16 @@
 
 namespace App\Modules\Core\AI\Services;
 
+use App\Base\AI\Services\KnowledgeNavigator;
+use App\Base\AI\Services\ModelCatalogQueryService;
 use App\Base\Foundation\Exceptions\BlbDataContractException;
 use Illuminate\Support\Str;
 
 class LaraOrchestrationService
 {
     public function __construct(
-        private readonly LaraModelCatalogQueryService $modelCatalogQuery,
-        private readonly LaraKnowledgeNavigator $knowledgeNavigator,
+        private readonly ModelCatalogQueryService $modelCatalogQuery,
+        private readonly KnowledgeNavigator $knowledgeNavigator,
         private readonly LaraCapabilityMatcher $capabilityMatcher,
         private readonly LaraTaskDispatcher $taskDispatcher,
         private readonly LaraNavigationRouter $navigationRouter,

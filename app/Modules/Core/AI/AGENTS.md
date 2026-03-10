@@ -44,5 +44,5 @@ Core AI reads catalog data from `app/Base/AI/Services/ModelCatalogService`. It d
 
 ## UI Pages
 
-- `resources/views/livewire/ai/providers.blade.php` — Provider catalog wizard + CRUD management
-- `resources/views/livewire/ai/playground.blade.php` — DW chat playground + LLM config assignment
+- `resources/core/views/livewire/ai/providers.blade.php` — Provider catalog wizard + CRUD management
+- `resources/core/views/livewire/ai/playground.blade.php` — DW chat playground + LLM config assignment

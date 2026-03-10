@@ -61,6 +61,19 @@ it('returns empty fallback_attempts on first model success', function (): void {
         ->and($result['meta']['llm']['model'])->toBe('gpt-4o');
 });
 
+it('returns no-configuration error when no workspace and default config are available', function (): void {
+    $configResolver = Mockery::mock(ConfigResolver::class);
+    stubResolvedConfigs($configResolver, []);
+
+    $llmClient = Mockery::mock(LlmClient::class);
+
+    $result = runRuntimeConversation($configResolver, $llmClient);
+
+    expect($result['content'])->toContain('No LLM configuration available.')
+        ->and($result['meta']['provider_name'])->toBe('unknown')
+        ->and($result['meta']['fallback_attempts'])->toBeEmpty();
+});
+
 it('collects fallback attempt entries on transient failures before success', function (): void {
     $configResolver = Mockery::mock(ConfigResolver::class);
     stubResolvedConfigs($configResolver, [

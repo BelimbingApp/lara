@@ -4,7 +4,7 @@
 **Scope:** Digital Worker tool catalog, setup, testing, health, and governance UI
 **Status:** Proposed
 **Last Updated:** 2026-03-09
-**Related:** `docs/architecture/dw-tools-blueprint.md`, `docs/architecture/ai-digital-worker.md`, `docs/architecture/lara-system-dw.md`, `resources/views/livewire/ai/providers/manager.blade.php`
+**Related:** `docs/architecture/dw-tools-blueprint.md`, `docs/architecture/ai-digital-worker.md`, `docs/architecture/lara-system-dw.md`, `resources/core/views/livewire/ai/providers/manager.blade.php`
 
 ## 1. Problem Essence
 

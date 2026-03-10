@@ -22,7 +22,7 @@ Vite plays several critical roles in the development workflow. Understanding the
 
 ### Key Features
 
-- **Serves Source Files:** Instead of compiling assets upfront, Vite serves your raw source files (`resources/css/app.css`, `resources/js/app.js`)
+- **Serves Source Files:** Instead of compiling assets upfront, Vite serves your raw source files (`resources/app.css`, `resources/core/js/app.js`)
 - **On-Demand Compilation:** Files are compiled only when requested, resulting in near-instant server startup
 - **Direct Import Support:** Modern JavaScript features (ES modules, TypeScript) work without bundling
 - **Port Configuration:** Runs on port 5173 (dev) or 5174 (staging) and is accessible only on localhost
@@ -51,8 +51,8 @@ This means when your browser requests a JavaScript file, Caddy receives the HTTP
 ### Processing Pipeline
 
 ```
-resources/css/app.css → TailwindCSS Plugin → PostCSS → Browser-ready CSS
-resources/js/app.js → ES Module Processing → Browser-ready JS
+resources/app.css → TailwindCSS Plugin → PostCSS → Browser-ready CSS
+resources/core/js/app.js → ES Module Processing → Browser-ready JS
 ```
 
 Each step in the pipeline transforms your source code into browser-compatible code. This happens automatically when files are requested, ensuring fast development iterations.
@@ -66,14 +66,14 @@ Each step in the pipeline transforms your source code into browser-compatible co
 ### How HMR Works
 
 - **WebSocket Connection:** Maintains a persistent WebSocket connection (`wss://dev.lara.blb`) to the browser
-- **Change Detection:** Watches file system for changes in `resources/css/`, `resources/js/`, and `resources/views/`
+- **Change Detection:** Watches file system for changes in `resources/core/css/`, `resources/core/js/`, and `resources/core/views/`
 - **Selective Updates:** Updates only the changed modules, preserving application state when possible
 - **Full Page Reload Fallback:** Falls back to full page reload when HMR isn't possible (e.g., for Blade template changes)
 
 ### HMR Flow
 
 ```
-1. Developer edits resources/css/app.css
+1. Developer edits resources/core/css/tokens.css
 2. Vite detects file change
 3. Vite recompiles changed CSS
 4. Vite sends update signal via WebSocket
@@ -97,7 +97,7 @@ The beauty of HMR is that it preserves your application state. If you have a for
 ### Refresh Flow
 
 ```
-1. Developer edits resources/views/welcome.blade.php
+1. Developer edits resources/core/views/welcome.blade.php
 2. Laravel Vite Plugin detects change
 3. Vite sends refresh signal via WebSocket
 4. Browser performs full page reload
@@ -122,11 +122,11 @@ Unlike CSS/JS changes which can use HMR, Blade templates require a full page rel
 
 ```php
 // In Blade template:
-@vite(['resources/css/app.css', 'resources/js/app.js'])
+@vite(['resources/app.css', 'resources/core/js/app.js'])
 
 // Development output:
 <script type="module" src="https://dev.lara.blb/build/@vite/client"></script>
-<script type="module" src="https://dev.lara.blb/build/resources/js/app.js"></script>
+<script type="module" src="https://dev.lara.blb/build/resources/core/js/app.js"></script>
 
 // Production output:
 <link rel="stylesheet" href="/build/assets/app-abc123.css">

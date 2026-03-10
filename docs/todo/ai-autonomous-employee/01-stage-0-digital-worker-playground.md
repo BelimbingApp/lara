@@ -175,9 +175,9 @@ Module: `app/Modules/Core/AI/`
     - playground UI only lists Digital Workers supervised by the current user
     - capability-specific middleware (`ai.provider.manage`, `ai.digital_worker.configure_llm`) is planned
 
-## 5. Frontend Deliverables (Volt/Livewire)
+## 5. Frontend Deliverables (Livewire)
 
-1. Volt page component for playground shell
+1. Livewire page component for playground shell
 2. DW tab bar (switch between supervised Digital Workers)
 3. Session list (left panel)
 4. Chat timeline (main panel)
@@ -235,7 +235,7 @@ Behavior requirements:
 2. File-based services (`SessionManager`, `MessageManager`)
 3. Authorization policy boundaries (Digital Worker chained to human, scope by supervisor)
 4. Runtime adapter (OpenAI-compatible via HTTP client)
-5. Routes + Volt UI shell + components
+5. Routes + Livewire UI shell + components
 6. Pest tests + UAT run
 
 ## 10. Future: Memory and Recall

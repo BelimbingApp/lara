@@ -5,13 +5,14 @@
 
 namespace App\Modules\Core\AI\Services;
 
+use App\Base\AI\Services\KnowledgeNavigator;
 use App\Base\Foundation\Providers\ProviderRegistry;
 use App\Modules\Core\AI\Models\AiProvider;
 
 class LaraContextProvider
 {
     public function __construct(
-        private readonly LaraKnowledgeNavigator $knowledgeNavigator,
+        private readonly KnowledgeNavigator $knowledgeNavigator,
     ) {}
 
     /**

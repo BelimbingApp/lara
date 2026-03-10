@@ -467,7 +467,7 @@ Pattern:
 
 ## 11. Expected Call Patterns
 
-1. **Web Controller/Volt Action**
+1. **Web Controller/Livewire Action**
    - `authorize(actor, capability, resource)` before service call.
 2. **Digital Worker Tool Execution**
    - Evaluate as Digital Worker actor with delegation/supervision context.
@@ -501,7 +501,7 @@ Routes are auto-discovered from `app/Base/Authz/Routes/web.php`.
 
 ### 12.3 UI
 
-- **Banner:** `resources/views/components/layouts/impersonation-banner.blade.php` renders a warning-colored bar at the top of the layout when impersonation is active, showing the impersonated user's name and a "Stop Impersonation" button.
+- **Status Bar warning:** When impersonation is active, `resources/core/views/components/layouts/status-bar.blade.php` displays a `text-status-danger` warning with the impersonated user's name and a "Stop Impersonation" button.
 - **Buttons:** Eye icon in the user list (index) and "Impersonate" button on the user show page. Hidden when viewing yourself or when already impersonating.
 
 ### 12.4 Constraints (v1)

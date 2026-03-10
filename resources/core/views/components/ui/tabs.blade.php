@@ -1,0 +1,176 @@
+{{--
+    Tabs: accessible page-level tab switcher with URL hash persistence.
+
+    Props:
+        tabs     — Array of tab definitions: [['id' => 'general', 'label' => 'General'], ...]
+                   Each item must have 'id' and 'label'; optional 'icon' for a Heroicon name.
+        default  — ID of the initially active tab (falls back to first tab)
+        variant  — Visual style: 'underline' (default) or 'pill'
+
+    Usage:
+        <x-ui.tabs :tabs="[
+            ['id' => 'general', 'label' => __('General')],
+            ['id' => 'addresses', 'label' => __('Addresses')],
+            ['id' => 'contacts', 'label' => __('Contacts'), 'icon' => 'heroicon-o-user-group'],
+        ]" default="general">
+            <x-ui.tab id="general">
+                General tab content...
+            </x-ui.tab>
+            <x-ui.tab id="addresses">
+                Addresses tab content...
+            </x-ui.tab>
+            <x-ui.tab id="contacts">
+                Contacts tab content...
+            </x-ui.tab>
+        </x-ui.tabs>
+
+    ARIA: WAI-ARIA Tabs Pattern (tablist, tab, tabpanel roles, arrow key navigation).
+    URL hash: Active tab is reflected in the URL hash (#tab-id) and restored on page load.
+--}}
+@props([
+    'tabs' => [],
+    'default' => null,
+    'variant' => 'underline',
+])
+
+@php
+    use Illuminate\Support\Str;
+
+    $tabsId = 'tabs-' . Str::random(8);
+    $defaultTab = $default ?? ($tabs[0]['id'] ?? null);
+
+    $variantClasses = match($variant) {
+        'pill' => [
+            'list' => 'flex gap-1 p-1 rounded-2xl bg-surface-subtle',
+            'tab' => 'px-3.5 py-1.5 text-sm font-medium rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-1',
+            'active' => 'bg-surface-card text-ink shadow-sm',
+            'inactive' => 'text-muted hover:text-ink',
+        ],
+        default => [
+            'list' => 'flex gap-0 border-b border-border-default',
+            'tab' => 'relative px-3.5 py-2 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-accent focus:ring-inset',
+            'active' => 'text-ink',
+            'inactive' => 'text-muted hover:text-ink',
+        ],
+    };
+@endphp
+
+<div
+    {{ $attributes->class([]) }}
+    x-data="{
+        activeTab: null,
+        tabs: @js(collect($tabs)->pluck('id')->values()->all()),
+        defaultTab: @js($defaultTab),
+        prefix: '{{ $tabsId }}',
+
+        init() {
+            const hash = window.location.hash?.slice(1)
+            this.activeTab = (hash && this.tabs.includes(hash)) ? hash : this.defaultTab
+
+            {{-- Listen for hash changes (e.g., back/forward navigation) --}}
+            this._onHashChange = () => {
+                const h = window.location.hash?.slice(1)
+                if (h && this.tabs.includes(h)) {
+                    this.activeTab = h
+                }
+            }
+            window.addEventListener('hashchange', this._onHashChange)
+        },
+
+        destroy() {
+            window.removeEventListener('hashchange', this._onHashChange)
+        },
+
+        select(tabId) {
+            this.activeTab = tabId
+            history.replaceState(null, '', '#' + tabId)
+        },
+
+        isActive(tabId) {
+            return this.activeTab === tabId
+        },
+
+        tabId(id) {
+            return this.prefix + '-tab-' + id
+        },
+
+        panelId(id) {
+            return this.prefix + '-panel-' + id
+        },
+
+        {{-- Keyboard navigation: Arrow Left/Right to cycle, Home/End for first/last --}}
+        onKeydown(event) {
+            const idx = this.tabs.indexOf(this.activeTab)
+            let newIdx = idx
+
+            if (event.key === 'ArrowRight' || event.key === 'ArrowDown') {
+                event.preventDefault()
+                newIdx = (idx + 1) % this.tabs.length
+            } else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') {
+                event.preventDefault()
+                newIdx = (idx - 1 + this.tabs.length) % this.tabs.length
+            } else if (event.key === 'Home') {
+                event.preventDefault()
+                newIdx = 0
+            } else if (event.key === 'End') {
+                event.preventDefault()
+                newIdx = this.tabs.length - 1
+            } else {
+                return
+            }
+
+            this.select(this.tabs[newIdx])
+
+            {{-- Move focus to the newly activated tab button --}}
+            this.$nextTick(() => {
+                const tabEl = this.$refs.tablist?.querySelector('[data-tab-id=\'' + this.tabs[newIdx] + '\']')
+                tabEl?.focus()
+            })
+        }
+    }"
+>
+    {{-- Tab triggers --}}
+    <div
+        x-ref="tablist"
+        role="tablist"
+        @keydown="onKeydown($event)"
+        class="{{ $variantClasses['list'] }}"
+    >
+        @foreach($tabs as $tab)
+            <button
+                type="button"
+                role="tab"
+                data-tab-id="{{ $tab['id'] }}"
+                :id="tabId('{{ $tab['id'] }}')"
+                :aria-selected="isActive('{{ $tab['id'] }}') ? 'true' : 'false'"
+                :aria-controls="panelId('{{ $tab['id'] }}')"
+                :tabindex="isActive('{{ $tab['id'] }}') ? '0' : '-1'"
+                @click="select('{{ $tab['id'] }}')"
+                class="{{ $variantClasses['tab'] }}"
+                :class="isActive('{{ $tab['id'] }}') ? '{{ $variantClasses['active'] }}' : '{{ $variantClasses['inactive'] }}'"
+            >
+                @if(isset($tab['icon']))
+                    <span class="inline-flex items-center gap-1.5">
+                        <x-icon :name="$tab['icon']" class="w-4 h-4" />
+                        <span>{{ $tab['label'] }}</span>
+                    </span>
+                @else
+                    {{ $tab['label'] }}
+                @endif
+
+                {{-- Underline indicator (underline variant only) --}}
+                @if($variant === 'underline')
+                    <span
+                        x-show="isActive('{{ $tab['id'] }}')"
+                        class="absolute bottom-0 inset-x-0 h-0.5 bg-accent rounded-full"
+                    ></span>
+                @endif
+            </button>
+        @endforeach
+    </div>
+
+    {{-- Tab panels (rendered by <x-ui.tab> children) --}}
+    <div class="mt-4">
+        {{ $slot }}
+    </div>
+</div>

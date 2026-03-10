@@ -74,7 +74,7 @@ class CountrySeeder extends Seeder
                 'country' => $parts[4] ?? null,
                 'capital' => $parts[5] ?? null,
                 'area' => ! empty($parts[6]) ? (float) $parts[6] : null,
-                'population' => ! empty($parts[7]) ? (int) $parts[7] : null,
+                'population' => ! empty($parts[7]) ? (int) $parts[7] : 0,
                 'continent' => $parts[8] ?? null,
                 'tld' => $parts[9] ?? null,
                 'currency_code' => $parts[10] ?? null,

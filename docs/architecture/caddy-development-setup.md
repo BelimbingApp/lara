@@ -174,11 +174,11 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/app.css', 'resources/core/js/app.js'],
             refresh: [
-                'resources/views/**',
-                'resources/css/**',
-                'resources/js/**',
+                'resources/core/views/**',
+                'resources/core/css/**',
+                'resources/core/js/**',
             ],
         }),
         tailwindcss(),
@@ -603,7 +603,7 @@ If auto-start is configured:
 
 ### Hot Reloading Mechanism
 
-1. **File Watcher**: Vite watches `resources/css/`, `resources/js/`, `resources/views/`
+1. **File Watcher**: Vite watches `resources/core/css/`, `resources/core/js/`, `resources/core/views/`
 2. **Change Detection**: File system events trigger Vite rebuild
 3. **WebSocket**: Vite HMR uses WebSocket (wss://dev.lara.blb) for notifications
 4. **Browser Update**: Browser receives update signal and reloads changed modules/pages

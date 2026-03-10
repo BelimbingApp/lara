@@ -22,7 +22,7 @@ Planned for:
 | Component | Technology | Location |
 | :--- | :--- | :--- |
 | **WebSocket Server** | Laravel Reverb (`laravel/reverb`) | Runs on port 8080 (`ws://localhost:8080`) |
-| **JS Client** | Laravel Echo + `pusher-js` | `resources/js/echo.js` |
+| **JS Client** | Laravel Echo + `pusher-js` | `resources/core/js/echo.js` |
 | **Broadcasting Driver** | `reverb` | Configured via `BROADCAST_CONNECTION=reverb` in `.env` |
 
 Reverb implements the Pusher protocol, so Echo connects using `pusher-js` under the hood. No external service (Pusher, Ably) is required — everything runs locally.
@@ -117,7 +117,7 @@ All public properties are automatically included in the broadcast payload.
 
 ### Echo Initialization
 
-Echo is initialized in `resources/js/echo.js` and attached to `window.Echo`. It is available globally in any Blade/Livewire view.
+Echo is initialized in `resources/core/js/echo.js` and attached to `window.Echo`. It is available globally in any Blade/Livewire view.
 
 ### Listening with Alpine.js
 

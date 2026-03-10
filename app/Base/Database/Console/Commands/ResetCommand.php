@@ -28,7 +28,7 @@ class ResetCommand extends IlluminateResetCommand
     {
         $this->loadAllModuleMigrations();
 
-        return parent::handle();
+        return (int) parent::handle();
     }
 
     /**

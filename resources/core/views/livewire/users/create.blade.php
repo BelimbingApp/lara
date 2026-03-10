@@ -1,0 +1,80 @@
+<div>
+    <x-slot name="title">{{ __('Create User') }}</x-slot>
+
+    <div class="space-y-section-gap">
+        <x-ui.page-header :title="__('Create User')" :subtitle="__('Add a new user to the system')">
+            <x-slot name="actions">
+                <x-ui.button variant="ghost" as="a" href="{{ route('admin.users.index') }}" wire:navigate>
+                    <x-icon name="heroicon-o-arrow-left" class="w-5 h-5" />
+                    {{ __('Back') }}
+                </x-ui.button>
+            </x-slot>
+        </x-ui.page-header>
+
+        <x-ui.card>
+            <form wire:submit="store" class="space-y-6">
+                <x-ui.select
+                    wire:model="company_id"
+                    label="{{ __('Company') }}"
+                    :error="$errors->first('company_id')"
+                >
+                    <option value="">{{ __('No company') }}</option>
+                    @foreach ($companies as $company)
+                        <option value="{{ $company->id }}">{{ $company->name }}</option>
+                    @endforeach
+                </x-ui.select>
+
+                <x-ui.input
+                    wire:model="name"
+                    label="{{ __('Name') }}"
+                    type="text"
+                    required
+                    autofocus
+                    autocomplete="name"
+                    placeholder="{{ __('Enter user name') }}"
+                    :error="$errors->first('name')"
+                />
+
+                <x-ui.input
+                    wire:model="email"
+                    label="{{ __('Email') }}"
+                    type="email"
+                    required
+                    autocomplete="email"
+                    placeholder="{{ __('Enter email address') }}"
+                    :error="$errors->first('email')"
+                />
+
+                <x-ui.input
+                    wire:model="password"
+                    label="{{ __('Password') }}"
+                    type="password"
+                    required
+                    autocomplete="new-password"
+                    placeholder="{{ __('Enter password') }}"
+                    :error="$errors->first('password')"
+                />
+
+                <x-ui.input
+                    wire:model="password_confirmation"
+                    label="{{ __('Confirm Password') }}"
+                    type="password"
+                    required
+                    autocomplete="new-password"
+                    placeholder="{{ __('Confirm password') }}"
+                    :error="$errors->first('password_confirmation')"
+                />
+
+                <div class="flex items-center gap-4">
+                    <x-ui.button type="submit" variant="primary">
+                        {{ __('Create User') }}
+                    </x-ui.button>
+                    <x-ui.button variant="ghost" as="a" href="{{ route('admin.users.index') }}" wire:navigate>
+                        {{ __('Cancel') }}
+                    </x-ui.button>
+                </div>
+            </form>
+        </x-ui.card>
+    </div>
+</div>
+

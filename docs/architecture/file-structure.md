@@ -221,9 +221,14 @@ app/Base/
 │
 ├── AI/                      # AI infrastructure (stateless)
 │   ├── Config/ai.php        # LLM defaults, provider overlay
-│   ├── Services/            # ModelCatalogService, LlmClient, ProviderDiscoveryService
-│   ├── Console/Commands/    # blb:ai:catalog:sync
-│   └── DTO/                 # Value objects
+│   ├── Contracts/            # Tool interface
+│   ├── Enums/                # ToolCategory, ToolRiskClass
+│   ├── Tools/                # AbstractTool, AbstractActionTool, ToolResult, ToolSchemaBuilder
+│   │   ├── Concerns/         # FormatsProcessResult trait
+│   │   └── Schema/           # ToolSchemaBuilder
+│   ├── Services/             # ModelCatalogService, LlmClient, ProviderDiscoveryService
+│   ├── Console/Commands/     # blb:ai:catalog:sync
+│   └── DTO/                  # Value objects
 │
 ├── Database/                # Database abstraction
 │   ├── MigrationManager.php
@@ -289,7 +294,7 @@ app/Modules/{Layer1}/{Module}/
 ├── Models/                   # Module internals: Eloquent models
 ├── Services/                 # Module internals: business logic
 ├── Controllers/              # Module internals: HTTP controllers
-├── Livewire/                 # Module internals: Livewire Volt components
+├── Livewire/                 # Module internals: Livewire component classes
 ├── Events/                   # Module internals: events
 ├── Listeners/                # Module internals: event listeners
 ├── Hooks/                    # Module internals: extension hooks
@@ -683,7 +688,7 @@ resources/
 │   │   ├── admin.blade.php
 │   │   └── auth.blade.php
 │   │
-│   ├── livewire/            # Livewire Volt components
+│   ├── livewire/            # Livewire component Blade templates
 │   │   ├── admin/
 │   │   ├── modules/
 │   │   └── extensions/

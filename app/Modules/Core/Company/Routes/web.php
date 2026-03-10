@@ -3,18 +3,25 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Modules\Core\Company\Livewire\Companies\Create;
+use App\Modules\Core\Company\Livewire\Companies\Departments;
+use App\Modules\Core\Company\Livewire\Companies\DepartmentTypes;
+use App\Modules\Core\Company\Livewire\Companies\Index;
+use App\Modules\Core\Company\Livewire\Companies\LegalEntityTypes;
+use App\Modules\Core\Company\Livewire\Companies\Relationships;
+use App\Modules\Core\Company\Livewire\Companies\Show;
+use App\Modules\Core\Company\Livewire\Setup\Licensee;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
     // Setup
-    Volt::route('admin/setup/licensee', 'admin.setup.licensee')->name('admin.setup.licensee');
+    Route::get('admin/setup/licensee', Licensee::class)->name('admin.setup.licensee');
 
-    Volt::route('admin/companies', 'companies.index')->name('admin.companies.index');
-    Volt::route('admin/companies/create', 'companies.create')->name('admin.companies.create');
-    Volt::route('admin/companies/legal-entity-types', 'companies.legal-entity-types')->name('admin.companies.legal-entity-types');
-    Volt::route('admin/companies/department-types', 'companies.department-types')->name('admin.companies.department-types');
-    Volt::route('admin/companies/{company}', 'companies.show')->name('admin.companies.show');
-    Volt::route('admin/companies/{company}/relationships', 'companies.relationships')->name('admin.companies.relationships');
-    Volt::route('admin/companies/{company}/departments', 'companies.departments')->name('admin.companies.departments');
+    Route::get('admin/companies', Index::class)->name('admin.companies.index');
+    Route::get('admin/companies/create', Create::class)->name('admin.companies.create');
+    Route::get('admin/companies/legal-entity-types', LegalEntityTypes::class)->name('admin.companies.legal-entity-types');
+    Route::get('admin/companies/department-types', DepartmentTypes::class)->name('admin.companies.department-types');
+    Route::get('admin/companies/{company}', Show::class)->name('admin.companies.show');
+    Route::get('admin/companies/{company}/relationships', Relationships::class)->name('admin.companies.relationships');
+    Route::get('admin/companies/{company}/departments', Departments::class)->name('admin.companies.departments');
 });

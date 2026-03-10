@@ -25,11 +25,12 @@ frontendDomain = frontendDomain || 'local.blb.lara';
 export default defineConfig({
     plugins: [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.js'],
+            input: ['resources/app.css', 'resources/core/js/app.js'],
             refresh: [
-                'resources/views/**',
-                'resources/css/**',
-                'resources/js/**',
+                'resources/core/views/**',
+                'resources/core/css/**',
+                'resources/core/js/**',
+                ...(process.env.VITE_THEME_DIR ? [`resources/${process.env.VITE_THEME_DIR}/**`] : ['resources/custom/**']),
             ],
         }),
         tailwindcss(),

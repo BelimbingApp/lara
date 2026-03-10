@@ -98,7 +98,7 @@ Acceptance:
 ## Stage C - App Integration Surface
 
 Deliverables:
-1. Controller/Volt integration pattern (`authorize(...)`)
+1. Controller/Livewire integration pattern (`authorize(...)`)
 2. Route/API middleware hooks where applicable
 3. `menu.php` capability checks via service
 

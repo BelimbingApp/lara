@@ -4,13 +4,15 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 use App\Modules\Core\Address\Http\Controllers\PostcodeSearchController;
+use App\Modules\Core\Address\Livewire\Addresses\Create;
+use App\Modules\Core\Address\Livewire\Addresses\Index;
+use App\Modules\Core\Address\Livewire\Addresses\Show;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
     Route::get('admin/addresses/postcodes/search', PostcodeSearchController::class)
         ->name('admin.addresses.postcodes.search');
-    Volt::route('admin/addresses', 'addresses.index')->name('admin.addresses.index');
-    Volt::route('admin/addresses/create', 'addresses.create')->name('admin.addresses.create');
-    Volt::route('admin/addresses/{address}', 'addresses.show')->name('admin.addresses.show');
+    Route::get('admin/addresses', Index::class)->name('admin.addresses.index');
+    Route::get('admin/addresses/create', Create::class)->name('admin.addresses.create');
+    Route::get('admin/addresses/{address}', Show::class)->name('admin.addresses.show');
 });

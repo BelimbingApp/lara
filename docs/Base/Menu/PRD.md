@@ -140,7 +140,7 @@
 
 **Framework code:**
 - `app/Base/Menu/`: MenuServiceProvider, MenuRegistry, MenuBuilder, Services/MenuDiscoveryService
-- Blade components: `resources/views/components/menu/{sidebar,tree,item}.blade.php`
+- Blade components: `resources/core/views/components/menu/{sidebar,tree,item}.blade.php`
 
 ---
 

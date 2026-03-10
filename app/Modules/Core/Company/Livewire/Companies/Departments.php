@@ -1,0 +1,87 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Modules\Core\Company\Livewire\Companies;
+
+use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\Company\Models\Department;
+use App\Modules\Core\Company\Models\DepartmentType;
+use Illuminate\Support\Facades\Session;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+class Departments extends Component
+{
+    use WithPagination;
+
+    public Company $company;
+
+    public bool $showCreateModal = false;
+
+    public int $create_department_type_id = 0;
+
+    public string $create_status = 'active';
+
+    public function mount(Company $company): void
+    {
+        $this->company = $company;
+    }
+
+    public function createDepartment(): void
+    {
+        if ($this->create_department_type_id === 0) {
+            return;
+        }
+
+        Department::query()->create([
+            'company_id' => $this->company->id,
+            'department_type_id' => $this->create_department_type_id,
+            'status' => $this->create_status,
+        ]);
+
+        $this->showCreateModal = false;
+        $this->reset(['create_department_type_id', 'create_status']);
+        Session::flash('success', __('Department created.'));
+    }
+
+    public function saveStatus(int $departmentId, string $status): void
+    {
+        if (! in_array($status, ['active', 'inactive', 'suspended'])) {
+            return;
+        }
+
+        $dept = Department::query()->findOrFail($departmentId);
+        $dept->status = $status;
+        $dept->save();
+
+        Session::flash('success', __('Department status updated.'));
+    }
+
+    public function deleteDepartment(int $departmentId): void
+    {
+        Department::query()->findOrFail($departmentId)->delete();
+        Session::flash('success', __('Department deleted.'));
+    }
+
+    public function render(): \Illuminate\Contracts\View\View
+    {
+        $existingTypeIds = Department::query()
+            ->where('company_id', $this->company->id)
+            ->pluck('department_type_id')
+            ->toArray();
+
+        return view('livewire.companies.departments', [
+            'departments' => Department::query()
+                ->where('company_id', $this->company->id)
+                ->with('type')
+                ->paginate(15),
+            'availableTypes' => DepartmentType::query()
+                ->active()
+                ->whereNotIn('id', $existingTypeIds)
+                ->orderBy('name')
+                ->get(),
+        ]);
+    }
+}

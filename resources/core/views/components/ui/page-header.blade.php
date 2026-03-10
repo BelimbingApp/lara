@@ -1,0 +1,64 @@
+<?php
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+?>
+
+@props(['title', 'subtitle' => null, 'actions' => null, 'help' => null, 'pinnable' => null])
+
+@php
+    $hasInteractive = $help || $pinnable;
+    $alpineData = [];
+    if ($help) $alpineData[] = 'helpOpen: false';
+    if ($pinnable) $alpineData[] = 'pinData: ' . json_encode($pinnable, JSON_UNESCAPED_SLASHES);
+@endphp
+
+<div @if($hasInteractive) x-data="{ {{ implode(', ', $alpineData) }} }" @endif>
+    <div class="flex items-center justify-between">
+        <div>
+            <div class="flex items-center gap-2">
+                <h1 class="text-xl font-medium tracking-tight text-ink">{{ $title }}</h1>
+                @if($pinnable)
+                    <button
+                        type="button"
+                        @click="$dispatch('toggle-page-pin', pinData)"
+                        class="inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted hover:text-accent transition-colors"
+                        :title="'{{ __('Pin to sidebar') }}'"
+                        aria-label="{{ __('Pin :page to sidebar', ['page' => $title]) }}"
+                    >
+                        <x-icon name="heroicon-o-pin" class="w-4 h-4" />
+                    </button>
+                @endif
+                @if($help)
+                    <x-ui.help size="lg" @click="helpOpen = !helpOpen" ::aria-expanded="helpOpen" />
+                @endif
+            </div>
+            @if($subtitle)
+                <p class="mt-1 text-sm text-muted">{{ $subtitle }}</p>
+            @endif
+        </div>
+        @if($actions)
+            <div class="flex items-center gap-2">
+                {{ $actions }}
+            </div>
+        @endif
+    </div>
+
+    @if($help)
+        <div
+            x-cloak
+            x-show="helpOpen"
+            x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-300 motion-reduce:duration-0"
+            x-transition:enter-start="opacity-0 translate-y-2 scale-95 blur-sm"
+            x-transition:enter-end="opacity-100 translate-y-0 scale-100 blur-0"
+            x-transition:leave="transition ease-in duration-200 motion-reduce:duration-0"
+            x-transition:leave-start="opacity-100 scale-100 blur-0"
+            x-transition:leave-end="opacity-0 scale-95 blur-sm"
+            class="mt-3 rounded-2xl border border-border-default bg-surface-card p-4 text-sm text-muted cursor-pointer shadow-lg shadow-black/[0.02] active:scale-[0.99] transition-transform"
+            @click="helpOpen = false"
+            role="note"
+            aria-label="{{ __('Click to dismiss') }}"
+        >
+            {{ $help }}
+        </div>
+    @endif
+</div>

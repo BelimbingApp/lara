@@ -1,0 +1,45 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Modules\Core\User\Livewire\Auth;
+
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
+use Livewire\Attributes\Layout;
+use Livewire\Component;
+
+#[Layout('components.layouts.auth')]
+class ConfirmPassword extends Component
+{
+    public string $password = '';
+
+    /**
+     * Confirm the current user's password.
+     */
+    public function confirmPassword(): void
+    {
+        $this->validate([
+            'password' => ['required', 'string'],
+        ]);
+
+        if (! Auth::guard('web')->validate([
+            'email' => Auth::user()->email,
+            'password' => $this->password,
+        ])) {
+            throw ValidationException::withMessages([
+                'password' => __('auth.password'),
+            ]);
+        }
+
+        session(['auth.password_confirmed_at' => time()]);
+
+        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
+    }
+
+    public function render(): \Illuminate\Contracts\View\View
+    {
+        return view('livewire.auth.confirm-password');
+    }
+}

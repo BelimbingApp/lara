@@ -3,18 +3,21 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
+use App\Modules\Core\AI\Livewire\Playground;
+use App\Modules\Core\AI\Livewire\Providers;
+use App\Modules\Core\AI\Livewire\Setup\Lara;
+use App\Modules\Core\AI\Livewire\Tools;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth'])->group(function () {
     // Lara setup
-    Volt::route('admin/setup/lara', 'admin.setup.lara')
+    Route::get('admin/setup/lara', Lara::class)
         ->name('admin.setup.lara');
 
-    Volt::route('admin/ai/playground', 'ai.playground')
+    Route::get('admin/ai/playground', Playground::class)
         ->name('admin.ai.playground');
-    Volt::route('admin/ai/providers', 'ai.providers')
+    Route::get('admin/ai/providers', Providers::class)
         ->name('admin.ai.providers');
-    Volt::route('admin/ai/tools', 'ai.tools')
+    Route::get('admin/ai/tools/{toolName?}', Tools::class)
         ->name('admin.ai.tools');
 });
