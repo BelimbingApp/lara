@@ -7,6 +7,7 @@
 
 namespace App\Modules\Core\AI\Livewire\Tools;
 
+use App\Base\AI\Tools\ToolResult;
 use App\Base\Settings\Contracts\SettingsService;
 use App\Modules\Core\AI\Enums\ToolReadiness;
 use App\Modules\Core\AI\Services\DigitalWorkerToolRegistry;
@@ -104,6 +105,14 @@ class Workspace extends Component
 
         $registry = app(DigitalWorkerToolRegistry::class);
         $example = $metadata->testExamples[$exampleIndex];
+
+        if (! ($example['runnable'] ?? true)) {
+            $this->tryItResult = __('This example is for display only and cannot be executed from the workspace.');
+            $this->tryItIsError = true;
+            $this->tryItErrorPayload = null;
+
+            return;
+        }
 
         if (! $registry->isRegistered($this->toolName)) {
             $this->tryItResult = __('Error: This tool is not configured yet. Set the required API key and provider in the Configuration panel, then try again.');

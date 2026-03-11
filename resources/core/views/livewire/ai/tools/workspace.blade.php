@@ -68,18 +68,23 @@
 
                         <div class="space-y-3">
                             @foreach($metadata->testExamples as $index => $example)
+                                @php $runnable = $example['runnable'] ?? true; @endphp
                                 <div class="rounded-lg bg-surface-subtle p-3 border border-border-default">
                                     <div class="flex items-center justify-between gap-2 mb-1">
                                         <div class="text-sm font-medium text-ink">{{ $example['label'] }}</div>
-                                        <x-ui.button
-                                            variant="ghost"
-                                            size="sm"
-                                            wire:click="tryIt({{ $index }})"
-                                            wire:loading.attr="disabled"
-                                        >
-                                            <x-icon name="heroicon-m-play" class="w-4 h-4" />
-                                            {{ __('Run') }}
-                                        </x-ui.button>
+                                        @if($runnable)
+                                            <x-ui.button
+                                                variant="ghost"
+                                                size="sm"
+                                                wire:click="tryIt({{ $index }})"
+                                                wire:loading.attr="disabled"
+                                            >
+                                                <x-icon name="heroicon-m-play" class="w-4 h-4" />
+                                                {{ __('Run') }}
+                                            </x-ui.button>
+                                        @else
+                                            <span class="text-xs text-muted italic">{{ __('Example only') }}</span>
+                                        @endif
                                     </div>
                                     <code class="text-xs text-muted block whitespace-pre-wrap break-all">{{ is_string($example['input']) ? $example['input'] : json_encode($example['input'], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</code>
                                 </div>

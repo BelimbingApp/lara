@@ -537,9 +537,9 @@ class ToolMetadataRegistry
                 capability: 'ai.tool_artisan.execute',
                 setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
-                    ['label' => 'List routes', 'input' => ['command' => 'route:list --compact']],
-                    ['label' => 'Create a user', 'input' => ['command' => "blb:user:create alice@example.com --name='Alice Smith' --role=core_admin"]],
-                    ['label' => '⚠ Wipe database (destroys all data)', 'input' => ['command' => 'db:wipe --force']],
+                    ['label' => 'List routes', 'input' => ['command' => 'route:list']],
+                    ['label' => 'Create a user', 'input' => ['command' => "blb:user:create alice@example.com --name='Alice Smith' --role=core_admin"], 'runnable' => false],
+                    ['label' => '⚠ Wipe database (destroys all data)', 'input' => ['command' => 'db:wipe --force'], 'runnable' => false],
                 ],
                 healthChecks: [
                     'Artisan process available',
@@ -560,7 +560,7 @@ class ToolMetadataRegistry
                 setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'Disk usage', 'input' => ['command' => 'df -h']],
-                    ['label' => '⚠ Clear application logs (irreversible)', 'input' => ['command' => 'truncate -s 0 storage/logs/laravel.log && echo "Log cleared."']],
+                    ['label' => '⚠ Clear application logs (irreversible)', 'input' => ['command' => 'truncate -s 0 storage/logs/laravel.log && echo "Log cleared."'], 'runnable' => false],
                 ],
                 healthChecks: [
                     'Shell access available',
@@ -581,7 +581,7 @@ class ToolMetadataRegistry
                 setupRequirements: self::NO_EXTERNAL_SETUP,
                 testExamples: [
                     ['label' => 'Scroll to top', 'input' => ['script' => 'window.scrollTo({top: 0, behavior: "smooth"})', 'description' => 'Scroll the page to the top']],
-                    ['label' => '⚠ Redirect user to another page', 'input' => ['script' => 'window.location.href = "/dashboard"', 'description' => 'Navigate user away from current page']],
+                    ['label' => '⚠ Redirect user to another page', 'input' => ['script' => 'window.location.href = "/dashboard"', 'description' => 'Navigate user away from current page'], 'runnable' => false],
                 ],
                 limits: [
                     'Executes in the user\'s browser context',
