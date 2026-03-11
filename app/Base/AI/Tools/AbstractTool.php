@@ -15,10 +15,83 @@ use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
  * argument extraction, and a schema builder API. Concrete tools implement
  * `handle()` with only their domain logic.
  *
+ * Also provides sensible defaults for all metadata methods declared on the
+ * Tool contract, so tools only override what they need. This makes each
+ * tool a deep module: self-describing with powerful functionality behind
+ * a simple interface.
+ *
+ * Error handling catches two exception types:
+ *  - ToolArgumentException    → ToolResult::error()      (bad LLM input)
+ *  - ToolUnavailableException → ToolResult::unavailable() (setup/infra problem)
+ *
  * Tools that do not fit this pattern can implement the `Tool` interface directly.
  */
 abstract class AbstractTool implements Tool
 {
+    // ─── Metadata defaults ──────────────────────────────────────────
+    // Concrete tools override these to self-describe. The defaults are
+    // safe fallbacks so existing tools compile before migration.
+
+    /**
+     * One-sentence plain-language summary for humans.
+     *
+     * Falls back to description() (the LLM-oriented text) when not overridden.
+     */
+    public function summary(): string
+    {
+        return $this->description();
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return '';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [];
+    }
+
+    // ─── Schema ─────────────────────────────────────────────────────
+
     /**
      * Define the tool's parameter schema using the fluent builder.
      *
@@ -48,6 +121,8 @@ abstract class AbstractTool implements Tool
         return $builder->build();
     }
 
+    // ─── Execution ──────────────────────────────────────────────────
+
     /**
      * Execute the tool with uniform error handling.
      *
@@ -56,12 +131,19 @@ abstract class AbstractTool implements Tool
      *
      * @param  array<string, mixed>  $arguments  Parsed arguments from LLM
      */
-    final public function execute(array $arguments): string
+    final public function execute(array $arguments): ToolResult
     {
         try {
             return $this->handle($arguments);
         } catch (ToolArgumentException $e) {
-            return 'Error: '.$e->getMessage();
+            return ToolResult::error($e->getMessage());
+        } catch (ToolUnavailableException $e) {
+            return ToolResult::unavailable(
+                $e->errorCode,
+                $e->getMessage(),
+                $e->hint,
+                $e->action,
+            );
         }
     }
 
@@ -70,11 +152,12 @@ abstract class AbstractTool implements Tool
      *
      * Implement this instead of `execute()`. Throw `ToolArgumentException`
      * for input validation errors — they'll be caught and formatted by
-     * `execute()`. Other exceptions propagate to the registry's error handler.
+     * `execute()`. Throw `ToolUnavailableException` for infrastructure or
+     * setup problems. Other exceptions propagate to the registry's handler.
      *
      * @param  array<string, mixed>  $arguments  Parsed and validated arguments from LLM
      */
-    abstract protected function handle(array $arguments): string;
+    abstract protected function handle(array $arguments): ToolResult;
 
     // ─── Typed argument extractors ──────────────────────────────────
 

@@ -10,6 +10,7 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Notifications\Messages\BroadcastMessage;
 use Illuminate\Notifications\Notification;
@@ -27,8 +28,6 @@ use Illuminate\Support\Facades\Notification as NotificationFacade;
  */
 class NotificationTool extends AbstractTool
 {
-    private const ERROR_PREFIX = 'Error: ';
-
     /**
      * Maximum length for the notification subject.
      */
@@ -96,7 +95,68 @@ class NotificationTool extends AbstractTool
         return 'ai.tool_notification.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Notification';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Send notifications to BLB users via internal channels.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Sends notifications via Laravel\'s notification system (database, email, broadcast). '
+            .'Targeted at internal BLB notifications — not an external messaging platform.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'Notification channels configured',
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Notification system available',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Internal BLB users only',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $userId = $arguments['user_id'] ?? null;
 
@@ -123,17 +183,19 @@ class NotificationTool extends AbstractTool
         try {
             $users = $this->resolveRecipients($userId);
             $this->sendNotification($users, $this->buildNotification($subject, $body, $channel));
-        } catch (NotificationToolRecipientException|NotificationToolDeliveryException $e) {
-            return self::ERROR_PREFIX.$e->getMessage();
+        } catch (NotificationToolRecipientException $e) {
+            return ToolResult::error($e->getMessage(), 'recipient_error');
+        } catch (NotificationToolDeliveryException $e) {
+            return ToolResult::error($e->getMessage(), 'delivery_error');
         }
 
-        return json_encode([
+        return ToolResult::success(json_encode([
             'status' => 'sent',
             'recipients' => count($users),
             'channel' => $channel,
             'subject' => $subject,
             'sent_at' => now()->toIso8601String(),
-        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES));
     }
 
     /**
@@ -267,6 +329,18 @@ class NotificationTool extends AbstractTool
     }
 }
 
+/**
+ * Thrown when the notification recipient cannot be resolved.
+ *
+ * Kept as a domain-specific exception (not collapsed into ToolArgumentException)
+ * because recipient resolution failures are runtime errors (user not found,
+ * no company), not input validation errors.
+ */
 final class NotificationToolRecipientException extends \RuntimeException {}
 
+/**
+ * Thrown when notification delivery fails.
+ *
+ * Covers infrastructure issues like missing database tables or transport errors.
+ */
 final class NotificationToolDeliveryException extends \RuntimeException {}

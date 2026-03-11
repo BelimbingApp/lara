@@ -7,6 +7,7 @@ use App\Base\AI\Contracts\Tool;
 use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Services\LlmClient;
+use App\Base\AI\Tools\ToolResult;
 use App\Modules\Core\AI\Services\ConfigResolver;
 use Illuminate\Foundation\Testing\TestCase;
 use Tests\Support\MakesRuntimeResponses;
@@ -55,13 +56,48 @@ class TestTool implements Tool
         return ToolRiskClass::READ_ONLY;
     }
 
-    public function execute(array $arguments): string
+    public function displayName(): string
+    {
+        return $this->toolName;
+    }
+
+    public function summary(): string
+    {
+        return $this->toolDescription;
+    }
+
+    public function explanation(): string
+    {
+        return '';
+    }
+
+    public function setupRequirements(): array
+    {
+        return [];
+    }
+
+    public function testExamples(): array
+    {
+        return [];
+    }
+
+    public function healthChecks(): array
+    {
+        return [];
+    }
+
+    public function limits(): array
+    {
+        return [];
+    }
+
+    public function execute(array $arguments): ToolResult
     {
         if (empty($arguments)) {
-            return $this->toolResult;
+            return ToolResult::success($this->toolResult);
         }
 
-        return $this->toolResult.json_encode($arguments);
+        return ToolResult::success($this->toolResult.json_encode($arguments));
     }
 }
 

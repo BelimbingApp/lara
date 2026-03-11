@@ -9,6 +9,8 @@ use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
+use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -107,22 +109,104 @@ class QueryDataTool extends AbstractTool
         return 'ai.tool_query_data.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Query Data';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Read data from BLB using safe, read-only SQL.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Executes SELECT queries against the application database to answer data questions. '
+            .'Only read-only operations are allowed — write statements (INSERT, UPDATE, DELETE, DROP, etc.) '
+            .'are rejected at the SQL parsing level. Results are returned as formatted tables. '
+            .'This tool cannot modify data or schema.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'No external API key required',
+            'Database connection must be available',
+        ];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Count employees',
+                'input' => ['query' => 'SELECT count(*) AS total FROM employees'],
+            ],
+            [
+                'label' => 'List tables',
+                'input' => ['query' => "SELECT tablename FROM pg_tables WHERE schemaname = 'public' LIMIT 10"],
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Database reachable',
+            'Read-only SQL validator active',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Maximum 100 rows per query',
+            '10-second statement timeout',
+            'SELECT and WITH statements only',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $query = $this->requireString($arguments, 'query');
 
         // Remove trailing semicolons (prevents multi-statement injection)
         $query = rtrim($query, ';');
 
-        $response = $this->validateQuery($query);
+        $this->validateQuery($query);
 
         $limit = $this->optionalInt($arguments, 'limit', self::DEFAULT_LIMIT, min: 1, max: self::MAX_ROWS);
 
-        if ($response === null) {
-            $response = $this->runValidatedQuery($query, $limit);
-        }
-
-        return $response;
+        return $this->runValidatedQuery($query, $limit);
     }
 
     /**
@@ -131,33 +215,33 @@ class QueryDataTool extends AbstractTool
      * Checks are ordered to produce the most specific error message:
      * forbidden keywords first (names the offending operation), then
      * structural checks (multi-statement, must start with SELECT/WITH).
+     *
+     * @throws ToolArgumentException If the query is not a safe SELECT
      */
-    private function validateQuery(string $query): ?string
+    private function validateQuery(string $query): void
     {
-        $error = null;
-
         // Reject semicolons within the query (multi-statement)
         if (str_contains($query, ';')) {
-            $error = 'Error: Multiple statements are not allowed.';
-        } else {
-            foreach (self::FORBIDDEN_KEYWORDS as $keyword) {
-                if (preg_match('/\b'.$keyword.'\b/i', $query)) {
-                    $error = 'Error: '.$keyword.' operations are not allowed. Only SELECT queries are permitted.';
+            throw new ToolArgumentException('Multiple statements are not allowed.');
+        }
 
-                    break;
-                }
-            }
-
-            if ($error === null) {
-                $normalised = strtoupper(ltrim($query));
-
-                if (! str_starts_with($normalised, 'SELECT') && ! str_starts_with($normalised, 'WITH')) {
-                    $error = 'Error: Only SELECT queries are allowed. Your query must start with SELECT or WITH.';
-                }
+        // Scan for forbidden keywords at word boundaries
+        foreach (self::FORBIDDEN_KEYWORDS as $keyword) {
+            if (preg_match('/\b'.$keyword.'\b/i', $query)) {
+                throw new ToolArgumentException(
+                    $keyword.' operations are not allowed. Only SELECT queries are permitted.'
+                );
             }
         }
 
-        return $error;
+        // Must start with SELECT or WITH (for CTEs)
+        $normalised = strtoupper(ltrim($query));
+
+        if (! str_starts_with($normalised, 'SELECT') && ! str_starts_with($normalised, 'WITH')) {
+            throw new ToolArgumentException(
+                'Only SELECT queries are allowed. Your query must start with SELECT or WITH.'
+            );
+        }
     }
 
     /**
@@ -171,7 +255,7 @@ class QueryDataTool extends AbstractTool
         return 'SELECT * FROM ('.$query.') AS _blb_limited LIMIT '.$limit;
     }
 
-    private function runValidatedQuery(string $query, int $limit): string
+    private function runValidatedQuery(string $query, int $limit): ToolResult
     {
         $limitedQuery = $this->applyLimit($query, $limit);
 
@@ -185,14 +269,16 @@ class QueryDataTool extends AbstractTool
             /** @var list<array<string, mixed>> $rows */
             $rows = $results->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\PDOException $e) {
-            return 'Query error: '.$e->getMessage();
+            return ToolResult::error('Query error: '.$e->getMessage(), 'query_error');
         } catch (\Throwable $e) {
-            return 'Error: '.$e->getMessage();
+            return ToolResult::error($e->getMessage());
         }
 
-        return $rows === []
+        $content = $rows === []
             ? 'Query returned 0 rows.'
             : $this->formatResults($rows, $limit);
+
+        return ToolResult::success($content);
     }
 
     /**

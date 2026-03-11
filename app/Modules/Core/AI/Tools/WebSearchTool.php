@@ -10,6 +10,7 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Services\WebSearchService;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
+use App\Base\AI\Tools\ToolResult;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -123,7 +124,92 @@ class WebSearchTool extends AbstractTool
         return 'ai.tool_web_search.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Web Search';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Search the public web and return summarized results.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Searches the web for current information using a configured provider (Parallel or Brave Search). '
+            .'Results include titles, URLs, and snippets. Cached for 15 minutes to reduce API calls. '
+            .'This tool cannot access private networks or internal resources.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'Search provider selected (Parallel or Brave)',
+            'API key configured for the selected provider',
+        ];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Simple search',
+                'input' => ['query' => 'Laravel 12 new features'],
+            ],
+            [
+                'label' => 'Recent news',
+                'input' => ['query' => 'latest PHP releases', 'freshness' => 'week'],
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Provider API key present',
+            'Provider endpoint reachable',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Maximum 10 results per query',
+            '15-second API timeout',
+            '15-minute result cache TTL',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $query = $this->requireString($arguments, 'query', 'search query');
         $count = $this->optionalInt($arguments, 'count', self::DEFAULT_COUNT, min: 1, max: self::MAX_COUNT);
@@ -136,13 +222,19 @@ class WebSearchTool extends AbstractTool
         // Cache key only — not used for crypto; md5 is sufficient and more efficient.
         $cacheKey = 'lara_tool:web_search:'.md5($query.$count.$freshness);
 
-        return Cache::remember($cacheKey, $this->cacheTtlMinutes * 60, function () use ($query, $count, $freshness): string {
+        /** @var string $cached */
+        $cached = Cache::remember($cacheKey, $this->cacheTtlMinutes * 60, function () use ($query, $count, $freshness): string {
             return $this->performSearch($query, $count, $freshness);
         });
+
+        return ToolResult::success($cached);
     }
 
     /**
      * Dispatch to the appropriate provider and return formatted results.
+     *
+     * Returns a plain string for cache storage. The calling method wraps
+     * the cached string in ToolResult::success().
      */
     private function performSearch(string $query, int $count, ?string $freshness): string
     {

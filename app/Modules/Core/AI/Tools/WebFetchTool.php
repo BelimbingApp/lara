@@ -11,6 +11,7 @@ use App\Base\AI\Services\UrlSafetyGuard;
 use App\Base\AI\Services\WebFetchService;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
+use App\Base\AI\Tools\ToolResult;
 
 /**
  * Web page fetching and content extraction tool for Digital Workers.
@@ -84,7 +85,94 @@ class WebFetchTool extends AbstractTool
         return 'ai.tool_web_fetch.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Web Fetch';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Fetch and extract content from a public URL with SSRF protection.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Fetches a web page via HTTP GET and extracts readable content as plain text or markdown. '
+            .'SSRF protection blocks requests to private/internal networks by default. '
+            .'Useful for reading documentation, articles, and public web pages. '
+            .'This tool cannot access internal services or bypass network restrictions.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'Outbound HTTP access available',
+            'SSRF guard enabled (default)',
+        ];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Fetch documentation',
+                'input' => ['url' => 'https://laravel.com/docs/12.x/installation', 'extract_mode' => 'markdown'],
+            ],
+            [
+                'label' => 'Fetch as text',
+                'input' => ['url' => 'https://example.com', 'max_chars' => 1000],
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'HTTP client connectivity',
+            'SSRF guard operational',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            '5 MB maximum response size',
+            '50,000 character content cap (configurable)',
+            '30-second timeout',
+            '5 redirect maximum',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $url = $this->requireString($arguments, 'url', 'URL');
         $maxChars = $this->optionalInt($arguments, 'max_chars', self::DEFAULT_MAX_CHARS, min: 1);
@@ -108,27 +196,33 @@ class WebFetchTool extends AbstractTool
     /**
      * @param  array{validation_error?: string, request_error?: string, http_status?: int, content?: string, char_count?: int, truncated?: bool}  $result
      */
-    private function formatFetchResponse(array $result, string $url, int $maxChars): string
+    private function formatFetchResponse(array $result, string $url, int $maxChars): ToolResult
     {
-        $response = null;
-
         if (isset($result['validation_error'])) {
-            $response = 'Error: '.$result['validation_error'];
-        } elseif (isset($result['request_error'])) {
-            $response = 'Error: Failed to fetch URL: '.$result['request_error'];
-        } elseif (isset($result['http_status'])) {
-            $response = 'Failed to fetch URL: HTTP '.$result['http_status'];
-        } else {
-            $content = $result['content'] ?? '';
-
-            if (($result['truncated'] ?? false) === true) {
-                $content .= "\n\n[Content truncated at {$maxChars} characters]";
-            }
-
-            $charCount = (int) ($result['char_count'] ?? mb_strlen($content));
-            $response = "# Content from {$url}\n\n{$content}\n\n---\nFetched {$charCount} characters from {$url}";
+            return ToolResult::error($result['validation_error'], 'validation_error');
         }
 
-        return $response;
+        if (isset($result['request_error'])) {
+            return ToolResult::error('Failed to fetch URL: '.$result['request_error'], 'request_error');
+        }
+
+        if (isset($result['http_status'])) {
+            return ToolResult::error(
+                'Failed to fetch URL: HTTP '.$result['http_status'],
+                'http_error',
+            );
+        }
+
+        $content = $result['content'] ?? '';
+
+        if (($result['truncated'] ?? false) === true) {
+            $content .= "\n\n[Content truncated at {$maxChars} characters]";
+        }
+
+        $charCount = (int) ($result['char_count'] ?? mb_strlen($content));
+
+        return ToolResult::success(
+            "# Content from {$url}\n\n{$content}\n\n---\nFetched {$charCount} characters from {$url}"
+        );
     }
 }

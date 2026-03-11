@@ -9,6 +9,8 @@ use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
+use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 use App\Modules\Core\Employee\Models\Employee;
 
 /**
@@ -75,14 +77,89 @@ class MemoryGetTool extends AbstractTool
         return 'ai.tool_memory_get.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Memory Get';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Read a specific knowledge file from the DW workspace.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Reads the content of a file within the DW workspace by path. '
+            .'Path validation prevents directory traversal. This tool can only '
+            .'read files within the designated workspace directory.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'Workspace directory must exist',
+        ];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Read a file',
+                'input' => ['path' => 'MEMORY.md'],
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Workspace directory accessible',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Workspace files only — no arbitrary filesystem access',
+            'Path traversal blocked',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $path = $this->requireString($arguments, 'path');
 
-        $pathError = $this->validatePath($path);
-        if ($pathError !== null) {
-            return $pathError;
-        }
+        $this->validatePath($path);
 
         $scope = $this->requireEnum($arguments, 'scope', ['docs', 'workspace'], 'docs');
         $from = $this->optionalInt($arguments, 'from', 1, min: 1);
@@ -90,16 +167,16 @@ class MemoryGetTool extends AbstractTool
         $readResult = $this->readRequestedFile($path, $scope, $from, $maxLines);
 
         if (isset($readResult['error'])) {
-            return $readResult['error'];
+            return ToolResult::error($readResult['error']);
         }
 
-        return $this->formatReadResult(
+        return ToolResult::success($this->formatReadResult(
             path: $path,
             scope: $scope,
             from: $from,
             totalLines: $readResult['total_lines'],
             selectedLines: $readResult['selected_lines'],
-        );
+        ));
     }
 
     /**
@@ -108,21 +185,22 @@ class MemoryGetTool extends AbstractTool
      * Rejects absolute paths, directory traversal sequences, and null bytes.
      *
      * @param  string  $path  The relative path to validate
-     * @return string|null Error message if invalid, null if valid
+     *
+     * @throws ToolArgumentException If the path is invalid
      */
-    private function validatePath(string $path): ?string
+    private function validatePath(string $path): void
     {
-        $error = null;
-
         if (str_starts_with($path, '/')) {
-            $error = 'Error: Invalid path: absolute paths are not allowed.';
-        } elseif (str_contains($path, '..')) {
-            $error = 'Error: Invalid path: directory traversal is not allowed.';
-        } elseif (str_contains($path, "\0")) {
-            $error = 'Error: Invalid path: null bytes are not allowed.';
+            throw new ToolArgumentException('Invalid path: absolute paths are not allowed.');
         }
 
-        return $error;
+        if (str_contains($path, '..')) {
+            throw new ToolArgumentException('Invalid path: directory traversal is not allowed.');
+        }
+
+        if (str_contains($path, "\0")) {
+            throw new ToolArgumentException('Invalid path: null bytes are not allowed.');
+        }
     }
 
     /**
@@ -149,32 +227,33 @@ class MemoryGetTool extends AbstractTool
         $fullPath = $basePath.'/'.ltrim($path, '/');
         $realBase = realpath($basePath);
         $realFull = realpath($fullPath);
-        $error = null;
 
         if ($realBase === false) {
-            $error = 'Error: Scope directory does not exist.';
-        } elseif ($realFull === false || ! is_file($realFull)) {
-            $error = 'Error: File not found: '.$path;
-        } elseif (! str_starts_with($realFull, $realBase.'/')) {
-            $error = 'Error: Invalid path: directory traversal is not allowed.';
-        } elseif ($this->isBinary($realFull)) {
-            $error = 'Error: Cannot read binary file: '.$path;
+            return ['error' => 'Scope directory does not exist.'];
         }
 
-        if ($error !== null) {
-            return ['error' => $error];
+        if ($realFull === false || ! is_file($realFull)) {
+            return ['error' => 'File not found: '.$path];
+        }
+
+        if (! str_starts_with($realFull, $realBase.'/')) {
+            return ['error' => 'Invalid path: directory traversal is not allowed.'];
+        }
+
+        if ($this->isBinary($realFull)) {
+            return ['error' => 'Cannot read binary file: '.$path];
         }
 
         $allLines = file($realFull, FILE_IGNORE_NEW_LINES);
 
         if ($allLines === false) {
-            return ['error' => 'Error: Unable to read file: '.$path];
+            return ['error' => 'Unable to read file: '.$path];
         }
 
         $totalLines = count($allLines);
 
         if ($from > $totalLines) {
-            return ['error' => 'Error: Start line '.$from.' exceeds file length ('.$totalLines.' lines).'];
+            return ['error' => 'Start line '.$from.' exceeds file length ('.$totalLines.' lines).'];
         }
 
         /** @var list<string> $selectedLines */

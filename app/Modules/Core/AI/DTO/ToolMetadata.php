@@ -25,7 +25,7 @@ final readonly class ToolMetadata
      * @param  ToolRiskClass  $riskClass  Risk classification badge
      * @param  ?string  $capability  Required authz capability key
      * @param  list<string>  $setupRequirements  Human-readable setup checklist items
-     * @param  list<array{label: string, input: array<string, mixed>}>  $testExamples  Sample inputs for the Try-It console
+     * @param  list<array{label: string, input: array<string, mixed>, runnable?: bool}>  $testExamples  Sample inputs for the Try-It console; runnable defaults to true
      * @param  list<string>  $healthChecks  Descriptions of health probes this tool supports
      * @param  list<string>  $limits  Known safety limits users should understand
      * @param  list<ToolConfigField>  $configFields  Configurable settings for this tool

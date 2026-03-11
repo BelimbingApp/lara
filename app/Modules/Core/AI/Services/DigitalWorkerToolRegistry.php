@@ -6,6 +6,7 @@
 namespace App\Modules\Core\AI\Services;
 
 use App\Base\AI\Contracts\Tool;
+use App\Base\AI\Tools\ToolResult;
 use App\Base\Authz\Contracts\AuthorizationService;
 use App\Base\Authz\DTO\Actor;
 use App\Base\Authz\Enums\PrincipalType;
@@ -19,8 +20,6 @@ use App\Modules\Core\User\Models\User;
  */
 class DigitalWorkerToolRegistry
 {
-    private const ERROR_PREFIX = 'Error: ';
-
     /** @var array<string, Tool> */
     private array $tools = [];
 
@@ -69,6 +68,26 @@ class DigitalWorkerToolRegistry
     }
 
     /**
+     * Get a registered tool by name.
+     *
+     * @param  string  $toolName  Tool machine name
+     */
+    public function get(string $toolName): ?Tool
+    {
+        return $this->tools[$toolName] ?? null;
+    }
+
+    /**
+     * Get all registered tool instances.
+     *
+     * @return array<string, Tool>
+     */
+    public function all(): array
+    {
+        return $this->tools;
+    }
+
+    /**
      * Get OpenAI-format tool definitions for tools the current user can access.
      *
      * @return list<array{type: string, function: array{name: string, description: string, parameters: array<string, mixed>}}>
@@ -98,31 +117,35 @@ class DigitalWorkerToolRegistry
     /**
      * Execute a tool by name with given arguments.
      *
-     * Returns the tool result string, or an error message if the tool is
-     * unknown or the user lacks permission.
+     * Returns a structured ToolResult. Registry-level errors (unknown tool,
+     * permission denied, unexpected exception) are wrapped in ToolResult::error()
+     * so callers always receive a typed result.
+     *
+     * @param  array<string, mixed>  $arguments
      */
-    public function execute(string $toolName, array $arguments): string
+    public function execute(string $toolName, array $arguments): ToolResult
     {
         $tool = $this->tools[$toolName] ?? null;
-        $response = null;
 
         if ($tool === null) {
-            $response = self::ERROR_PREFIX.'Unknown tool "'.$toolName.'".';
+            return ToolResult::error('Unknown tool "'.$toolName.'".', 'unknown_tool');
         }
 
-        if ($tool !== null && ! $this->currentUserCanUse($tool)) {
-            $response = self::ERROR_PREFIX.'You do not have permission to use the "'.$toolName.'" tool.';
+        if (! $this->currentUserCanUse($tool)) {
+            return ToolResult::error(
+                'You do not have permission to use the "'.$toolName.'" tool.',
+                'permission_denied',
+            );
         }
 
-        if ($response === null && $tool !== null) {
-            try {
-                $response = $tool->execute($arguments);
-            } catch (\Throwable $e) {
-                $response = self::ERROR_PREFIX.'Error executing "'.$toolName.'": '.$e->getMessage();
-            }
+        try {
+            return $tool->execute($arguments);
+        } catch (\Throwable $e) {
+            return ToolResult::error(
+                'Error executing "'.$toolName.'": '.$e->getMessage(),
+                'unexpected_error',
+            );
         }
-
-        return $response;
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 
 /**
  * Client-side JavaScript execution tool for Digital Workers.
@@ -79,7 +80,70 @@ class WriteJsTool extends AbstractTool
         return 'ai.tool_write_js.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Write JS';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Execute JavaScript in the user\'s browser.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Sends JavaScript code to be executed client-side in the user\'s browser session. '
+            .'Useful for UI interactions and dynamic page modifications.';
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Scroll to top',
+                'input' => [
+                    'script' => 'window.scrollTo({top: 0, behavior: "smooth"})',
+                    'description' => 'Scroll the page to the top',
+                ],
+            ],
+            [
+                'label' => '⚠ Redirect user to another page',
+                'input' => [
+                    'script' => 'window.location.href = "/dashboard"',
+                    'description' => 'Navigate user away from current page',
+                ],
+                'runnable' => false,
+            ],
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Executes in the user\'s browser context',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $script = $this->requireString($arguments, 'script');
         $description = $this->requireString($arguments, 'description');
@@ -98,6 +162,6 @@ class WriteJsTool extends AbstractTool
             }
         }
 
-        return '<lara-action>'.$script.'</lara-action>Script executed: '.$description.'.';
+        return ToolResult::success('<lara-action>'.$script.'</lara-action>Script executed: '.$description.'.');
     }
 }

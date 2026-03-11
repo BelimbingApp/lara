@@ -10,6 +10,7 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 
 /**
  * Browser navigation tool for Digital Workers.
@@ -57,7 +58,45 @@ class NavigateTool extends AbstractTool
         return 'ai.tool_navigate.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Navigate';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Navigate the user to a page within BLB.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Triggers client-side SPA navigation to a BLB page. '
+            .'The LLM uses this to direct users to relevant screens. '
+            .'Navigation is limited to internal BLB routes.';
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Internal BLB routes only',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $url = $this->requireString($arguments, 'url');
 
@@ -70,6 +109,6 @@ class NavigateTool extends AbstractTool
             throw new ToolArgumentException('URL contains invalid characters.');
         }
 
-        return '<lara-action>Livewire.navigate(\''.$url.'\')</lara-action>Navigation initiated to '.$url.'.';
+        return ToolResult::success('<lara-action>Livewire.navigate(\''.$url.'\')</lara-action>Navigation initiated to '.$url.'.');
     }
 }

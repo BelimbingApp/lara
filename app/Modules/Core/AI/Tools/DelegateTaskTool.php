@@ -10,6 +10,7 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 use App\Modules\Core\AI\Services\LaraCapabilityMatcher;
 use App\Modules\Core\AI\Services\LaraTaskDispatcher;
 
@@ -79,7 +80,87 @@ class DelegateTaskTool extends AbstractTool
         return 'ai.tool_delegate.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Delegate Task';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Dispatch work to another Digital Worker.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Queues a task for execution by another Digital Worker. Returns a dispatch ID '
+            .'immediately. The dispatched DW runs asynchronously via Laravel queues. '
+            .'This tool can only delegate to workers the current user supervises.';
+    }
+
+    /**
+     * Human-readable setup checklist items.
+     *
+     * @return list<string>
+     */
+    public function setupRequirements(): array
+    {
+        return [
+            'At least one other Digital Worker configured',
+            'Laravel queue worker running',
+        ];
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'Delegate a task',
+                'input' => ['task' => 'Summarize today\'s activity'],
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Queue connection active',
+            'Delegable workers available',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Default 300-second timeout per delegation',
+            'Scoped to supervised workers',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $task = $this->requireString($arguments, 'task');
 
@@ -91,23 +172,23 @@ class DelegateTaskTool extends AbstractTool
 
         $workerId = $this->resolveWorkerId($arguments, $task);
 
-        $response = 'Error: No suitable Digital Worker found for this task. '
-            .'Use worker_list to see available workers, then specify a worker_id explicitly.';
-
         if ($workerId === null) {
-            return $response;
+            return ToolResult::error(
+                'No suitable Digital Worker found for this task. '
+                    .'Use worker_list to see available workers, then specify a worker_id explicitly.',
+                'no_worker_match',
+            );
         }
 
         try {
             $result = $this->dispatcher->dispatchForCurrentUser($workerId, $task);
-            $response = $this->formatDispatchResult($result);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
-            $response = 'Error: '.$e->getMessage();
-        } catch (\Throwable $e) {
-            $response = 'Error dispatching task: '.$e->getMessage();
-        }
 
-        return $response;
+            return ToolResult::success($this->formatDispatchResult($result));
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return ToolResult::error($e->getMessage(), 'authorization_error');
+        } catch (\Throwable $e) {
+            return ToolResult::error('Dispatching task failed: '.$e->getMessage(), 'dispatch_error');
+        }
     }
 
     /**

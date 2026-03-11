@@ -10,6 +10,8 @@ use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
 use App\Base\AI\Tools\Concerns\FormatsProcessResult;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
+use App\Base\AI\Tools\ToolArgumentException;
+use App\Base\AI\Tools\ToolResult;
 use Illuminate\Support\Facades\Process;
 
 /**
@@ -97,7 +99,82 @@ class ArtisanTool extends AbstractTool
         return 'ai.tool_artisan.execute';
     }
 
-    protected function handle(array $arguments): string
+    /**
+     * Human-friendly display name for UI surfaces.
+     */
+    public function displayName(): string
+    {
+        return 'Artisan';
+    }
+
+    /**
+     * One-sentence plain-language summary for humans.
+     */
+    public function summary(): string
+    {
+        return 'Execute Laravel artisan commands.';
+    }
+
+    /**
+     * Longer explanation of what this tool does and does not do.
+     */
+    public function explanation(): string
+    {
+        return 'Runs `php artisan` commands within the BLB application. '
+            .'Useful for system administration tasks. This is a powerful tool '
+            .'that can modify application state — use with appropriate authorization.';
+    }
+
+    /**
+     * Sample inputs for the Try-It console.
+     *
+     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
+     */
+    public function testExamples(): array
+    {
+        return [
+            [
+                'label' => 'List routes',
+                'input' => ['command' => 'route:list'],
+            ],
+            [
+                'label' => 'Create a user',
+                'input' => ['command' => 'blb:user:create alice@example.com --name=\'Alice Smith\' --role=core_admin'],
+                'runnable' => false,
+            ],
+            [
+                'label' => '⚠ Wipe database (destroys all data)',
+                'input' => ['command' => 'db:wipe --force'],
+                'runnable' => false,
+            ],
+        ];
+    }
+
+    /**
+     * Descriptions of health probes this tool supports.
+     *
+     * @return list<string>
+     */
+    public function healthChecks(): array
+    {
+        return [
+            'Artisan process available',
+        ];
+    }
+
+    /**
+     * Known safety limits users should understand.
+     *
+     * @return list<string>
+     */
+    public function limits(): array
+    {
+        return [
+            'Commands execute in the application context',
+        ];
+    }
+
+    protected function handle(array $arguments): ToolResult
     {
         $command = $this->requireString($arguments, 'command');
 
@@ -105,13 +182,13 @@ class ArtisanTool extends AbstractTool
         $command = preg_replace('/^(php\s+)?artisan\s+/', '', $command) ?? $command;
 
         if ($command === '') {
-            throw new \App\Base\AI\Tools\ToolArgumentException('Empty command after parsing.');
+            throw new ToolArgumentException('Empty command after parsing.');
         }
 
         $background = $this->optionalBool($arguments, 'background');
 
         if ($background) {
-            return $this->executeBackground($command);
+            return ToolResult::success($this->executeBackground($command));
         }
 
         return $this->executeForeground($command, $arguments);
@@ -122,7 +199,7 @@ class ArtisanTool extends AbstractTool
      *
      * @param  array<string, mixed>  $arguments  Original arguments for timeout extraction
      */
-    private function executeForeground(string $command, array $arguments): string
+    private function executeForeground(string $command, array $arguments): ToolResult
     {
         $timeout = $this->optionalInt(
             $arguments,
