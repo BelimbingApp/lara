@@ -14,9 +14,9 @@
         <x-ui.card>
             <form wire:submit="update" class="space-y-6">
                 <x-ui.select
-                    wire:model="company_id"
+                    wire:model="companyId"
                     label="{{ __('Company') }}"
-                    :error="$errors->first('company_id')"
+                    :error="$errors->first('companyId')"
                 >
                     <option value="">{{ __('No company') }}</option>
                     @foreach ($companies as $company)
@@ -59,12 +59,12 @@
                 />
 
                 <x-ui.input
-                    wire:model="password_confirmation"
+                    wire:model="passwordConfirmation"
                     label="{{ __('Confirm New Password') }}"
                     type="password"
                     autocomplete="new-password"
                     placeholder="{{ __('Confirm new password') }}"
-                    :error="$errors->first('password_confirmation')"
+                    :error="$errors->first('passwordConfirmation')"
                 />
 
                 <div class="flex items-center gap-4">
@@ -79,4 +79,3 @@
         </x-ui.card>
     </div>
 </div>
-

@@ -12,11 +12,11 @@ use Livewire\Component;
 
 class Password extends Component
 {
-    public string $current_password = '';
+    public string $currentPassword = '';
 
     public string $password = '';
 
-    public string $password_confirmation = '';
+    public string $passwordConfirmation = '';
 
     /**
      * Update the password for the currently authenticated user.
@@ -25,11 +25,12 @@ class Password extends Component
     {
         try {
             $validated = $this->validate([
-                'current_password' => ['required', 'string', 'current_password'],
-                'password' => ['required', 'string', \Illuminate\Validation\Rules\Password::defaults(), 'confirmed'],
+                'currentPassword' => ['required', 'string', 'current_password'],
+                'password' => ['required', 'string', \Illuminate\Validation\Rules\Password::defaults()],
+                'passwordConfirmation' => ['required', 'same:password'],
             ]);
         } catch (ValidationException $e) {
-            $this->reset('current_password', 'password', 'password_confirmation');
+            $this->reset('currentPassword', 'password', 'passwordConfirmation');
 
             throw $e;
         }
@@ -38,7 +39,7 @@ class Password extends Component
             'password' => Hash::make($validated['password']),
         ]);
 
-        $this->reset('current_password', 'password', 'password_confirmation');
+        $this->reset('currentPassword', 'password', 'passwordConfirmation');
 
         $this->dispatch('password-updated');
     }

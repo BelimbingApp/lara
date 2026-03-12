@@ -141,63 +141,51 @@ class LaraChatOverlay extends Component
      */
     public function generateSessionTitle(string $sessionId): void
     {
-        if (! $this->isLaraActivated()) {
-            return;
-        }
+        if ($this->isLaraActivated()) {
+            $messageManager = app(MessageManager::class);
+            $messages = $messageManager->read(Employee::LARA_ID, $sessionId);
 
-        $messageManager = app(MessageManager::class);
-        $messages = $messageManager->read(Employee::LARA_ID, $sessionId);
+            if ($messages !== []) {
+                $configResolver = app(ConfigResolver::class);
+                $config = $configResolver->resolvePrimaryWithDefaultFallback(Employee::LARA_ID);
 
-        if (empty($messages)) {
-            return;
-        }
+                if ($config !== null) {
+                    $credentialResolver = app(RuntimeCredentialResolver::class);
+                    $credentials = $credentialResolver->resolve($config);
 
-        $configResolver = app(ConfigResolver::class);
-        $config = $configResolver->resolvePrimaryWithDefaultFallback(Employee::LARA_ID);
+                    if (! isset($credentials['error'])) {
+                        $messageBuilder = app(RuntimeMessageBuilder::class);
+                        $apiMessages = $messageBuilder->build(
+                            $messages,
+                            'Generate a concise 3–6 word title summarizing this conversation. Reply with only the title, no quotes or punctuation.',
+                        );
 
-        if ($config === null) {
-            return;
-        }
+                        $llmClient = app(LlmClient::class);
+                        $response = $llmClient->chat(
+                            baseUrl: $credentials['base_url'],
+                            apiKey: $credentials['api_key'],
+                            model: $config['model'],
+                            messages: $apiMessages,
+                            maxTokens: 20,
+                            temperature: 0.5,
+                            timeout: 15,
+                            providerName: $config['provider_name'] ?? null,
+                        );
 
-        $credentialResolver = app(RuntimeCredentialResolver::class);
-        $credentials = $credentialResolver->resolve($config);
+                        $title = trim($response['content'] ?? '');
 
-        if (isset($credentials['error'])) {
-            return;
-        }
+                        if ($title !== '') {
+                            $title = trim($title, '"\'');
 
-        $messageBuilder = app(RuntimeMessageBuilder::class);
-        $apiMessages = $messageBuilder->build(
-            $messages,
-            'Generate a concise 3–6 word title summarizing this conversation. Reply with only the title, no quotes or punctuation.',
-        );
+                            app(SessionManager::class)->updateTitle(Employee::LARA_ID, $sessionId, $title);
 
-        $llmClient = app(LlmClient::class);
-        $response = $llmClient->chat(
-            baseUrl: $credentials['base_url'],
-            apiKey: $credentials['api_key'],
-            model: $config['model'],
-            messages: $apiMessages,
-            maxTokens: 20,
-            temperature: 0.5,
-            timeout: 15,
-            providerName: $config['provider_name'] ?? null,
-        );
-
-        $title = trim($response['content'] ?? '');
-
-        if ($title === '') {
-            return;
-        }
-
-        // Strip surrounding quotes if the LLM wrapped the title
-        $title = trim($title, '"\'');
-
-        app(SessionManager::class)->updateTitle(Employee::LARA_ID, $sessionId, $title);
-
-        // If we're currently editing this session, update the editing state too
-        if ($this->editingSessionId === $sessionId) {
-            $this->editingTitle = $title;
+                            if ($this->editingSessionId === $sessionId) {
+                                $this->editingTitle = $title;
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 

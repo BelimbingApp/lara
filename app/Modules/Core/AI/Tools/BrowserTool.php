@@ -8,6 +8,7 @@ namespace App\Modules\Core\AI\Tools;
 use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractActionTool;
+use App\Base\AI\Tools\Concerns\ProvidesToolMetadata;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\SetupAction;
 use App\Base\AI\Tools\ToolArgumentException;
@@ -36,6 +37,8 @@ use App\Modules\Core\AI\Services\Browser\BrowserSsrfGuard;
  */
 class BrowserTool extends AbstractActionTool
 {
+    use ProvidesToolMetadata;
+
     /**
      * Valid actions for browser automation.
      *
@@ -115,84 +118,33 @@ class BrowserTool extends AbstractActionTool
         return 'ai.tool_browser.execute';
     }
 
-    /**
-     * Human-friendly display name for UI surfaces.
-     */
-    public function displayName(): string
-    {
-        return 'Browser';
-    }
-
-    /**
-     * One-sentence plain-language summary for humans.
-     */
-    public function summary(): string
-    {
-        return 'Automate headless browser actions for web scraping and RPA.';
-    }
-
-    /**
-     * Longer explanation of what this tool does and does not do.
-     */
-    public function explanation(): string
-    {
-        return 'Server-side headless Chromium automation for navigating, capturing snapshots, '
-            .'clicking, typing, and extracting content from external websites. '
-            .'Enterprise-grade RPA capability. This tool can interact with external websites '
-            .'on behalf of the business.';
-    }
-
-    /**
-     * Human-readable setup checklist items.
-     *
-     * @return list<string>
-     */
-    public function setupRequirements(): array
+    protected function toolMetadata(): array
     {
         return [
-            'Headless browser configured',
-            'Browser pool available',
-        ];
-    }
-
-    /**
-     * Sample inputs for the Try-It console.
-     *
-     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
-     */
-    public function testExamples(): array
-    {
-        return [
-            [
-                'label' => 'Navigate to URL',
-                'input' => ['action' => 'navigate', 'url' => 'https://example.com'],
+            'displayName' => 'Browser',
+            'summary' => 'Automate headless browser actions for web scraping and RPA.',
+            'explanation' => 'Server-side headless Chromium automation for navigating, capturing snapshots, '
+                .'clicking, typing, and extracting content from external websites. '
+                .'Enterprise-grade RPA capability. This tool can interact with external websites '
+                .'on behalf of the business.',
+            'setupRequirements' => [
+                'Headless browser configured',
+                'Browser pool available',
             ],
-        ];
-    }
-
-    /**
-     * Descriptions of health probes this tool supports.
-     *
-     * @return list<string>
-     */
-    public function healthChecks(): array
-    {
-        return [
-            'Browser pool available',
-            'Chromium process responsive',
-        ];
-    }
-
-    /**
-     * Known safety limits users should understand.
-     *
-     * @return list<string>
-     */
-    public function limits(): array
-    {
-        return [
-            'Company-scoped browser contexts',
-            'Session isolation between DWs',
+            'testExamples' => [
+                [
+                    'label' => 'Navigate to URL',
+                    'input' => ['action' => 'navigate', 'url' => 'https://example.com'],
+                ],
+            ],
+            'healthChecks' => [
+                'Browser pool available',
+                'Chromium process responsive',
+            ],
+            'limits' => [
+                'Company-scoped browser contexts',
+                'Session isolation between DWs',
+            ],
         ];
     }
 

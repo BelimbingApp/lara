@@ -250,19 +250,21 @@
                                             autocomplete="off"
                                         />
                                     @elseif($field->type === 'boolean')
+                                        @php($fieldId = 'config-field-'.$field->key)
                                         <div class="space-y-1">
-                                            <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
+                                            <label for="{{ $fieldId }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
                                                 {{ $field->label }}
                                             </label>
-                                            <label class="inline-flex items-center gap-2 cursor-pointer">
+                                            <div class="inline-flex items-center gap-2 cursor-pointer">
                                                 <input
+                                                    id="{{ $fieldId }}"
                                                     type="checkbox"
                                                     wire:model="configValues.{{ $field->key }}"
                                                     value="1"
                                                     class="rounded border-border-input text-accent focus:ring-accent"
                                                 >
                                                 <span class="text-sm text-ink">{{ __('Enabled') }}</span>
-                                            </label>
+                                            </div>
                                         </div>
                                     @else
                                         <x-ui.input

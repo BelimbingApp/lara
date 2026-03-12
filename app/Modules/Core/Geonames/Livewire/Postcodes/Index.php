@@ -37,14 +37,14 @@ class Index extends Component
             $query->where(function ($q) {
                 $q->where('geonames_postcodes.postcode', 'like', '%'.$this->search.'%')
                     ->orWhere('geonames_postcodes.place_name', 'like', '%'.$this->search.'%')
-                    ->orWhere('geonames_postcodes.country_iso', 'like', '%'.$this->search.'%')
+                    ->orWhere('geonames_postcodes.countryIso', 'like', '%'.$this->search.'%')
                     ->orWhere('geonames_countries.country', 'like', '%'.$this->search.'%');
             });
         }
 
         $importedIsos = DB::table('geonames_postcodes')
             ->distinct()
-            ->pluck('country_iso')
+            ->pluck('countryIso')
             ->all();
 
         $allCountries = Country::query()
@@ -56,13 +56,13 @@ class Index extends Component
         $countryRecordCounts = collect();
         if ($hasData) {
             $countryRecordCounts = DB::table('geonames_postcodes')
-                ->leftJoin('geonames_countries', 'geonames_postcodes.country_iso', '=', 'geonames_countries.iso')
-                ->select('geonames_postcodes.country_iso')
+                ->leftJoin('geonames_countries', 'geonames_postcodes.countryIso', '=', 'geonames_countries.iso')
+                ->select('geonames_postcodes.countryIso')
                 ->selectRaw('geonames_countries.country as country_name')
                 ->selectRaw('count(*) as record_count')
-                ->groupBy('geonames_postcodes.country_iso', 'geonames_countries.country')
+                ->groupBy('geonames_postcodes.countryIso', 'geonames_countries.country')
                 ->orderBy('geonames_countries.country')
-                ->orderBy('geonames_postcodes.country_iso')
+                ->orderBy('geonames_postcodes.countryIso')
                 ->get();
         }
 
@@ -101,7 +101,7 @@ class Index extends Component
     {
         $importedIsos = DB::table('geonames_postcodes')
             ->distinct()
-            ->pluck('country_iso')
+            ->pluck('countryIso')
             ->all();
 
         if (empty($importedIsos)) {

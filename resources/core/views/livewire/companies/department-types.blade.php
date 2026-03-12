@@ -143,28 +143,28 @@
 
             <div class="space-y-4">
                 <x-ui.input
-                    wire:model="create_code"
+                    wire:model="createCode"
                     label="{{ __('Code') }}"
                     type="text"
                     required
                     placeholder="{{ __('e.g. engineering') }}"
-                    :error="$errors->first('create_code')"
+                    :error="$errors->first('createCode')"
                 />
 
                 <x-ui.input
-                    wire:model="create_name"
+                    wire:model="createName"
                     label="{{ __('Name') }}"
                     type="text"
                     required
                     placeholder="{{ __('e.g. Engineering') }}"
-                    :error="$errors->first('create_name')"
+                    :error="$errors->first('createName')"
                 />
 
                 <x-ui.select
-                    wire:model="create_category"
+                    wire:model="createCategory"
                     label="{{ __('Category') }}"
                     required
-                    :error="$errors->first('create_category')"
+                    :error="$errors->first('createCategory')"
                 >
                     <option value="administrative">{{ __('Administrative') }}</option>
                     <option value="operational">{{ __('Operational') }}</option>
@@ -173,14 +173,14 @@
                 </x-ui.select>
 
                 <x-ui.textarea
-                    wire:model="create_description"
+                    wire:model="createDescription"
                     label="{{ __('Description') }}"
                     rows="3"
                     placeholder="{{ __('Brief description of this department type') }}"
-                    :error="$errors->first('create_description')"
+                    :error="$errors->first('createDescription')"
                 />
 
-                <x-ui.checkbox wire:model="create_is_active" label="{{ __('Active') }}" />
+                <x-ui.checkbox wire:model="createIsActive" label="{{ __('Active') }}" />
             </div>
 
             <div class="flex items-center gap-4">

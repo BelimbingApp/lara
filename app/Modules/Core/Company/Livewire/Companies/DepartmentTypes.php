@@ -19,38 +19,38 @@ class DepartmentTypes extends Component
 
     public bool $showCreateModal = false;
 
-    public string $create_code = '';
+    public string $createCode = '';
 
-    public string $create_name = '';
+    public string $createName = '';
 
-    public string $create_category = 'operational';
+    public string $createCategory = 'operational';
 
-    public ?string $create_description = null;
+    public ?string $createDescription = null;
 
-    public bool $create_is_active = true;
+    public bool $createIsActive = true;
 
     public function createType(): void
     {
         $validated = $this->validate([
-            'create_code' => ['required', 'string', 'max:255', Rule::unique('company_department_types', 'code')],
-            'create_name' => ['required', 'string', 'max:255'],
-            'create_category' => ['required', 'string', Rule::in(['administrative', 'operational', 'revenue', 'support'])],
-            'create_description' => ['nullable', 'string'],
-            'create_is_active' => ['boolean'],
+            'createCode' => ['required', 'string', 'max:255', Rule::unique('company_department_types', 'code')],
+            'createName' => ['required', 'string', 'max:255'],
+            'createCategory' => ['required', 'string', Rule::in(['administrative', 'operational', 'revenue', 'support'])],
+            'createDescription' => ['nullable', 'string'],
+            'createIsActive' => ['boolean'],
         ]);
 
         DepartmentType::query()->create([
-            'code' => $validated['create_code'],
-            'name' => $validated['create_name'],
-            'category' => $validated['create_category'],
-            'description' => $validated['create_description'],
-            'is_active' => $validated['create_is_active'],
+            'code' => $validated['createCode'],
+            'name' => $validated['createName'],
+            'category' => $validated['createCategory'],
+            'description' => $validated['createDescription'],
+            'is_active' => $validated['createIsActive'],
         ]);
 
         $this->showCreateModal = false;
-        $this->reset(['create_code', 'create_name', 'create_category', 'create_description', 'create_is_active']);
-        $this->create_category = 'operational';
-        $this->create_is_active = true;
+        $this->reset(['createCode', 'createName', 'createCategory', 'createDescription', 'createIsActive']);
+        $this->createCategory = 'operational';
+        $this->createIsActive = true;
         Session::flash('success', __('Department type created.'));
     }
 

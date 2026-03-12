@@ -85,19 +85,20 @@ class Providers extends Component
             return '—';
         }
 
+        $value = (float) $count;
+        $suffix = '';
+
         if ($count >= 1_000_000) {
             $value = $count / 1_000_000;
-
-            return rtrim(rtrim(number_format($value, 1), '0'), '.').'M';
-        }
-
-        if ($count >= 1_000) {
+            $suffix = 'M';
+        } elseif ($count >= 1_000) {
             $value = $count / 1_000;
-
-            return rtrim(rtrim(number_format($value, 1), '0'), '.').'K';
+            $suffix = 'K';
         }
 
-        return (string) $count;
+        return $suffix === ''
+            ? (string) $count
+            : rtrim(rtrim(number_format($value, 1), '0'), '.').$suffix;
     }
 
     public function render(): \Illuminate\Contracts\View\View

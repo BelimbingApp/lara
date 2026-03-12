@@ -33,25 +33,25 @@ class Show extends Component
 
     public string $password = '';
 
-    public string $password_confirmation = '';
+    public string $passwordConfirmation = '';
 
     public array $selectedRoleIds = [];
 
     public array $selectedCapabilityKeys = [];
 
-    public ?int $link_employee_id = null;
+    public ?int $linkEmployeeId = null;
 
     public bool $showAddEmployeeModal = false;
 
-    public ?int $new_emp_company_id = null;
+    public ?int $newEmpCompanyId = null;
 
-    public string $new_emp_employee_number = '';
+    public string $newEmpEmployeeNumber = '';
 
-    public string $new_emp_full_name = '';
+    public string $newEmpFullName = '';
 
-    public ?string $new_emp_designation = null;
+    public ?string $newEmpDesignation = null;
 
-    public ?string $new_emp_employment_start = null;
+    public ?string $newEmpEmploymentStart = null;
 
     public function mount(User $user): void
     {
@@ -61,7 +61,7 @@ class Show extends Component
             'employee.company',
             'employee.department',
         ]);
-        $this->new_emp_company_id = $user->company_id;
+        $this->newEmpCompanyId = $user->company_id;
     }
 
     /**
@@ -110,13 +110,14 @@ class Show extends Component
     public function updatePassword(): void
     {
         $validated = $this->validate([
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            'password' => ['required', 'string', Rules\Password::defaults()],
+            'passwordConfirmation' => ['required', 'same:password'],
         ]);
 
         $this->user->password = Hash::make($validated['password']);
         $this->user->save();
 
-        $this->reset(['password', 'password_confirmation']);
+        $this->reset(['password', 'passwordConfirmation']);
 
         Session::flash('success', __('Password updated successfully.'));
     }
@@ -255,7 +256,7 @@ class Show extends Component
 
         $this->user->update(['employee_id' => $employeeId]);
         $this->user->load('employee.company', 'employee.department');
-        $this->link_employee_id = null;
+        $this->linkEmployeeId = null;
     }
 
     /**
@@ -285,19 +286,19 @@ class Show extends Component
         }
 
         $validated = $this->validate([
-            'new_emp_company_id' => ['required', 'integer', 'exists:companies,id'],
-            'new_emp_employee_number' => ['required', 'string', 'max:255'],
-            'new_emp_full_name' => ['required', 'string', 'max:255'],
-            'new_emp_designation' => ['nullable', 'string', 'max:255'],
-            'new_emp_employment_start' => ['nullable', 'date'],
+            'newEmpCompanyId' => ['required', 'integer', 'exists:companies,id'],
+            'newEmpEmployeeNumber' => ['required', 'string', 'max:255'],
+            'newEmpFullName' => ['required', 'string', 'max:255'],
+            'newEmpDesignation' => ['nullable', 'string', 'max:255'],
+            'newEmpEmploymentStart' => ['nullable', 'date'],
         ]);
 
         $employee = Employee::query()->create([
-            'company_id' => $validated['new_emp_company_id'],
-            'employee_number' => $validated['new_emp_employee_number'],
-            'full_name' => $validated['new_emp_full_name'],
-            'designation' => $validated['new_emp_designation'],
-            'employment_start' => $validated['new_emp_employment_start'],
+            'company_id' => $validated['newEmpCompanyId'],
+            'employee_number' => $validated['newEmpEmployeeNumber'],
+            'full_name' => $validated['newEmpFullName'],
+            'designation' => $validated['newEmpDesignation'],
+            'employment_start' => $validated['newEmpEmploymentStart'],
             'status' => 'active',
         ]);
 
@@ -305,8 +306,8 @@ class Show extends Component
         $this->user->load('employee.company', 'employee.department');
         $this->showAddEmployeeModal = false;
         $this->reset([
-            'new_emp_company_id', 'new_emp_employee_number', 'new_emp_full_name',
-            'new_emp_designation', 'new_emp_employment_start',
+            'newEmpCompanyId', 'newEmpEmployeeNumber', 'newEmpFullName',
+            'newEmpDesignation', 'newEmpEmploymentStart',
         ]);
         Session::flash('success', __('Employee record created.'));
     }

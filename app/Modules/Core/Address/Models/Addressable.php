@@ -27,7 +27,7 @@ class Addressable extends MorphPivot
         'addressable_type',
         'addressable_id',
         'kind',
-        'is_primary',
+        'isPrimary',
         'priority',
         'valid_from',
         'valid_to',
@@ -42,7 +42,7 @@ class Addressable extends MorphPivot
     {
         return [
             'kind' => 'array',
-            'is_primary' => 'boolean',
+            'isPrimary' => 'boolean',
             'priority' => 'integer',
             'valid_from' => 'date',
             'valid_to' => 'date',

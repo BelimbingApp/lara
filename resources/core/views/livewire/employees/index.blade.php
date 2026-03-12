@@ -32,7 +32,7 @@
                         placeholder="{{ __('Search by name, employee number, email, designation, or job description...') }}"
                     />
                 </div>
-                <x-ui.select wire:model.live="type_filter">
+                <x-ui.select wire:model.live="typeFilter">
                     <option value="all">{{ __('All') }}</option>
                     <option value="human">{{ __('Human only') }}</option>
                     <option value="digital_worker">{{ __('Digital Worker only') }}</option>

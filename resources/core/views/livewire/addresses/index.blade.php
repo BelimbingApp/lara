@@ -60,9 +60,9 @@
                                     <div>{{ $address->locality ?: '-' }}</div>
                                     <div class="tabular-nums">{{ $address->postcode ?: '-' }}</div>
                                 </td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->country_iso ?: '-' }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $address->countryIso ?: '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">
-                                    <x-ui.badge :variant="$this->statusVariant($address->verification_status)">{{ ucfirst($address->verification_status) }}</x-ui.badge>
+                                    <x-ui.badge :variant="$this->statusVariant($address->verificationStatus)">{{ ucfirst($address->verificationStatus) }}</x-ui.badge>
                                 </td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-right">
                                     <div class="flex items-center justify-end gap-2">

@@ -8,6 +8,7 @@ namespace App\Modules\Core\AI\Tools;
 use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractActionTool;
+use App\Base\AI\Tools\Concerns\ProvidesToolMetadata;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
 use App\Base\AI\Tools\ToolResult;
@@ -28,6 +29,8 @@ use Illuminate\Support\Str;
  */
 class ScheduleTaskTool extends AbstractActionTool
 {
+    use ProvidesToolMetadata;
+
     /**
      * Valid actions for schedule management.
      *
@@ -82,80 +85,29 @@ class ScheduleTaskTool extends AbstractActionTool
         return 'ai.tool_schedule.execute';
     }
 
-    /**
-     * Human-friendly display name for UI surfaces.
-     */
-    public function displayName(): string
-    {
-        return 'Schedule Task';
-    }
-
-    /**
-     * One-sentence plain-language summary for humans.
-     */
-    public function summary(): string
-    {
-        return 'Create and manage scheduled tasks for Digital Workers.';
-    }
-
-    /**
-     * Longer explanation of what this tool does and does not do.
-     */
-    public function explanation(): string
-    {
-        return 'CRUD operations for scheduled tasks stored in the database. '
-            .'Each task defines a cron expression, target DW, and task description. '
-            .'Tasks execute via Laravel\'s scheduler.';
-    }
-
-    /**
-     * Human-readable setup checklist items.
-     *
-     * @return list<string>
-     */
-    public function setupRequirements(): array
+    protected function toolMetadata(): array
     {
         return [
-            'Laravel scheduler running',
-        ];
-    }
-
-    /**
-     * Sample inputs for the Try-It console.
-     *
-     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
-     */
-    public function testExamples(): array
-    {
-        return [
-            [
-                'label' => 'List schedules',
-                'input' => ['action' => 'list'],
+            'displayName' => 'Schedule Task',
+            'summary' => 'Create and manage scheduled tasks for Digital Workers.',
+            'explanation' => 'CRUD operations for scheduled tasks stored in the database. '
+                .'Each task defines a cron expression, target DW, and task description. '
+                .'Tasks execute via Laravel\'s scheduler.',
+            'setupRequirements' => [
+                'Laravel scheduler running',
             ],
-        ];
-    }
-
-    /**
-     * Descriptions of health probes this tool supports.
-     *
-     * @return list<string>
-     */
-    public function healthChecks(): array
-    {
-        return [
-            'Scheduler active',
-        ];
-    }
-
-    /**
-     * Known safety limits users should understand.
-     *
-     * @return list<string>
-     */
-    public function limits(): array
-    {
-        return [
-            'Company-scoped task isolation',
+            'testExamples' => [
+                [
+                    'label' => 'List schedules',
+                    'input' => ['action' => 'list'],
+                ],
+            ],
+            'healthChecks' => [
+                'Scheduler active',
+            ],
+            'limits' => [
+                'Company-scoped task isolation',
+            ],
         ];
     }
 

@@ -125,26 +125,27 @@ class DigitalWorkerToolRegistry
     public function execute(string $toolName, array $arguments): ToolResult
     {
         $tool = $this->tools[$toolName] ?? null;
+        $result = null;
 
         if ($tool === null) {
-            return ToolResult::error('Unknown tool "'.$toolName.'".', 'unknown_tool');
-        }
-
-        if (! $this->currentUserCanUse($tool)) {
-            return ToolResult::error(
+            $result = ToolResult::error('Unknown tool "'.$toolName.'".', 'unknown_tool');
+        } elseif (! $this->currentUserCanUse($tool)) {
+            $result = ToolResult::error(
                 'You do not have permission to use the "'.$toolName.'" tool.',
                 'permission_denied',
             );
+        } else {
+            try {
+                $result = $tool->execute($arguments);
+            } catch (\Throwable $e) {
+                $result = ToolResult::error(
+                    'Error executing "'.$toolName.'": '.$e->getMessage(),
+                    'unexpected_error',
+                );
+            }
         }
 
-        try {
-            return $tool->execute($arguments);
-        } catch (\Throwable $e) {
-            return ToolResult::error(
-                'Error executing "'.$toolName.'": '.$e->getMessage(),
-                'unexpected_error',
-            );
-        }
+        return $result;
     }
 
     /**

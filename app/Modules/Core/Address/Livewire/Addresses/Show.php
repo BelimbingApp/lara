@@ -19,13 +19,13 @@ class Show extends AbstractAddressForm
     public function mount(Address $address): void
     {
         $this->address = $address->load(['country', 'admin1']);
-        $this->country_iso = $address->country_iso;
-        $this->admin1_code = $address->admin1_code;
+        $this->countryIso = $address->countryIso;
+        $this->admin1Code = $address->admin1Code;
         $this->postcode = $address->postcode;
         $this->locality = $address->locality;
 
-        if ($this->country_iso) {
-            $this->admin1Options = $this->loadAdmin1ForCountry($this->country_iso);
+        if ($this->countryIso) {
+            $this->admin1Options = $this->loadAdmin1ForCountry($this->countryIso);
         }
     }
 
@@ -37,14 +37,14 @@ class Show extends AbstractAddressForm
     public function saveCountry(string $iso): void
     {
         if ($iso === '') {
-            $this->address->country_iso = null;
+            $this->address->countryIso = null;
         } else {
             $validated = validator(
-                ['country_iso' => $iso],
-                ['country_iso' => ['string', 'size:2']]
+                ['countryIso' => $iso],
+                ['countryIso' => ['string', 'size:2']]
             )->validate();
 
-            $this->address->country_iso = strtoupper($validated['country_iso']);
+            $this->address->countryIso = strtoupper($validated['countryIso']);
         }
 
         $this->address->save();
@@ -55,7 +55,7 @@ class Show extends AbstractAddressForm
     {
         $this->saveCountry($value ?? '');
         parent::updatedCountryIso($value);
-        $this->address->admin1_code = null;
+        $this->address->admin1Code = null;
         $this->address->postcode = null;
         $this->address->locality = null;
         $this->address->save();
@@ -66,7 +66,7 @@ class Show extends AbstractAddressForm
         $this->address->postcode = $value;
         $this->address->save();
         parent::updatedPostcode($value);
-        $this->address->admin1_code = $this->admin1_code;
+        $this->address->admin1Code = $this->admin1Code;
         $this->address->locality = $this->locality;
         $this->address->save();
     }
@@ -74,7 +74,7 @@ class Show extends AbstractAddressForm
     public function updatedAdmin1Code($value = null): void
     {
         parent::updatedAdmin1Code($value);
-        $this->address->admin1_code = $value ?? $this->admin1_code;
+        $this->address->admin1Code = $value ?? $this->admin1Code;
         $this->address->save();
     }
 
@@ -91,7 +91,7 @@ class Show extends AbstractAddressForm
             return;
         }
 
-        $this->address->verification_status = $status;
+        $this->address->verificationStatus = $status;
         $this->address->save();
     }
 
@@ -108,7 +108,7 @@ class Show extends AbstractAddressForm
                 'model' => $model,
                 'type' => class_basename($row->addressable_type),
                 'kind' => json_decode($row->kind, true) ?? [],
-                'is_primary' => $row->is_primary,
+                'isPrimary' => $row->isPrimary,
                 'priority' => $row->priority,
                 'valid_from' => $row->valid_from,
                 'valid_to' => $row->valid_to,

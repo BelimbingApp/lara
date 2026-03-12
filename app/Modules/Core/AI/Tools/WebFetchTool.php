@@ -198,19 +198,22 @@ class WebFetchTool extends AbstractTool
      */
     private function formatFetchResponse(array $result, string $url, int $maxChars): ToolResult
     {
+        $errorMessage = null;
+        $errorCode = null;
+
         if (isset($result['validation_error'])) {
-            return ToolResult::error($result['validation_error'], 'validation_error');
+            $errorMessage = $result['validation_error'];
+            $errorCode = 'validation_error';
+        } elseif (isset($result['request_error'])) {
+            $errorMessage = 'Failed to fetch URL: '.$result['request_error'];
+            $errorCode = 'request_error';
+        } elseif (isset($result['http_status'])) {
+            $errorMessage = 'Failed to fetch URL: HTTP '.$result['http_status'];
+            $errorCode = 'http_error';
         }
 
-        if (isset($result['request_error'])) {
-            return ToolResult::error('Failed to fetch URL: '.$result['request_error'], 'request_error');
-        }
-
-        if (isset($result['http_status'])) {
-            return ToolResult::error(
-                'Failed to fetch URL: HTTP '.$result['http_status'],
-                'http_error',
-            );
+        if ($errorMessage !== null && $errorCode !== null) {
+            return ToolResult::error($errorMessage, $errorCode);
         }
 
         $content = $result['content'] ?? '';

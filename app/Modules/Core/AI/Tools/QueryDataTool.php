@@ -28,8 +28,6 @@ use Illuminate\Support\Facades\DB;
  */
 class QueryDataTool extends AbstractTool
 {
-    private const TIMEOUT_SECONDS = 10;
-
     private const MAX_ROWS = 100;
 
     private const DEFAULT_LIMIT = 50;
@@ -333,9 +331,10 @@ class QueryDataTool extends AbstractTool
 
         $result = implode("\n", $lines);
 
+        $rowLabel = $rowCount === 1 ? 'row' : 'rows';
         $suffix = $rowCount >= $limit
             ? "\n\n(".$rowCount.' rows returned — limit reached, there may be more results)'
-            : "\n\n(".$rowCount.' '.($rowCount === 1 ? 'row' : 'rows').' returned)';
+            : "\n\n(".$rowCount.' '.$rowLabel.' returned)';
 
         return $result.$suffix;
     }

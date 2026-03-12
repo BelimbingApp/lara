@@ -18,33 +18,38 @@ class Create extends Component
 
     public string $description = '';
 
-    public ?int $company_id = null;
+    /** @var int|string|null */
+    public $companyId = null;
 
     /**
      * Create a new custom role.
      */
     public function createRole(): void
     {
-        $this->validate([
+        if ($this->companyId === '') {
+            $this->companyId = null;
+        }
+
+        $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
             'code' => [
                 'required', 'string', 'max:255', 'regex:/^[a-z0-9_]+$/',
                 Rule::unique('base_authz_roles', 'code')
                     ->when(
-                        $this->company_id !== null,
-                        fn ($rule) => $rule->where('company_id', $this->company_id),
+                        $this->companyId !== null,
+                        fn ($rule) => $rule->where('company_id', $this->companyId),
                         fn ($rule) => $rule->whereNull('company_id'),
                     ),
             ],
             'description' => ['nullable', 'string', 'max:1000'],
-            'company_id' => ['nullable', 'integer', 'exists:companies,id'],
+            'companyId' => ['nullable', 'integer', 'exists:companies,id'],
         ]);
 
         $role = Role::query()->create([
-            'company_id' => $this->company_id,
-            'name' => $this->name,
-            'code' => $this->code,
-            'description' => $this->description ?: null,
+            'company_id' => ($validated['companyId'] ?? null) ? (int) $validated['companyId'] : null,
+            'name' => $validated['name'],
+            'code' => $validated['code'],
+            'description' => ($validated['description'] ?? '') ?: null,
             'is_system' => false,
         ]);
 

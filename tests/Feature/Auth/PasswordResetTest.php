@@ -56,7 +56,7 @@ test('password can be reset with valid token', function () {
         $response = Livewire::test(ResetPassword::class, ['token' => $notification->token])
             ->set('email', $user->email)
             ->set('password', 'password')
-            ->set('password_confirmation', 'password')
+            ->set('passwordConfirmation', 'password')
             ->call('resetPassword');
 
         $response

@@ -16,7 +16,7 @@ test('authenticated users can view address pages', function (): void {
         'label' => 'HQ',
         'line1' => '123 Main Street',
         'locality' => 'Springfield',
-        'verification_status' => 'unverified',
+        'verificationStatus' => 'unverified',
     ]);
 
     $this->actingAs($user);
@@ -45,17 +45,21 @@ test('address can be created from create page component', function (): void {
         ->set('line1', '88 River Road')
         ->set('locality', 'Boston')
         ->set('postcode', '02110')
-        ->set('country_iso', 'us')
-        ->set('verification_status', 'verified')
+        ->set('countryIso', 'us')
+        ->set('verificationStatus', 'verified')
         ->call('store')
         ->assertRedirect(route('admin.addresses.index'));
 
-    $address = Address::query()->where('label', 'Warehouse')->first();
+    $address = Address::query()
+        ->where('label', 'Warehouse')
+        ->where('line1', '88 River Road')
+        ->latest('id')
+        ->first();
 
     expect($address)
         ->not()->toBeNull()
-        ->and($address->country_iso)
+        ->and($address->countryIso)
         ->toBe('US')
-        ->and($address->verification_status)
+        ->and($address->verificationStatus)
         ->toBe('verified');
 });

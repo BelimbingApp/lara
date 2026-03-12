@@ -19,52 +19,64 @@ class Create extends Component
 {
     use DecodesJsonFields;
 
-    public ?int $company_id = null;
+    public ?int $companyId = null;
 
-    public ?int $department_id = null;
+    public ?int $departmentId = null;
 
-    public ?int $supervisor_id = null;
+    public ?int $supervisorId = null;
 
-    public string $employee_number = '';
+    public string $employeeNumber = '';
 
-    public string $full_name = '';
+    public string $fullName = '';
 
-    public ?string $short_name = null;
+    public ?string $shortName = null;
 
     public ?string $designation = null;
 
-    public string $employee_type = 'full_time';
+    public string $employeeType = 'full_time';
 
     public string $status = 'active';
 
     public ?string $email = null;
 
-    public ?string $mobile_number = null;
+    public ?string $mobileNumber = null;
 
-    public ?string $employment_start = null;
+    public ?string $employmentStart = null;
 
-    public ?string $employment_end = null;
+    public ?string $employmentEnd = null;
 
-    public ?string $job_description = null;
+    public ?string $jobDescription = null;
 
-    public ?int $user_id = null;
+    public ?int $userId = null;
 
-    public string $metadata_json = '';
+    public string $metadataJson = '';
 
     public function store(): void
     {
         $validated = $this->validate($this->rules());
 
-        $validated['metadata'] = $this->decodeJsonField($validated['metadata_json'] ?? null);
-        $validated['job_description'] = $validated['job_description'] ?? null;
-
-        unset($validated['metadata_json']);
-
-        if (($validated['employee_type'] ?? '') === 'digital_worker') {
-            $validated['user_id'] = null;
+        if (($validated['employeeType'] ?? '') === 'digital_worker') {
+            $validated['userId'] = null;
         }
 
-        Employee::query()->create($validated);
+        Employee::query()->create([
+            'company_id' => $validated['companyId'],
+            'department_id' => $validated['departmentId'],
+            'user_id' => $validated['userId'],
+            'supervisor_id' => $validated['supervisorId'],
+            'employee_number' => $validated['employeeNumber'],
+            'full_name' => $validated['fullName'],
+            'short_name' => $validated['shortName'],
+            'designation' => $validated['designation'],
+            'employee_type' => $validated['employeeType'],
+            'job_description' => $validated['jobDescription'] ?? null,
+            'email' => $validated['email'],
+            'mobile_number' => $validated['mobileNumber'],
+            'status' => $validated['status'],
+            'employment_start' => $validated['employmentStart'],
+            'employment_end' => $validated['employmentEnd'],
+            'metadata' => $this->decodeJsonField($validated['metadataJson'] ?? null),
+        ]);
 
         Session::flash('success', __('Employee created successfully.'));
 
@@ -73,30 +85,28 @@ class Create extends Component
 
     protected function rules(): array
     {
-        $rules = [
-            'company_id' => ['required', 'integer', Rule::exists(Company::class, 'id')],
-            'department_id' => ['nullable', 'integer', 'exists:company_departments,id'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
-            'supervisor_id' => [
-                $this->employee_type === 'digital_worker' ? 'required' : 'nullable',
+        return [
+            'companyId' => ['required', 'integer', Rule::exists(Company::class, 'id')],
+            'departmentId' => ['nullable', 'integer', 'exists:company_departments,id'],
+            'userId' => ['nullable', 'integer', 'exists:users,id'],
+            'supervisorId' => [
+                $this->employeeType === 'digital_worker' ? 'required' : 'nullable',
                 'integer',
                 Rule::exists(Employee::class, 'id'),
             ],
-            'employee_number' => ['required', 'string', 'max:255', Rule::unique('employees')->where('company_id', $this->company_id)],
-            'full_name' => ['required', 'string', 'max:255'],
-            'short_name' => ['nullable', 'string', 'max:255'],
+            'employeeNumber' => ['required', 'string', 'max:255', Rule::unique('employees')->where('company_id', $this->companyId)],
+            'fullName' => ['required', 'string', 'max:255'],
+            'shortName' => ['nullable', 'string', 'max:255'],
             'designation' => ['nullable', 'string', 'max:255'],
-            'employee_type' => ['required', Rule::exists(EmployeeType::class, 'code')],
-            'job_description' => ['nullable', 'string', 'max:65535'],
+            'employeeType' => ['required', Rule::exists(EmployeeType::class, 'code')],
+            'jobDescription' => ['nullable', 'string', 'max:65535'],
             'email' => ['nullable', 'email', 'max:255'],
-            'mobile_number' => ['nullable', 'string', 'max:255'],
+            'mobileNumber' => ['nullable', 'string', 'max:255'],
             'status' => ['required', 'in:pending,probation,active,inactive,terminated'],
-            'employment_start' => ['nullable', 'date'],
-            'employment_end' => ['nullable', 'date'],
-            'metadata_json' => ['nullable', 'json'],
+            'employmentStart' => ['nullable', 'date'],
+            'employmentEnd' => ['nullable', 'date'],
+            'metadataJson' => ['nullable', 'json'],
         ];
-
-        return $rules;
     }
 
     public function render(): \Illuminate\Contracts\View\View

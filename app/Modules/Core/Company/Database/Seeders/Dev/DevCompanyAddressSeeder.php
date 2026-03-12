@@ -174,9 +174,9 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line2' => 'Jalan Sultan Ismail',
                 'locality' => 'Kuala Lumpur',
                 'postcode' => '50250',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.14',
-                'verification_status' => 'verified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.14',
+                'verificationStatus' => 'verified',
             ],
             [
                 'label' => 'Stellar Factory',
@@ -185,9 +185,9 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line2' => 'Jalan Industri 3',
                 'locality' => 'Nilai',
                 'postcode' => '71800',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.05',
-                'verification_status' => 'verified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.05',
+                'verificationStatus' => 'verified',
             ],
             [
                 'label' => 'SG Office',
@@ -196,8 +196,8 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line2' => '#05-02 Marina Bay Financial Centre',
                 'locality' => 'Singapore',
                 'postcode' => '018981',
-                'country_iso' => 'SG',
-                'verification_status' => 'verified',
+                'countryIso' => 'SG',
+                'verificationStatus' => 'verified',
             ],
             [
                 'label' => 'Borneo Warehouse',
@@ -205,18 +205,18 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line1' => 'Lot 3456, Demak Laut Industrial Park',
                 'locality' => 'Kuching',
                 'postcode' => '93050',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.13',
-                'verification_status' => 'verified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.13',
+                'verificationStatus' => 'verified',
             ],
             [
                 'label' => 'Billing Address',
                 'line1' => 'PO Box 1234',
                 'locality' => 'Petaling Jaya',
                 'postcode' => '46000',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.12',
-                'verification_status' => 'unverified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.12',
+                'verificationStatus' => 'unverified',
             ],
             [
                 'label' => 'Jakarta Office',
@@ -225,17 +225,17 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line2' => 'Jl. Jend. Sudirman Kav. 1',
                 'locality' => 'Jakarta Pusat',
                 'postcode' => '10220',
-                'country_iso' => 'ID',
-                'verification_status' => 'suggested',
+                'countryIso' => 'ID',
+                'verificationStatus' => 'suggested',
             ],
             [
                 'label' => 'Penang Branch',
                 'line1' => '23A, Lebuh Pantai',
                 'locality' => 'George Town',
                 'postcode' => '10300',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.07',
-                'verification_status' => 'unverified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.07',
+                'verificationStatus' => 'unverified',
             ],
             [
                 'label' => 'Johor Shipping Depot',
@@ -244,9 +244,9 @@ class DevCompanyAddressSeeder extends DevSeeder
                 'line2' => 'Kawasan Perindustrian Tanjung Langsat',
                 'locality' => 'Pasir Gudang',
                 'postcode' => '81700',
-                'country_iso' => 'MY',
-                'admin1_code' => 'MY.01',
-                'verification_status' => 'verified',
+                'countryIso' => 'MY',
+                'admin1Code' => 'MY.01',
+                'verificationStatus' => 'verified',
             ],
         ];
 
@@ -256,7 +256,7 @@ class DevCompanyAddressSeeder extends DevSeeder
             $addresses[] = Address::query()->firstOrCreate(
                 [
                     'label' => $definition['label'],
-                    'country_iso' => $definition['country_iso'],
+                    'countryIso' => $definition['countryIso'],
                 ],
                 $definition
             );
@@ -305,7 +305,7 @@ class DevCompanyAddressSeeder extends DevSeeder
             if (! $exists) {
                 $company->addresses()->attach($address->id, [
                     'kind' => $kind,
-                    'is_primary' => $isPrimary,
+                    'isPrimary' => $isPrimary,
                     'priority' => $priority,
                     'valid_from' => $validFrom,
                     'valid_to' => $validTo,

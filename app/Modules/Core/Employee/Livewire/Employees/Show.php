@@ -20,13 +20,13 @@ class Show extends Component
 
     public Employee $employee;
 
-    public int $attach_address_id = 0;
+    public int $attachAddressId = 0;
 
-    public array $attach_kind = [];
+    public array $attachKind = [];
 
-    public bool $attach_is_primary = false;
+    public bool $attachIsPrimary = false;
 
-    public int $attach_priority = 0;
+    public int $attachPriority = 0;
 
     public bool $showAttachModal = false;
 
@@ -132,20 +132,20 @@ class Show extends Component
 
     public function attachAddress(): void
     {
-        if ($this->attach_address_id === 0) {
+        if ($this->attachAddressId === 0) {
             return;
         }
 
-        $this->employee->addresses()->attach($this->attach_address_id, [
-            'kind' => $this->attach_kind,
-            'is_primary' => $this->attach_is_primary,
-            'priority' => $this->attach_priority,
+        $this->employee->addresses()->attach($this->attachAddressId, [
+            'kind' => $this->attachKind,
+            'isPrimary' => $this->attachIsPrimary,
+            'priority' => $this->attachPriority,
             'valid_from' => now()->toDateString(),
         ]);
 
         $this->employee->load('addresses');
         $this->showAttachModal = false;
-        $this->reset(['attach_address_id', 'attach_kind', 'attach_is_primary', 'attach_priority']);
+        $this->reset(['attachAddressId', 'attachKind', 'attachIsPrimary', 'attachPriority']);
         Session::flash('success', __('Address attached.'));
     }
 
@@ -158,12 +158,12 @@ class Show extends Component
 
     public function updateAddressPivot(int $addressId, string $field, mixed $value): void
     {
-        $allowed = ['is_primary', 'priority'];
+        $allowed = ['isPrimary', 'priority'];
         if (! in_array($field, $allowed)) {
             return;
         }
 
-        if ($field === 'is_primary') {
+        if ($field === 'isPrimary') {
             $value = (bool) $value;
         } elseif ($field === 'priority') {
             $value = (int) $value;
@@ -210,7 +210,7 @@ class Show extends Component
             'availableAddresses' => Address::query()
                 ->whereNotIn('id', $this->employee->addresses->pluck('id')->toArray())
                 ->orderBy('label')
-                ->get(['id', 'label', 'line1', 'locality', 'country_iso']),
+                ->get(['id', 'label', 'line1', 'locality', 'countryIso']),
         ]);
     }
 }
