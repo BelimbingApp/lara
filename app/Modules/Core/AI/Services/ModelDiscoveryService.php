@@ -5,6 +5,8 @@
 
 namespace App\Modules\Core\AI\Services;
 
+use App\Base\AI\Exceptions\GithubCopilotAuthException;
+use App\Base\AI\Exceptions\ProviderDiscoveryException;
 use App\Base\AI\Services\GithubCopilotAuthService;
 use App\Base\AI\Services\ModelCatalogService;
 use App\Base\AI\Services\ProviderDiscoveryService;
@@ -40,7 +42,7 @@ class ModelDiscoveryService
      * @param  AiProvider  $provider  Provider with base_url and api_key
      * @return list<array{model_id: string, display_name: string}>
      *
-     * @throws RuntimeException
+     * @throws GithubCopilotAuthException|ProviderDiscoveryException
      */
     public function discoverModels(AiProvider $provider): array
     {
