@@ -5,6 +5,7 @@
 
 namespace App\Base\AI\Console\Commands;
 
+use App\Base\AI\Exceptions\ModelCatalogSyncException;
 use App\Base\AI\Services\ModelCatalogService;
 use Illuminate\Console\Command;
 use Symfony\Component\Console\Attribute\AsCommand;
@@ -31,7 +32,7 @@ class AiCatalogSyncCommand extends Command
 
         try {
             $result = $catalog->sync(force: (bool) $this->option('force'));
-        } catch (\RuntimeException $e) {
+        } catch (ModelCatalogSyncException $e) {
             $this->components->error($e->getMessage());
 
             return self::FAILURE;

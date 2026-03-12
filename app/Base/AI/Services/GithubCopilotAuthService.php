@@ -5,9 +5,9 @@
 
 namespace App\Base\AI\Services;
 
+use App\Base\AI\Exceptions\GithubCopilotAuthException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 /**
  * GitHub Copilot OAuth device flow and token exchange.
@@ -48,7 +48,7 @@ class GithubCopilotAuthService
      *
      * @return array{device_code: string, user_code: string, verification_uri: string, expires_in: int, interval: int}
      *
-     * @throws RuntimeException
+     * @throws GithubCopilotAuthException
      */
     public function requestDeviceCode(): array
     {
@@ -60,13 +60,13 @@ class GithubCopilotAuthService
             ]);
 
         if (! $response->successful()) {
-            throw new RuntimeException('GitHub device code request failed: HTTP '.$response->status());
+            throw GithubCopilotAuthException::deviceCodeRequestFailed($response->status());
         }
 
         $data = $response->json();
 
         if (empty($data['device_code']) || empty($data['user_code']) || empty($data['verification_uri'])) {
-            throw new RuntimeException('GitHub device code response missing required fields');
+            throw GithubCopilotAuthException::missingDeviceCodeFields();
         }
 
         return [
@@ -127,7 +127,7 @@ class GithubCopilotAuthService
      * @param  string  $githubToken  GitHub access token from device flow
      * @return array{token: string, expires_at: int, base_url: string}
      *
-     * @throws RuntimeException
+     * @throws GithubCopilotAuthException
      */
     public function exchangeForCopilotToken(string $githubToken): array
     {
@@ -143,14 +143,14 @@ class GithubCopilotAuthService
             ->get(self::COPILOT_TOKEN_URL);
 
         if (! $response->successful()) {
-            throw new RuntimeException('Copilot token exchange failed: HTTP '.$response->status());
+            throw GithubCopilotAuthException::tokenExchangeFailed($response->status());
         }
 
         $data = $response->json();
         $token = $data['token'] ?? null;
 
         if (! is_string($token) || $token === '') {
-            throw new RuntimeException('Copilot token response missing token');
+            throw GithubCopilotAuthException::missingCopilotToken();
         }
 
         $expiresAt = $this->parseExpiresAt($data['expires_at'] ?? null);
@@ -206,7 +206,7 @@ class GithubCopilotAuthService
      *
      * @param  mixed  $expiresAt  Raw expires_at from response
      *
-     * @throws RuntimeException
+     * @throws GithubCopilotAuthException
      */
     private function parseExpiresAt(mixed $expiresAt): int
     {
@@ -216,6 +216,6 @@ class GithubCopilotAuthService
             return $value > 10_000_000_000 ? intdiv($value, 1000) : $value;
         }
 
-        throw new RuntimeException('Copilot token response has invalid expires_at');
+        throw GithubCopilotAuthException::invalidExpiresAt();
     }
 }

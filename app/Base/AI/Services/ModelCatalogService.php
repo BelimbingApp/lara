@@ -6,9 +6,9 @@
 namespace App\Base\AI\Services;
 
 use App\Base\AI\DTO\CatalogSyncResult;
+use App\Base\AI\Exceptions\ModelCatalogSyncException;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 /**
  * Fetches, caches, and serves the models.dev community model catalog.
@@ -39,7 +39,7 @@ class ModelCatalogService
      * Sends an If-None-Match header if we have a cached ETag. On 304 Not Modified,
      * no data is written. On 200 OK, the full response is saved to disk.
      *
-     * @throws RuntimeException
+     * @throws ModelCatalogSyncException
      */
     public function sync(bool $force = false): CatalogSyncResult
     {
@@ -71,13 +71,13 @@ class ModelCatalogService
         }
 
         if (! $response->successful()) {
-            throw new RuntimeException('Catalog sync failed: HTTP '.$response->status());
+            throw ModelCatalogSyncException::httpFailure($response->status());
         }
 
         $data = $response->json();
 
         if (! is_array($data) || $data === []) {
-            throw new RuntimeException('Catalog sync returned empty or invalid data');
+            throw ModelCatalogSyncException::invalidPayload();
         }
 
         $etag = $response->header('ETag') ?? '';

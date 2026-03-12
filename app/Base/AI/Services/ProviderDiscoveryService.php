@@ -5,8 +5,8 @@
 
 namespace App\Base\AI\Services;
 
+use App\Base\AI\Exceptions\ProviderDiscoveryException;
 use Illuminate\Support\Facades\Http;
-use RuntimeException;
 
 /**
  * Stateless model discovery via the OpenAI-compatible GET /models endpoint.
@@ -23,7 +23,7 @@ class ProviderDiscoveryService
      * @param  string  $apiKey  Bearer token / API key (empty string if not required)
      * @return list<array{model_id: string, display_name: string}>
      *
-     * @throws RuntimeException
+     * @throws ProviderDiscoveryException
      */
     public function discoverModels(string $baseUrl, string $apiKey = ''): array
     {
@@ -36,7 +36,7 @@ class ProviderDiscoveryService
         $response = $request->get(rtrim($baseUrl, '/').'/models');
 
         if (! $response->successful()) {
-            throw new RuntimeException('Model discovery failed: HTTP '.$response->status());
+            throw ProviderDiscoveryException::httpFailure($response->status());
         }
 
         $data = $response->json('data', []);

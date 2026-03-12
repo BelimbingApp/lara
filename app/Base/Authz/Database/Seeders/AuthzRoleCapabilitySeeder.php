@@ -6,10 +6,10 @@
 namespace App\Base\Authz\Database\Seeders;
 
 use App\Base\Authz\Capability\CapabilityRegistry;
+use App\Base\Authz\Exceptions\AuthzRoleCapabilitySeedingException;
 use App\Base\Authz\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
-use RuntimeException;
 
 class AuthzRoleCapabilitySeeder extends Seeder
 {
@@ -40,7 +40,7 @@ class AuthzRoleCapabilitySeeder extends Seeder
                 ->first();
 
             if ($role === null) {
-                throw new RuntimeException("Missing role [$roleCode] before seeding role capabilities.");
+                throw AuthzRoleCapabilitySeedingException::missingRole($roleCode);
             }
 
             // grant_all roles don't need individual capability rows.
