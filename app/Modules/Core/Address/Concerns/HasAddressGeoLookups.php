@@ -56,21 +56,21 @@ trait HasAddressGeoLookups
         // Fallback when Admin1 seed data is missing: derive options from imported postcodes.
         // Only include codes that exist in geonames_admin1 to avoid FK violations.
         return Postcode::query()
-            ->where('country_iso', $iso)
-            ->whereNotNull('admin1_code')
-            ->select('admin1_code')
+            ->where('countryIso', $iso)
+            ->whereNotNull('admin1Code')
+            ->select('admin1Code')
             ->distinct()
-            ->orderBy('admin1_code')
+            ->orderBy('admin1Code')
             ->get()
             ->map(function (Postcode $postcode) use ($iso): ?array {
-                $code = $iso.'.'.((string) $postcode->admin1_code);
+                $code = $iso.'.'.((string) $postcode->admin1Code);
                 if (! Admin1::query()->where('code', $code)->exists()) {
                     return null;
                 }
 
                 return [
                     'value' => $code,
-                    'label' => (string) $postcode->admin1_code,
+                    'label' => (string) $postcode->admin1Code,
                 ];
             })
             ->filter()
@@ -92,7 +92,7 @@ trait HasAddressGeoLookups
         $iso = strtoupper($countryIso);
 
         return Postcode::query()
-            ->where('country_iso', $iso)
+            ->where('countryIso', $iso)
             ->select('postcode')
             ->distinct()
             ->orderBy('postcode')
@@ -121,7 +121,7 @@ trait HasAddressGeoLookups
         $q = trim($query);
 
         $query = Postcode::query()
-            ->where('country_iso', $iso)
+            ->where('countryIso', $iso)
             ->select('postcode')
             ->distinct();
 
@@ -147,7 +147,7 @@ trait HasAddressGeoLookups
      *
      * @param  string  $countryIso  Two-letter ISO country code
      * @param  string  $postcode  Postal code to look up
-     * @return array{locality: string, admin1_code: string|null}|null
+     * @return array{locality: string, admin1Code: string|null}|null
      */
     public function lookupPostcode(string $countryIso, string $postcode): ?array
     {
@@ -159,7 +159,7 @@ trait HasAddressGeoLookups
 
         return [
             'locality' => $result['localities'][0]['value'],
-            'admin1_code' => $result['admin1_code'],
+            'admin1Code' => $result['admin1Code'],
         ];
     }
 
@@ -168,16 +168,16 @@ trait HasAddressGeoLookups
      *
      * @param  string  $countryIso  Two-letter ISO country code
      * @param  string  $postcode  Postal code to look up
-     * @return array{localities: array<int, array{value: string, label: string}>, admin1_code: string|null}|null
+     * @return array{localities: array<int, array{value: string, label: string}>, admin1Code: string|null}|null
      */
     public function lookupLocalitiesByPostcode(string $countryIso, string $postcode): ?array
     {
         $iso = strtoupper($countryIso);
 
         $results = Postcode::query()
-            ->where('country_iso', $iso)
+            ->where('countryIso', $iso)
             ->where('postcode', $postcode)
-            ->get(['place_name', 'admin1_code']);
+            ->get(['place_name', 'admin1Code']);
 
         if ($results->isEmpty()) {
             return null;
@@ -203,8 +203,8 @@ trait HasAddressGeoLookups
 
         $first = $results->first();
         $admin1Code = null;
-        if ($first->admin1_code) {
-            $candidate = $iso.'.'.$first->admin1_code;
+        if ($first->admin1Code) {
+            $candidate = $iso.'.'.$first->admin1Code;
             if (Admin1::query()->where('code', $candidate)->exists()) {
                 $admin1Code = $candidate;
             }
@@ -212,7 +212,7 @@ trait HasAddressGeoLookups
 
         return [
             'localities' => $localities,
-            'admin1_code' => $admin1Code,
+            'admin1Code' => $admin1Code,
         ];
     }
 
@@ -223,7 +223,7 @@ trait HasAddressGeoLookups
      */
     protected function ensurePostcodesImported(string $countryIso): void
     {
-        if (Postcode::query()->where('country_iso', $countryIso)->exists()) {
+        if (Postcode::query()->where('countryIso', $countryIso)->exists()) {
             return;
         }
 
@@ -231,7 +231,7 @@ trait HasAddressGeoLookups
             ->onQueue(ImportPostcodes::QUEUE);
         ImportPostcodes::runWorkerOnce();
 
-        if (Postcode::query()->where('country_iso', $countryIso)->exists()) {
+        if (Postcode::query()->where('countryIso', $countryIso)->exists()) {
             return;
         }
 

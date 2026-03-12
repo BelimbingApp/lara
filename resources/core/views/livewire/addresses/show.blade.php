@@ -112,7 +112,7 @@
                 </div>
                 <div>
                     <x-ui.combobox
-                        wire:model.live="country_iso"
+                        wire:model.live="countryIso"
                         label="{{ __('Country') }}"
                         placeholder="{{ __('Search country...') }}"
                         :options="$countryOptions"
@@ -120,8 +120,8 @@
                 </div>
                 <div>
                     <x-ui.combobox
-                        wire:model.live="admin1_code"
-                        wire:key="show-admin1-{{ $country_iso ?? 'none' }}"
+                        wire:model.live="admin1Code"
+                        wire:key="show-admin1-{{ $countryIso ?? 'none' }}"
                         label="{{ __('State / Province') }}"
                         :hint="$admin1IsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('Search state...') }}"
@@ -131,12 +131,12 @@
                 <div>
                     <x-ui.combobox
                         wire:model.live="postcode"
-                        wire:key="show-postcode-{{ $country_iso ?? 'none' }}"
+                        wire:key="show-postcode-{{ $countryIso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
                         placeholder="{{ __('Search postcode...') }}"
                         :options="$postcodeOptions"
                         :editable="true"
-                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $country_iso ?? '' }}"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $countryIso ?? '' }}"
                     />
                 </div>
                 <div>
@@ -149,22 +149,22 @@
                         :editable="true"
                     />
                 </div>
-                <div x-data="{ editing: false, val: '{{ $address->verification_status }}' }">
+                <div x-data="{ editing: false, val: '{{ $address->verificationStatus }}' }">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Verification Status') }}</dt>
                     <dd class="mt-0.5">
                         <div x-show="!editing" @click="editing = true" class="group flex items-center gap-1.5 cursor-pointer">
-                            <x-ui.badge :variant="match($address->verification_status) {
+                            <x-ui.badge :variant="match($address->verificationStatus) {
                                 'verified' => 'success',
                                 'suggested' => 'warning',
                                 default => 'default',
-                            }">{{ ucfirst($address->verification_status) }}</x-ui.badge>
+                            }">{{ ucfirst($address->verificationStatus) }}</x-ui.badge>
                             <x-icon name="heroicon-o-pencil" class="w-3.5 h-3.5 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
                         </div>
                         <select
                             x-show="editing"
                             x-model="val"
                             @change="editing = false; $wire.saveVerificationStatus(val)"
-                            @keydown.escape="editing = false; val = '{{ $address->verification_status }}'"
+                            @keydown.escape="editing = false; val = '{{ $address->verificationStatus }}'"
                             @blur="editing = false"
                             class="px-2 py-1 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
                         >
@@ -202,7 +202,7 @@
                         />
                     </dd>
                 </div>
-                <div x-data="{ editing: false, val: '{{ addslashes($address->source_ref ?? '') }}' }">
+                <div x-data="{ editing: false, val: '{{ addslashes($address->sourceRef ?? '') }}' }">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Source Reference') }}</dt>
                     <dd class="text-sm text-ink">
                         <div x-show="!editing" @click="editing = true; $nextTick(() => $refs.input.select())" class="group flex items-center gap-1.5 cursor-pointer rounded px-1 -mx-1 py-0.5 hover:bg-surface-subtle">
@@ -213,9 +213,9 @@
                             x-show="editing"
                             x-ref="input"
                             x-model="val"
-                            @keydown.enter="editing = false; $wire.saveField('source_ref', val)"
-                            @keydown.escape="editing = false; val = '{{ addslashes($address->source_ref ?? '') }}'"
-                            @blur="editing = false; $wire.saveField('source_ref', val)"
+                            @keydown.enter="editing = false; $wire.saveField('sourceRef', val)"
+                            @keydown.escape="editing = false; val = '{{ addslashes($address->sourceRef ?? '') }}'"
+                            @blur="editing = false; $wire.saveField('sourceRef', val)"
                             type="text"
                             class="w-full px-1 -mx-1 py-0.5 text-sm border border-accent rounded bg-surface-card text-ink focus:outline-none focus:ring-1 focus:ring-accent"
                         />
@@ -223,19 +223,19 @@
                 </div>
                 <div>
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Parser Version') }}</dt>
-                    <dd class="text-sm text-ink">{{ $address->parser_version ?: '-' }}</dd>
+                    <dd class="text-sm text-ink">{{ $address->parserVersion ?: '-' }}</dd>
                 </div>
                 <div>
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Parse Confidence') }}</dt>
-                    <dd class="text-sm text-ink">{{ $address->parse_confidence !== null ? $address->parse_confidence : '-' }}</dd>
+                    <dd class="text-sm text-ink">{{ $address->parseConfidence !== null ? $address->parseConfidence : '-' }}</dd>
                 </div>
             </div>
 
-            @if($address->raw_input)
+            @if($address->rawInput)
                 <div class="mt-4">
                     <dt class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Raw Input') }}</dt>
                     <dd class="mt-1">
-                        <pre class="text-sm text-ink bg-surface-subtle rounded-2xl p-4 overflow-x-auto">{{ $address->raw_input }}</pre>
+                        <pre class="text-sm text-ink bg-surface-subtle rounded-2xl p-4 overflow-x-auto">{{ $address->rawInput }}</pre>
                     </dd>
                 </div>
             @endif
@@ -282,7 +282,7 @@
                                         -
                                     @endif
                                 </td>
-                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $entity->is_primary ? __('Yes') : __('No') }}</td>
+                                <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted">{{ $entity->isPrimary ? __('Yes') : __('No') }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $entity->priority ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $entity->valid_from ?? '-' }}</td>
                                 <td class="px-table-cell-x py-table-cell-y whitespace-nowrap text-sm text-muted tabular-nums">{{ $entity->valid_to ?? '-' }}</td>

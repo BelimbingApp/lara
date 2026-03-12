@@ -8,6 +8,7 @@ namespace App\Modules\Core\AI\Tools;
 use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractActionTool;
+use App\Base\AI\Tools\Concerns\ProvidesToolMetadata;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolArgumentException;
 use App\Base\AI\Tools\ToolResult;
@@ -37,6 +38,8 @@ use App\Modules\Core\AI\Services\Messaging\ChannelAdapterRegistry;
  */
 class MessageTool extends AbstractActionTool
 {
+    use ProvidesToolMetadata;
+
     /**
      * Valid actions for messaging.
      *
@@ -99,68 +102,27 @@ class MessageTool extends AbstractActionTool
         return 'ai.tool_message.execute';
     }
 
-    /**
-     * Human-friendly display name for UI surfaces.
-     */
-    public function displayName(): string
-    {
-        return 'Message';
-    }
-
-    /**
-     * One-sentence plain-language summary for humans.
-     */
-    public function summary(): string
-    {
-        return 'Send messages across WhatsApp, Telegram, Slack, and other channels.';
-    }
-
-    /**
-     * Longer explanation of what this tool does and does not do.
-     */
-    public function explanation(): string
-    {
-        return 'Multi-channel messaging tool that allows Digital Workers to communicate with '
-            .'customers, partners, and teams. Supports WhatsApp, Telegram, LinkedIn, Slack, '
-            .'email, and more. Each channel requires separate account configuration and authorization.';
-    }
-
-    /**
-     * Human-readable setup checklist items.
-     *
-     * @return list<string>
-     */
-    public function setupRequirements(): array
+    protected function toolMetadata(): array
     {
         return [
-            'At least one messaging channel account configured',
-            'Channel-specific credentials set up',
-        ];
-    }
-
-    /**
-     * Descriptions of health probes this tool supports.
-     *
-     * @return list<string>
-     */
-    public function healthChecks(): array
-    {
-        return [
-            'Channel adapter registry loaded',
-            'At least one channel configured',
-        ];
-    }
-
-    /**
-     * Known safety limits users should understand.
-     *
-     * @return list<string>
-     */
-    public function limits(): array
-    {
-        return [
-            'Each channel gated by separate authz capabilities',
-            'Company-scoped account isolation',
+            'displayName' => 'Message',
+            'summary' => 'Send messages across WhatsApp, Telegram, Slack, and other channels.',
+            'explanation' => 'Multi-channel messaging tool that allows Digital Workers to communicate with '
+                .'customers, partners, and teams. Supports WhatsApp, Telegram, LinkedIn, Slack, '
+                .'email, and more. Each channel requires separate account configuration and authorization.',
+            'setupRequirements' => [
+                'At least one messaging channel account configured',
+                'Channel-specific credentials set up',
+            ],
+            'testExamples' => [],
+            'healthChecks' => [
+                'Channel adapter registry loaded',
+                'At least one channel configured',
+            ],
+            'limits' => [
+                'Each channel gated by separate authz capabilities',
+                'Company-scoped account isolation',
+            ],
         ];
     }
 

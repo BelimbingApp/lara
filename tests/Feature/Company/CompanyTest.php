@@ -89,12 +89,12 @@ test('company full address formats correctly', function (): void {
         'line2' => 'Suite 100',
         'locality' => 'Springfield',
         'postcode' => '62701',
-        'country_iso' => null,
+        'countryIso' => null,
     ]);
 
     $company->addresses()->attach($address->id, [
         'kind' => 'office',
-        'is_primary' => true,
+        'isPrimary' => true,
         'priority' => 0,
     ]);
 

@@ -14,7 +14,7 @@
         <x-ui.card>
             <form wire:submit="store" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.select wire:model="parent_id" label="{{ __('Parent Company') }}" :error="$errors->first('parent_id')">
+                    <x-ui.select wire:model="parentId" label="{{ __('Parent Company') }}" :error="$errors->first('parentId')">
                         <option value="">{{ __('None') }}</option>
                         @foreach($parentCompanies as $parentCompany)
                             <option value="{{ $parentCompany->id }}">{{ $parentCompany->name }}</option>
@@ -48,14 +48,14 @@
                     />
 
                     <x-ui.input
-                        wire:model="legal_name"
+                        wire:model="legalName"
                         label="{{ __('Legal Name') }}"
                         type="text"
                         placeholder="{{ __('Registered legal entity name') }}"
-                        :error="$errors->first('legal_name')"
+                        :error="$errors->first('legalName')"
                     />
 
-                    <x-ui.select wire:model="legal_entity_type_id" label="{{ __('Legal Entity Type') }}" :error="$errors->first('legal_entity_type_id')">
+                    <x-ui.select wire:model="legalEntityTypeId" label="{{ __('Legal Entity Type') }}" :error="$errors->first('legalEntityTypeId')">
                         <option value="">{{ __('Select type...') }}</option>
                         @foreach($legalEntityTypes as $type)
                             <option value="{{ $type->id }}">{{ $type->name }}</option>
@@ -63,19 +63,19 @@
                     </x-ui.select>
 
                     <x-ui.input
-                        wire:model="registration_number"
+                        wire:model="registrationNumber"
                         label="{{ __('Registration Number') }}"
                         type="text"
                         placeholder="{{ __('Business registration number') }}"
-                        :error="$errors->first('registration_number')"
+                        :error="$errors->first('registrationNumber')"
                     />
 
                     <x-ui.input
-                        wire:model="tax_id"
+                        wire:model="taxId"
                         label="{{ __('Tax ID') }}"
                         type="text"
                         placeholder="{{ __('Tax identification number') }}"
-                        :error="$errors->first('tax_id')"
+                        :error="$errors->first('taxId')"
                     />
                 </div>
 
@@ -106,19 +106,19 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.textarea
-                        wire:model="scope_activities_json"
+                        wire:model="scopeActivitiesJson"
                         label="{{ __('Business Activities (JSON)') }}"
                         rows="6"
                         placeholder="{{ __('{\"industry\":\"Manufacturing\",\"services\":[\"Shipping\"],\"business_focus\":\"Regional trade\"}') }}"
-                        :error="$errors->first('scope_activities_json')"
+                        :error="$errors->first('scopeActivitiesJson')"
                     />
 
                     <x-ui.textarea
-                        wire:model="metadata_json"
+                        wire:model="metadataJson"
                         label="{{ __('Metadata (JSON)') }}"
                         rows="6"
                         placeholder="{{ __('{\"employee_count\":120,\"founded_year\":2014}') }}"
-                        :error="$errors->first('metadata_json')"
+                        :error="$errors->first('metadataJson')"
                     />
                 </div>
 

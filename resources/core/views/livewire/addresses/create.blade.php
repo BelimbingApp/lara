@@ -59,33 +59,33 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.combobox
-                        wire:model.live="country_iso"
+                        wire:model.live="countryIso"
                         label="{{ __('Country') }}"
                         placeholder="{{ __('Search country...') }}"
                         :options="$countryOptions"
-                        :error="$errors->first('country_iso')"
+                        :error="$errors->first('countryIso')"
                     />
 
                     <x-ui.combobox
-                        wire:model.live="admin1_code"
-                        wire:key="create-admin1-{{ $country_iso ?? 'none' }}"
+                        wire:model.live="admin1Code"
+                        wire:key="create-admin1-{{ $countryIso ?? 'none' }}"
                         label="{{ __('State / Province') }}"
                         :hint="$admin1IsAuto ? __('(from postcode)') : null"
                         placeholder="{{ __('Search state...') }}"
                         :options="$admin1Options"
-                        :error="$errors->first('admin1_code')"
+                        :error="$errors->first('admin1Code')"
                     />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.combobox
                         wire:model.live="postcode"
-                        wire:key="create-postcode-{{ $country_iso ?? 'none' }}"
+                        wire:key="create-postcode-{{ $countryIso ?? 'none' }}"
                         label="{{ __('Postcode') }}"
                         placeholder="{{ __('Search postcode...') }}"
                         :options="$postcodeOptions"
                         :editable="true"
-                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $country_iso ?? '' }}"
+                        search-url="{{ route('admin.addresses.postcodes.search') }}?country={{ $countryIso ?? '' }}"
                         :error="$errors->first('postcode')"
                     />
 
@@ -114,34 +114,34 @@
                         />
 
                         <x-ui.input
-                            wire:model="source_ref"
+                            wire:model="sourceRef"
                             label="{{ __('Source Reference') }}"
                             type="text"
                             placeholder="{{ __('External reference ID (optional)') }}"
-                            :error="$errors->first('source_ref')"
+                            :error="$errors->first('sourceRef')"
                         />
 
                         <x-ui.input
-                            wire:model="parser_version"
+                            wire:model="parserVersion"
                             label="{{ __('Parser Version') }}"
                             type="text"
                             placeholder="{{ __('Parser version (optional)') }}"
-                            :error="$errors->first('parser_version')"
+                            :error="$errors->first('parserVersion')"
                         />
 
                         <x-ui.input
-                            wire:model="parse_confidence"
+                            wire:model="parseConfidence"
                             label="{{ __('Parse Confidence') }}"
                             type="number"
                             step="0.0001"
                             min="0"
                             max="1"
                             placeholder="{{ __('0.0000 to 1.0000') }}"
-                            :error="$errors->first('parse_confidence')"
+                            :error="$errors->first('parseConfidence')"
                         />
 
                         <div class="md:col-span-2">
-                            <x-ui.select wire:model="verification_status" label="{{ __('Verification Status') }}" :error="$errors->first('verification_status')">
+                            <x-ui.select wire:model="verificationStatus" label="{{ __('Verification Status') }}" :error="$errors->first('verificationStatus')">
                                 <option value="unverified">{{ __('Unverified') }}</option>
                                 <option value="suggested">{{ __('Suggested') }}</option>
                                 <option value="verified">{{ __('Verified') }}</option>
@@ -151,11 +151,11 @@
                 </div>
 
                 <x-ui.textarea
-                    wire:model="raw_input"
+                    wire:model="rawInput"
                     label="{{ __('Raw Input') }}"
                     rows="4"
                     placeholder="{{ __('Original pasted or scanned address block (optional)') }}"
-                    :error="$errors->first('raw_input')"
+                    :error="$errors->first('rawInput')"
                 />
 
                 <div class="flex items-center gap-4">

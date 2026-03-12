@@ -34,8 +34,8 @@ class AddressFactory extends Factory
             'line2' => fake()->optional()->secondaryAddress(),
             'locality' => fake()->city(),
             'postcode' => fake()->postcode(),
-            'country_iso' => fake()->countryCode(),
-            'verification_status' => 'unverified',
+            'countryIso' => fake()->countryCode(),
+            'verificationStatus' => 'unverified',
             'source' => 'manual',
         ];
     }
@@ -47,7 +47,7 @@ class AddressFactory extends Factory
     {
         return $this->state(
             fn (array $attributes) => [
-                'verification_status' => 'verified',
+                'verificationStatus' => 'verified',
             ],
         );
     }
@@ -59,7 +59,7 @@ class AddressFactory extends Factory
     {
         return $this->state(
             fn (array $attributes) => [
-                'verification_status' => 'suggested',
+                'verificationStatus' => 'suggested',
             ],
         );
     }
@@ -71,7 +71,7 @@ class AddressFactory extends Factory
     {
         return $this->state(
             fn (array $attributes) => [
-                'verification_status' => 'unverified',
+                'verificationStatus' => 'unverified',
             ],
         );
     }
@@ -83,10 +83,10 @@ class AddressFactory extends Factory
     {
         return $this->state(
             fn (array $attributes) => [
-                'raw_input' => fake()->address(),
+                'rawInput' => fake()->address(),
                 'parsed_at' => now(),
-                'parser_version' => '1.0.0',
-                'parse_confidence' => fake()->randomFloat(4, 0.5, 1.0),
+                'parserVersion' => '1.0.0',
+                'parseConfidence' => fake()->randomFloat(4, 0.5, 1.0),
             ],
         );
     }
@@ -99,7 +99,7 @@ class AddressFactory extends Factory
         return $this->state(
             fn (array $attributes) => [
                 'source' => 'scan',
-                'source_ref' => fake()->uuid(),
+                'sourceRef' => fake()->uuid(),
             ],
         );
     }
@@ -112,7 +112,7 @@ class AddressFactory extends Factory
         return $this->state(
             fn (array $attributes) => [
                 'source' => 'import',
-                'source_ref' => fake()->uuid(),
+                'sourceRef' => fake()->uuid(),
             ],
         );
     }

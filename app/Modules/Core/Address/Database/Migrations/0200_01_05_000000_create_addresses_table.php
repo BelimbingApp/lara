@@ -29,22 +29,22 @@ return new class extends Migration
             $table->string('postcode')->nullable();
 
             // Geonames v1 normalization references (optional)
-            $table->string('country_iso', 2)->nullable()->index();
-            $table->string('admin1_code', 20)->nullable()->index();
+            $table->string('countryIso', 2)->nullable()->index();
+            $table->string('admin1Code', 20)->nullable()->index();
 
             // AI/import provenance
-            $table->text('raw_input')->nullable(); // pasted/scanned block
+            $table->text('rawInput')->nullable(); // pasted/scanned block
             $table->string('source')->nullable()->index(); // manual, scan, paste, import_api
-            $table->string('source_ref')->nullable();
-            $table->string('parser_version')->nullable();
-            $table->decimal('parse_confidence', 5, 4)->nullable();
+            $table->string('sourceRef')->nullable();
+            $table->string('parserVersion')->nullable();
+            $table->decimal('parseConfidence', 5, 4)->nullable();
             $table->timestamp('parsed_at')->nullable();
 
             // Normalization/QA
             $table->timestamp('normalized_at')->nullable();
             $table->json('normalization_notes')->nullable();
             $table
-                ->string('verification_status')
+                ->string('verificationStatus')
                 ->default('unverified')
                 ->index(); // unverified, suggested, verified
             $table->json('metadata')->nullable();
@@ -53,12 +53,12 @@ return new class extends Migration
             $table->softDeletes();
 
             $table
-                ->foreign('country_iso')
+                ->foreign('countryIso')
                 ->references('iso')
                 ->on('geonames_countries')
                 ->nullOnDelete();
             $table
-                ->foreign('admin1_code')
+                ->foreign('admin1Code')
                 ->references('code')
                 ->on('geonames_admin1')
                 ->nullOnDelete();

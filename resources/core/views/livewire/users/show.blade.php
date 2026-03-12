@@ -380,13 +380,13 @@
                         />
 
                         <x-ui.input
-                            wire:model="password_confirmation"
+                            wire:model="passwordConfirmation"
                             label="{{ __('Confirm New Password') }}"
                             type="password"
                             required
                             autocomplete="new-password"
                             placeholder="{{ __('Confirm new password') }}"
-                            :error="$errors->first('password_confirmation')"
+                            :error="$errors->first('passwordConfirmation')"
                         />
 
                         <x-ui.button type="submit" variant="primary">
@@ -479,15 +479,15 @@
                     </x-ui.button>
                     <div x-show="linking" class="flex items-end gap-2">
                         <x-ui.combobox
-                            wire:model="link_employee_id"
+                            wire:model="linkEmployeeId"
                             placeholder="{{ __('Search employee...') }}"
                             :options="$unlinkableEmployees->map(fn($e) => ['value' => $e->id, 'label' => $e->full_name . ' (' . $e->employee_number . ')'])->all()"
                             class="w-64"
                         />
-                        <x-ui.button variant="primary" size="sm" @click="if ($wire.link_employee_id) { $wire.linkEmployee($wire.link_employee_id); linking = false; }">
+                        <x-ui.button variant="primary" size="sm" @click="if ($wire.linkEmployeeId) { $wire.linkEmployee($wire.linkEmployeeId); linking = false; }">
                             {{ __('Link') }}
                         </x-ui.button>
-                        <x-ui.button variant="ghost" size="sm" @click="linking = false; $wire.set('link_employee_id', null)">
+                        <x-ui.button variant="ghost" size="sm" @click="linking = false; $wire.set('linkEmployeeId', null)">
                             {{ __('Cancel') }}
                         </x-ui.button>
                     </div>
@@ -500,22 +500,22 @@
                 <h3 class="text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Add Employee Record') }}</h3>
 
                 <x-ui.combobox
-                    wire:model="new_emp_company_id"
+                    wire:model="newEmpCompanyId"
                     label="{{ __('Company') }}"
                     placeholder="{{ __('Search company...') }}"
                     :options="$companies->map(fn($c) => ['value' => $c->id, 'label' => $c->name])->all()"
                     required
-                    :error="$errors->first('new_emp_company_id')"
+                    :error="$errors->first('newEmpCompanyId')"
                 />
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input wire:model="new_emp_employee_number" label="{{ __('Employee Number') }}" type="text" required :error="$errors->first('new_emp_employee_number')" />
-                    <x-ui.input wire:model="new_emp_full_name" label="{{ __('Full Name') }}" type="text" required :error="$errors->first('new_emp_full_name')" />
+                    <x-ui.input wire:model="newEmpEmployeeNumber" label="{{ __('Employee Number') }}" type="text" required :error="$errors->first('newEmpEmployeeNumber')" />
+                    <x-ui.input wire:model="newEmpFullName" label="{{ __('Full Name') }}" type="text" required :error="$errors->first('newEmpFullName')" />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.input wire:model="new_emp_designation" label="{{ __('Designation') }}" type="text" placeholder="{{ __('Job title') }}" :error="$errors->first('new_emp_designation')" />
-                    <x-ui.input wire:model="new_emp_employment_start" label="{{ __('Employment Start') }}" type="date" :error="$errors->first('new_emp_employment_start')" />
+                    <x-ui.input wire:model="newEmpDesignation" label="{{ __('Designation') }}" type="text" placeholder="{{ __('Job title') }}" :error="$errors->first('newEmpDesignation')" />
+                    <x-ui.input wire:model="newEmpEmploymentStart" label="{{ __('Employment Start') }}" type="date" :error="$errors->first('newEmpEmploymentStart')" />
                 </div>
 
                 <div class="flex items-center gap-4 pt-2">

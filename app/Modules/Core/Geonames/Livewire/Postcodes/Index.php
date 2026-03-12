@@ -5,6 +5,7 @@
 
 namespace App\Modules\Core\Geonames\Livewire\Postcodes;
 
+use App\Base\Foundation\Livewire\Concerns\ResetsPaginationOnSearch;
 use App\Modules\Core\Geonames\Database\Seeders\PostcodeSeeder;
 use App\Modules\Core\Geonames\Models\Country;
 use App\Modules\Core\Geonames\Models\Postcode;
@@ -15,6 +16,7 @@ use Livewire\WithPagination;
 
 class Index extends Component
 {
+    use ResetsPaginationOnSearch;
     use WithPagination;
 
     public string $search = '';
@@ -23,11 +25,6 @@ class Index extends Component
     public array $selectedCountries = [];
 
     public bool $showCountryPicker = false;
-
-    public function updatedSearch(): void
-    {
-        $this->resetPage();
-    }
 
     public function with(): array
     {
@@ -40,14 +37,14 @@ class Index extends Component
             $query->where(function ($q) {
                 $q->where('geonames_postcodes.postcode', 'like', '%'.$this->search.'%')
                     ->orWhere('geonames_postcodes.place_name', 'like', '%'.$this->search.'%')
-                    ->orWhere('geonames_postcodes.country_iso', 'like', '%'.$this->search.'%')
+                    ->orWhere('geonames_postcodes.countryIso', 'like', '%'.$this->search.'%')
                     ->orWhere('geonames_countries.country', 'like', '%'.$this->search.'%');
             });
         }
 
         $importedIsos = DB::table('geonames_postcodes')
             ->distinct()
-            ->pluck('country_iso')
+            ->pluck('countryIso')
             ->all();
 
         $allCountries = Country::query()
@@ -59,13 +56,13 @@ class Index extends Component
         $countryRecordCounts = collect();
         if ($hasData) {
             $countryRecordCounts = DB::table('geonames_postcodes')
-                ->leftJoin('geonames_countries', 'geonames_postcodes.country_iso', '=', 'geonames_countries.iso')
-                ->select('geonames_postcodes.country_iso')
+                ->leftJoin('geonames_countries', 'geonames_postcodes.countryIso', '=', 'geonames_countries.iso')
+                ->select('geonames_postcodes.countryIso')
                 ->selectRaw('geonames_countries.country as country_name')
                 ->selectRaw('count(*) as record_count')
-                ->groupBy('geonames_postcodes.country_iso', 'geonames_countries.country')
+                ->groupBy('geonames_postcodes.countryIso', 'geonames_countries.country')
                 ->orderBy('geonames_countries.country')
-                ->orderBy('geonames_postcodes.country_iso')
+                ->orderBy('geonames_postcodes.countryIso')
                 ->get();
         }
 
@@ -104,7 +101,7 @@ class Index extends Component
     {
         $importedIsos = DB::table('geonames_postcodes')
             ->distinct()
-            ->pluck('country_iso')
+            ->pluck('countryIso')
             ->all();
 
         if (empty($importedIsos)) {

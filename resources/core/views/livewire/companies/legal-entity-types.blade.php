@@ -121,32 +121,32 @@
 
             <div class="space-y-4">
                 <x-ui.input
-                    wire:model="create_code"
+                    wire:model="createCode"
                     label="{{ __('Code') }}"
                     type="text"
                     required
                     placeholder="{{ __('e.g. private_limited') }}"
-                    :error="$errors->first('create_code')"
+                    :error="$errors->first('createCode')"
                 />
 
                 <x-ui.input
-                    wire:model="create_name"
+                    wire:model="createName"
                     label="{{ __('Name') }}"
                     type="text"
                     required
                     placeholder="{{ __('e.g. Private Limited Company') }}"
-                    :error="$errors->first('create_name')"
+                    :error="$errors->first('createName')"
                 />
 
                 <x-ui.textarea
-                    wire:model="create_description"
+                    wire:model="createDescription"
                     label="{{ __('Description') }}"
                     rows="3"
                     placeholder="{{ __('Brief description of this entity type') }}"
-                    :error="$errors->first('create_description')"
+                    :error="$errors->first('createDescription')"
                 />
 
-                <x-ui.checkbox wire:model="create_is_active" label="{{ __('Active') }}" />
+                <x-ui.checkbox wire:model="createIsActive" label="{{ __('Active') }}" />
             </div>
 
             <div class="flex items-center gap-4">

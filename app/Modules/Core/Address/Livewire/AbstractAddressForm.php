@@ -12,9 +12,9 @@ abstract class AbstractAddressForm extends Component
 {
     use HasAddressGeoLookups;
 
-    public ?string $country_iso = null;
+    public ?string $countryIso = null;
 
-    public ?string $admin1_code = null;
+    public ?string $admin1Code = null;
 
     public array $admin1Options = [];
 
@@ -35,7 +35,7 @@ abstract class AbstractAddressForm extends Component
      */
     public function updatedCountryIso($value): void
     {
-        $this->admin1_code = null;
+        $this->admin1Code = null;
         $this->admin1IsAuto = false;
         $this->admin1Options = [];
         $this->postcode = null;
@@ -65,7 +65,7 @@ abstract class AbstractAddressForm extends Component
         }
 
         if ($this->admin1IsAuto) {
-            $this->admin1_code = null;
+            $this->admin1Code = null;
             $this->admin1IsAuto = false;
         }
         if ($this->localityIsAuto) {
@@ -88,8 +88,8 @@ abstract class AbstractAddressForm extends Component
             $this->localityIsAuto = true;
         }
 
-        if ($result['admin1_code']) {
-            $this->admin1_code = $result['admin1_code'];
+        if ($result['admin1Code']) {
+            $this->admin1Code = $result['admin1Code'];
             $this->admin1IsAuto = true;
 
             if (empty($this->admin1Options)) {
@@ -113,7 +113,7 @@ abstract class AbstractAddressForm extends Component
      */
     protected function getCountryIsoForLookup(): ?string
     {
-        return $this->country_iso;
+        return $this->countryIso;
     }
 
     /**
@@ -121,7 +121,7 @@ abstract class AbstractAddressForm extends Component
      */
     protected function resetAddressFormGeoState(): void
     {
-        $this->admin1_code = null;
+        $this->admin1Code = null;
         $this->admin1IsAuto = false;
         $this->admin1Options = [];
         $this->postcode = null;

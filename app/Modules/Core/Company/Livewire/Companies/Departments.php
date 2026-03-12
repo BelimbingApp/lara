@@ -20,9 +20,9 @@ class Departments extends Component
 
     public bool $showCreateModal = false;
 
-    public int $create_department_type_id = 0;
+    public int $createDepartmentTypeId = 0;
 
-    public string $create_status = 'active';
+    public string $createStatus = 'active';
 
     public function mount(Company $company): void
     {
@@ -31,18 +31,18 @@ class Departments extends Component
 
     public function createDepartment(): void
     {
-        if ($this->create_department_type_id === 0) {
+        if ($this->createDepartmentTypeId === 0) {
             return;
         }
 
         Department::query()->create([
             'company_id' => $this->company->id,
-            'department_type_id' => $this->create_department_type_id,
-            'status' => $this->create_status,
+            'department_type_id' => $this->createDepartmentTypeId,
+            'status' => $this->createStatus,
         ]);
 
         $this->showCreateModal = false;
-        $this->reset(['create_department_type_id', 'create_status']);
+        $this->reset(['createDepartmentTypeId', 'createStatus']);
         Session::flash('success', __('Department created.'));
     }
 

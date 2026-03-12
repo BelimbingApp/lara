@@ -348,4 +348,6 @@ update_env_file_if_missing() {
     if [[ -z "$current" ]]; then
         update_env_file "$var_name" "$default_value" "$env_file"
     fi
+
+    return 0
 }

@@ -5,12 +5,12 @@
 
 namespace App\Modules\Core\User\Livewire\Auth;
 
+use App\Modules\Core\User\Livewire\Concerns\ValidatesPasswordConfirmation;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Locked;
 use Livewire\Component;
@@ -18,6 +18,8 @@ use Livewire\Component;
 #[Layout('components.layouts.auth')]
 class ResetPassword extends Component
 {
+    use ValidatesPasswordConfirmation;
+
     #[Locked]
     public string $token = '';
 
@@ -25,7 +27,7 @@ class ResetPassword extends Component
 
     public string $password = '';
 
-    public string $password_confirmation = '';
+    public string $passwordConfirmation = '';
 
     /**
      * Mount the component.
@@ -42,14 +44,19 @@ class ResetPassword extends Component
      */
     public function resetPassword(): void
     {
-        $this->validate([
+        $validated = $this->validate([
             'token' => ['required'],
             'email' => ['required', 'string', 'email'],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            ...$this->passwordValidationRules(),
         ]);
 
         $status = Password::reset(
-            $this->only('email', 'password', 'password_confirmation', 'token'),
+            [
+                'email' => $validated['email'],
+                'password' => $validated['password'],
+                'password_confirmation' => $validated['passwordConfirmation'],
+                'token' => $validated['token'],
+            ],
             function ($user) {
                 $user->forceFill([
                     'password' => Hash::make($this->password),

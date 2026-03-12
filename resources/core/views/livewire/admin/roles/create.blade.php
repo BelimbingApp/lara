@@ -39,9 +39,9 @@
                 />
 
                 <x-ui.select
-                    wire:model="company_id"
+                    wire:model="companyId"
                     label="{{ __('Company Scope') }}"
-                    :error="$errors->first('company_id')"
+                    :error="$errors->first('companyId')"
                 >
                     <option value="">{{ __('Global (all companies)') }}</option>
                     @foreach($companies as $company)

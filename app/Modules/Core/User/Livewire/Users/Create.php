@@ -6,17 +6,19 @@
 namespace App\Modules\Core\User\Livewire\Users;
 
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\User\Livewire\Concerns\ValidatesPasswordConfirmation;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules;
 use Livewire\Component;
 
 class Create extends Component
 {
+    use ValidatesPasswordConfirmation;
+
     /** @var int|string|null */
-    public $company_id = null;
+    public $companyId = null;
 
     public string $name = '';
 
@@ -24,28 +26,30 @@ class Create extends Component
 
     public string $password = '';
 
-    public string $password_confirmation = '';
+    public string $passwordConfirmation = '';
 
     /**
      * Store a newly created user.
      */
     public function store(): void
     {
-        if ($this->company_id === '') {
-            $this->company_id = null;
+        if ($this->companyId === '') {
+            $this->companyId = null;
         }
 
         $validated = $this->validate([
-            'company_id' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
+            'companyId' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
-            'password' => ['required', 'string', 'confirmed', Rules\Password::defaults()],
+            ...$this->passwordValidationRules(),
         ]);
 
-        $validated['password'] = Hash::make($validated['password']);
-        $validated['company_id'] = ($validated['company_id'] ?? null) ? (int) $validated['company_id'] : null;
-
-        User::create($validated);
+        User::create([
+            'company_id' => ($validated['companyId'] ?? null) ? (int) $validated['companyId'] : null,
+            'name' => $validated['name'],
+            'email' => $validated['email'],
+            'password' => Hash::make($validated['password']),
+        ]);
 
         Session::flash('success', __('User created successfully.'));
 

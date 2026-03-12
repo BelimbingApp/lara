@@ -14,6 +14,8 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
 
+require_once __DIR__.'/../../../Support/Auth/FakeAuthenticatable.php';
+
 uses(TestCase::class);
 
 it('allows request when capability is authorized', function (): void {
@@ -24,7 +26,10 @@ it('allows request when capability is authorized', function (): void {
             return AuthorizationDecision::allow(['test']);
         }
 
-        public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void {}
+        public function authorize(Actor $actor, string $capability, ?ResourceContext $resource = null, array $context = []): void
+        {
+            // This test double models the successful can() path without side effects.
+        }
 
         public function filterAllowed(Actor $actor, string $capability, iterable $resources, array $context = []): Collection
         {
@@ -35,18 +40,7 @@ it('allows request when capability is authorized', function (): void {
     $middleware = new AuthorizeCapability($service);
 
     $request = Request::create('/admin/users', 'GET');
-    $request->setUserResolver(fn () => new class
-    {
-        public function getAuthIdentifier(): int
-        {
-            return 1;
-        }
-
-        public function getAttribute(string $key): mixed
-        {
-            return $key === 'company_id' ? 10 : null;
-        }
-    });
+    $request->setUserResolver(fn () => new FakeAuthenticatable(1, ['company_id' => 10]));
     $request->setRouteResolver(fn () => Route::getRoutes()->getByName('admin.users.index'));
 
     $response = $middleware->handle($request, fn () => new Response('ok', 200), 'core.user.list');
@@ -78,18 +72,7 @@ it('aborts with 403 when capability is denied', function (): void {
     $middleware = new AuthorizeCapability($service);
 
     $request = Request::create('/admin/users', 'GET');
-    $request->setUserResolver(fn () => new class
-    {
-        public function getAuthIdentifier(): int
-        {
-            return 1;
-        }
-
-        public function getAttribute(string $key): mixed
-        {
-            return $key === 'company_id' ? 10 : null;
-        }
-    });
+    $request->setUserResolver(fn () => new FakeAuthenticatable(1, ['company_id' => 10]));
 
     expect(fn () => $middleware->handle($request, fn () => new Response('ok', 200), 'core.user.list'))
         ->toThrow(HttpException::class);

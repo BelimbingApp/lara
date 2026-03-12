@@ -38,7 +38,7 @@
 
         <!-- Confirm Password -->
         <x-ui.input
-            wire:model="password_confirmation"
+            wire:model="passwordConfirmation"
             label="{{ __('Confirm password') }}"
             type="password"
             required

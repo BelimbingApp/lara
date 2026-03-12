@@ -14,6 +14,8 @@ use Tests\Support\MakesRuntimeResponses;
 
 uses(TestCase::class, MakesRuntimeResponses::class);
 
+const AGENTIC_RUNTIME_SYSTEM_PROMPT = 'You are Lara.';
+
 class TestTool implements Tool
 {
     /**
@@ -144,7 +146,7 @@ describe('AgenticRuntime', function () {
         ]);
 
         $runtime = $this->makeAgenticRuntime($llmClient, $configResolver);
-        $result = $runtime->run([$this->makeMessage('user', 'Hi')], 1, 'You are Lara.');
+        $result = $runtime->run([$this->makeMessage('user', 'Hi')], 1, AGENTIC_RUNTIME_SYSTEM_PROMPT);
 
         expect($result['content'])->toBe('Hello, I am Lara!');
         expect($result['run_id'])->toStartWith('run_');
@@ -171,7 +173,7 @@ describe('AgenticRuntime', function () {
         );
 
         $runtime = $this->makeAgenticRuntime($llmClient, $configResolver, $this->makeToolRegistry(buildEchoTool()));
-        $result = $runtime->run([$this->makeMessage('user', 'Echo world')], 1, 'You are Lara.');
+        $result = $runtime->run([$this->makeMessage('user', 'Echo world')], 1, AGENTIC_RUNTIME_SYSTEM_PROMPT);
 
         expect($result['content'])->toContain('executed:echo_tool:world');
         expect($result['meta']['tool_actions'])->toHaveCount(1);
@@ -193,7 +195,7 @@ describe('AgenticRuntime', function () {
         );
 
         $runtime = $this->makeAgenticRuntime($llmClient, $configResolver, $this->makeToolRegistry(buildNavigateActionTool()));
-        $result = $runtime->run([$this->makeMessage('user', 'Go to dashboard')], 1, 'You are Lara.');
+        $result = $runtime->run([$this->makeMessage('user', 'Go to dashboard')], 1, AGENTIC_RUNTIME_SYSTEM_PROMPT);
 
         expect($result['content'])->toStartWith('<lara-action>Livewire.navigate(\'/dashboard\')</lara-action>')
             ->and($result['content'])->toContain('Navigated successfully.');

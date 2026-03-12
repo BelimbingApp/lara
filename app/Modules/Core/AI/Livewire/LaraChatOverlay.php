@@ -145,57 +145,28 @@ class LaraChatOverlay extends Component
             return;
         }
 
-        $messageManager = app(MessageManager::class);
-        $messages = $messageManager->read(Employee::LARA_ID, $sessionId);
-
-        if (empty($messages)) {
+        $messages = app(MessageManager::class)->read(Employee::LARA_ID, $sessionId);
+        if ($messages === []) {
             return;
         }
 
-        $configResolver = app(ConfigResolver::class);
-        $config = $configResolver->resolvePrimaryWithDefaultFallback(Employee::LARA_ID);
-
+        $config = app(ConfigResolver::class)->resolvePrimaryWithDefaultFallback(Employee::LARA_ID);
         if ($config === null) {
             return;
         }
 
-        $credentialResolver = app(RuntimeCredentialResolver::class);
-        $credentials = $credentialResolver->resolve($config);
-
+        $credentials = app(RuntimeCredentialResolver::class)->resolve($config);
         if (isset($credentials['error'])) {
             return;
         }
 
-        $messageBuilder = app(RuntimeMessageBuilder::class);
-        $apiMessages = $messageBuilder->build(
-            $messages,
-            'Generate a concise 3–6 word title summarizing this conversation. Reply with only the title, no quotes or punctuation.',
-        );
-
-        $llmClient = app(LlmClient::class);
-        $response = $llmClient->chat(
-            baseUrl: $credentials['base_url'],
-            apiKey: $credentials['api_key'],
-            model: $config['model'],
-            messages: $apiMessages,
-            maxTokens: 20,
-            temperature: 0.5,
-            timeout: 15,
-            providerName: $config['provider_name'] ?? null,
-        );
-
-        $title = trim($response['content'] ?? '');
-
-        if ($title === '') {
+        $title = $this->requestGeneratedSessionTitle($messages, $config, $credentials);
+        if ($title === null) {
             return;
         }
 
-        // Strip surrounding quotes if the LLM wrapped the title
-        $title = trim($title, '"\'');
-
         app(SessionManager::class)->updateTitle(Employee::LARA_ID, $sessionId, $title);
 
-        // If we're currently editing this session, update the editing state too
         if ($this->editingSessionId === $sessionId) {
             $this->editingTitle = $title;
         }
@@ -312,6 +283,36 @@ class LaraChatOverlay extends Component
         }
 
         return $isActivated;
+    }
+
+    /**
+     * Request a concise session title from the configured LLM.
+     *
+     * @param  array<int, mixed>  $messages
+     * @param  array<string, mixed>  $config
+     * @param  array<string, mixed>  $credentials
+     */
+    private function requestGeneratedSessionTitle(array $messages, array $config, array $credentials): ?string
+    {
+        $apiMessages = app(RuntimeMessageBuilder::class)->build(
+            $messages,
+            'Generate a concise 3–6 word title summarizing this conversation. Reply with only the title, no quotes or punctuation.',
+        );
+
+        $response = app(LlmClient::class)->chat(
+            baseUrl: $credentials['base_url'],
+            apiKey: $credentials['api_key'],
+            model: $config['model'],
+            messages: $apiMessages,
+            maxTokens: 20,
+            temperature: 0.5,
+            timeout: 15,
+            providerName: $config['provider_name'] ?? null,
+        );
+
+        $title = trim($response['content'] ?? '');
+
+        return $title === '' ? null : trim($title, '"\'');
     }
 
     /**

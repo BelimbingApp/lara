@@ -5,6 +5,7 @@
 
 namespace App\Modules\Core\Employee\Livewire\Employees;
 
+use App\Base\Foundation\Livewire\Concerns\ResetsPaginationOnSearch;
 use App\Modules\Core\Employee\Models\Employee;
 use Illuminate\Support\Facades\Session;
 use Livewire\Component;
@@ -12,16 +13,12 @@ use Livewire\WithPagination;
 
 class Index extends Component
 {
+    use ResetsPaginationOnSearch;
     use WithPagination;
 
     public string $search = '';
 
-    public string $type_filter = 'all'; // all | human | digital_worker
-
-    public function updatedSearch(): void
-    {
-        $this->resetPage();
-    }
+    public string $typeFilter = 'all'; // all | human | digital_worker
 
     public function updatedTypeFilter(): void
     {
@@ -67,8 +64,8 @@ class Index extends Component
                         ->orWhere('designation', 'like', '%'.$search.'%')
                         ->orWhere('job_description', 'like', '%'.$search.'%');
                 })
-                ->when($this->type_filter === 'human', fn ($q) => $q->human())
-                ->when($this->type_filter === 'digital_worker', fn ($q) => $q->digitalWorker())
+                ->when($this->typeFilter === 'human', fn ($q) => $q->human())
+                ->when($this->typeFilter === 'digital_worker', fn ($q) => $q->digitalWorker())
                 ->latest()
                 ->paginate(15),
         ]);

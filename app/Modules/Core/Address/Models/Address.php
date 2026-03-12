@@ -37,17 +37,17 @@ class Address extends Model
         'line3',
         'locality',
         'postcode',
-        'country_iso',
-        'admin1_code',
-        'raw_input',
+        'countryIso',
+        'admin1Code',
+        'rawInput',
         'source',
-        'source_ref',
-        'parser_version',
-        'parse_confidence',
+        'sourceRef',
+        'parserVersion',
+        'parseConfidence',
         'parsed_at',
         'normalized_at',
         'normalization_notes',
-        'verification_status',
+        'verificationStatus',
         'metadata',
     ];
 
@@ -67,7 +67,7 @@ class Address extends Model
     protected function casts(): array
     {
         return [
-            'parse_confidence' => 'decimal:4',
+            'parseConfidence' => 'decimal:4',
             'parsed_at' => 'datetime',
             'normalized_at' => 'datetime',
             'normalization_notes' => 'array',
@@ -83,7 +83,7 @@ class Address extends Model
      */
     public function country(): BelongsTo
     {
-        return $this->belongsTo(Country::class, 'country_iso', 'iso');
+        return $this->belongsTo(Country::class, 'countryIso', 'iso');
     }
 
     /**
@@ -102,8 +102,8 @@ class Address extends Model
             'locality' => ['nullable', 'string', 'max:255'],
             'postcode' => ['nullable', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:255'],
-            'source_ref' => ['nullable', 'string', 'max:255'],
-            'raw_input' => ['nullable', 'string'],
+            'sourceRef' => ['nullable', 'string', 'max:255'],
+            'rawInput' => ['nullable', 'string'],
         ];
     }
 
@@ -112,6 +112,6 @@ class Address extends Model
      */
     public function admin1(): BelongsTo
     {
-        return $this->belongsTo(Admin1::class, 'admin1_code', 'code');
+        return $this->belongsTo(Admin1::class, 'admin1Code', 'code');
     }
 }

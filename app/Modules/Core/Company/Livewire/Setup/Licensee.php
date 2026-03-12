@@ -19,13 +19,13 @@ class Licensee extends Component
 
     public string $name = '';
 
-    public ?string $legal_name = null;
+    public ?string $legalName = null;
 
-    public ?string $registration_number = null;
+    public ?string $registrationNumber = null;
 
-    public ?string $tax_id = null;
+    public ?string $taxId = null;
 
-    public ?string $legal_entity_type = null;
+    public ?string $legalEntityType = null;
 
     public ?string $jurisdiction = null;
 
@@ -104,10 +104,10 @@ class Licensee extends Component
     {
         $validated = $this->validate([
             'name' => ['required', 'string', 'max:255'],
-            'legal_name' => ['nullable', 'string', 'max:255'],
-            'registration_number' => ['nullable', 'string', 'max:255'],
-            'tax_id' => ['nullable', 'string', 'max:255'],
-            'legal_entity_type' => ['nullable', 'string', 'max:255'],
+            'legalName' => ['nullable', 'string', 'max:255'],
+            'registrationNumber' => ['nullable', 'string', 'max:255'],
+            'taxId' => ['nullable', 'string', 'max:255'],
+            'legalEntityType' => ['nullable', 'string', 'max:255'],
             'jurisdiction' => ['nullable', 'string', 'max:255'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
@@ -116,7 +116,15 @@ class Licensee extends Component
         Company::provisionLicensee($validated['name']);
 
         // Update additional fields beyond what provisionLicensee() sets
-        $extra = collect($validated)->except('name')->filter()->all();
+        $extra = collect([
+            'legal_name' => $validated['legalName'],
+            'registration_number' => $validated['registrationNumber'],
+            'tax_id' => $validated['taxId'],
+            'legal_entity_type' => $validated['legalEntityType'],
+            'jurisdiction' => $validated['jurisdiction'],
+            'email' => $validated['email'],
+            'website' => $validated['website'],
+        ])->filter()->all();
         if ($extra) {
             Company::query()->where('id', Company::LICENSEE_ID)->update($extra);
         }

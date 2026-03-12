@@ -113,7 +113,6 @@ describe('lara-action execution', function () {
             'script' => $script,
             'description' => 'Enable dark mode',
         ]);
-        $data = null;
 
         expect($result)->toContain('<lara-action>')
             ->and($result)->toContain($script);

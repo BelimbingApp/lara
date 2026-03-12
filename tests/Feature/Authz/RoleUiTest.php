@@ -149,7 +149,7 @@ test('custom role can be created', function (): void {
         ->set('name', 'Test Custom Role')
         ->set('code', 'test_custom')
         ->set('description', 'A test custom role')
-        ->set('company_id', $user->company_id)
+        ->set('companyId', $user->company_id)
         ->call('createRole')
         ->assertRedirect();
 
@@ -175,7 +175,7 @@ test('duplicate role code in same scope returns validation error', function (): 
     Livewire::test('admin.roles.create')
         ->set('name', 'Another Role')
         ->set('code', 'duplicate_code')
-        ->set('company_id', $user->company_id)
+        ->set('companyId', $user->company_id)
         ->call('createRole')
         ->assertHasErrors(['code']);
 });
@@ -196,7 +196,7 @@ test('same role code in different company scope is allowed', function (): void {
     Livewire::test('admin.roles.create')
         ->set('name', 'My Role')
         ->set('code', 'shared_code')
-        ->set('company_id', $user->company_id)
+        ->set('companyId', $user->company_id)
         ->call('createRole')
         ->assertRedirect();
 

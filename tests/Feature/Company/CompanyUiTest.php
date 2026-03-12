@@ -73,8 +73,8 @@ test('company can be created from create page component', function (): void {
         ->set('name', 'Northwind Holdings')
         ->set('status', 'active')
         ->set('email', 'ops@northwind.example')
-        ->set('scope_activities_json', '{"industry":"Logistics"}')
-        ->set('metadata_json', '{"employee_count":250}')
+        ->set('scopeActivitiesJson', '{"industry":"Logistics"}')
+        ->set('metadataJson', '{"employee_count":250}')
         ->call('store')
         ->assertRedirect(route('admin.companies.index'));
 

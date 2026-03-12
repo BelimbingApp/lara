@@ -58,35 +58,35 @@
                         />
 
                         <x-ui.input
-                            wire:model="legal_name"
+                            wire:model="legalName"
                             label="{{ __('Legal Name') }}"
                             type="text"
                             placeholder="{{ __('Registered legal entity name') }}"
-                            :error="$errors->first('legal_name')"
+                            :error="$errors->first('legalName')"
                         />
 
                         <x-ui.input
-                            wire:model="legal_entity_type"
+                            wire:model="legalEntityType"
                             label="{{ __('Legal Entity Type') }}"
                             type="text"
                             placeholder="{{ __('LLC, Corporation, Partnership, etc.') }}"
-                            :error="$errors->first('legal_entity_type')"
+                            :error="$errors->first('legalEntityType')"
                         />
 
                         <x-ui.input
-                            wire:model="registration_number"
+                            wire:model="registrationNumber"
                             label="{{ __('Registration Number') }}"
                             type="text"
                             placeholder="{{ __('Business registration number') }}"
-                            :error="$errors->first('registration_number')"
+                            :error="$errors->first('registrationNumber')"
                         />
 
                         <x-ui.input
-                            wire:model="tax_id"
+                            wire:model="taxId"
                             label="{{ __('Tax ID') }}"
                             type="text"
                             placeholder="{{ __('Tax identification number') }}"
-                            :error="$errors->first('tax_id')"
+                            :error="$errors->first('taxId')"
                         />
                     </div>
 

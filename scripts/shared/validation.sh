@@ -32,7 +32,8 @@ is_port_available() {
 # Find next available port starting from given port (increments until free or max 100 attempts).
 # Used by start-app and start-docker to assign ports when .env has none set.
 next_free_port() {
-    local port=$1
+    local starting_port=$1
+    local port=$starting_port
     local max_attempts=100
     local attempt=0
 
@@ -44,7 +45,7 @@ next_free_port() {
         port=$((port + 1))
         attempt=$((attempt + 1))
     done
-    echo "$1"
+    echo "$starting_port"
     return 1
 }
 

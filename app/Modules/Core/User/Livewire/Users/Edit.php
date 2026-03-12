@@ -6,19 +6,21 @@
 namespace App\Modules\Core\User\Livewire\Users;
 
 use App\Modules\Core\Company\Models\Company;
+use App\Modules\Core\User\Livewire\Concerns\ValidatesPasswordConfirmation;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Validation\Rule;
-use Illuminate\Validation\Rules;
 use Livewire\Component;
 
 class Edit extends Component
 {
+    use ValidatesPasswordConfirmation;
+
     public User $user;
 
     /** @var int|string|null */
-    public $company_id = null;
+    public $companyId = null;
 
     public string $name = '';
 
@@ -26,12 +28,12 @@ class Edit extends Component
 
     public string $password = '';
 
-    public string $password_confirmation = '';
+    public string $passwordConfirmation = '';
 
     public function mount(User $user): void
     {
         $this->user = $user;
-        $this->company_id = $user->company_id;
+        $this->companyId = $user->company_id;
         $this->name = $user->name;
         $this->email = $user->email;
     }
@@ -41,12 +43,12 @@ class Edit extends Component
      */
     public function update(): void
     {
-        if ($this->company_id === '') {
-            $this->company_id = null;
+        if ($this->companyId === '') {
+            $this->companyId = null;
         }
 
         $rules = [
-            'company_id' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
+            'companyId' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
             'name' => ['required', 'string', 'max:255'],
             'email' => [
                 'required',
@@ -59,12 +61,12 @@ class Edit extends Component
         ];
 
         if (! empty($this->password)) {
-            $rules['password'] = ['required', 'string', 'confirmed', Rules\Password::defaults()];
+            $rules += $this->passwordValidationRules();
         }
 
         $validated = $this->validate($rules);
 
-        $this->user->company_id = ($validated['company_id'] ?? null) ? (int) $validated['company_id'] : null;
+        $this->user->company_id = ($validated['companyId'] ?? null) ? (int) $validated['companyId'] : null;
         $this->user->name = $validated['name'];
         $this->user->email = $validated['email'];
 

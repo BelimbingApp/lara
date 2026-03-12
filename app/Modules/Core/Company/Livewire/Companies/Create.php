@@ -5,6 +5,7 @@
 
 namespace App\Modules\Core\Company\Livewire\Companies;
 
+use App\Base\Foundation\Livewire\Concerns\DecodesJsonFields;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Company\Models\LegalEntityType;
 use App\Modules\Core\Geonames\Models\Country;
@@ -14,7 +15,9 @@ use Livewire\Component;
 
 class Create extends Component
 {
-    public ?int $parent_id = null;
+    use DecodesJsonFields;
+
+    public ?int $parentId = null;
 
     public string $name = '';
 
@@ -22,13 +25,13 @@ class Create extends Component
 
     public string $status = 'active';
 
-    public ?string $legal_name = null;
+    public ?string $legalName = null;
 
-    public ?string $registration_number = null;
+    public ?string $registrationNumber = null;
 
-    public ?string $tax_id = null;
+    public ?string $taxId = null;
 
-    public ?int $legal_entity_type_id = null;
+    public ?int $legalEntityTypeId = null;
 
     public ?string $jurisdiction = null;
 
@@ -36,20 +39,31 @@ class Create extends Component
 
     public ?string $website = null;
 
-    public string $scope_activities_json = '';
+    public string $scopeActivitiesJson = '';
 
-    public string $metadata_json = '';
+    public string $metadataJson = '';
 
     public function store(): void
     {
         $validated = $this->validate($this->rules());
 
-        $validated['scope_activities'] = $this->decodeJsonField($validated['scope_activities_json']);
-        $validated['metadata'] = $this->decodeJsonField($validated['metadata_json']);
+        $payload = [
+            'parent_id' => $validated['parentId'],
+            'name' => $validated['name'],
+            'code' => $validated['code'],
+            'status' => $validated['status'],
+            'legal_name' => $validated['legalName'],
+            'registration_number' => $validated['registrationNumber'],
+            'tax_id' => $validated['taxId'],
+            'legal_entity_type_id' => $validated['legalEntityTypeId'],
+            'jurisdiction' => $validated['jurisdiction'],
+            'email' => $validated['email'],
+            'website' => $validated['website'],
+            'scope_activities' => $this->decodeJsonField($validated['scopeActivitiesJson']),
+            'metadata' => $this->decodeJsonField($validated['metadataJson']),
+        ];
 
-        unset($validated['scope_activities_json'], $validated['metadata_json']);
-
-        Company::query()->create($validated);
+        Company::query()->create($payload);
 
         Session::flash('success', __('Company created successfully.'));
 
@@ -73,30 +87,19 @@ class Create extends Component
     protected function rules(): array
     {
         return [
-            'parent_id' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
+            'parentId' => ['nullable', 'integer', Rule::exists(Company::class, 'id')],
             'name' => ['required', 'string', 'max:255'],
             'code' => ['nullable', 'string', 'max:255', Rule::unique(Company::class, 'code')],
             'status' => ['required', 'in:active,suspended,pending,archived'],
-            'legal_name' => ['nullable', 'string', 'max:255'],
-            'registration_number' => ['nullable', 'string', 'max:255'],
-            'tax_id' => ['nullable', 'string', 'max:255'],
-            'legal_entity_type_id' => ['nullable', 'integer', 'exists:company_legal_entity_types,id'],
+            'legalName' => ['nullable', 'string', 'max:255'],
+            'registrationNumber' => ['nullable', 'string', 'max:255'],
+            'taxId' => ['nullable', 'string', 'max:255'],
+            'legalEntityTypeId' => ['nullable', 'integer', 'exists:company_legal_entity_types,id'],
             'jurisdiction' => ['nullable', 'string', 'max:2', 'exists:geonames_countries,iso'],
             'email' => ['nullable', 'email', 'max:255'],
             'website' => ['nullable', 'string', 'max:255'],
-            'scope_activities_json' => ['nullable', 'json'],
-            'metadata_json' => ['nullable', 'json'],
+            'scopeActivitiesJson' => ['nullable', 'json'],
+            'metadataJson' => ['nullable', 'json'],
         ];
-    }
-
-    protected function decodeJsonField(?string $value): ?array
-    {
-        if ($value === null || trim($value) === '') {
-            return null;
-        }
-
-        $decoded = json_decode($value, true);
-
-        return is_array($decoded) ? $decoded : null;
     }
 }

@@ -50,7 +50,7 @@ test('user can be created from create page component', function (): void {
         ->set('name', 'Jane Doe')
         ->set('email', 'jane@example.com')
         ->set('password', 'SecurePassword123!')
-        ->set('password_confirmation', 'SecurePassword123!')
+        ->set('passwordConfirmation', 'SecurePassword123!')
         ->call('store')
         ->assertRedirect(route('admin.users.index'));
 
@@ -68,11 +68,11 @@ test('user can be created with company', function (): void {
     $this->actingAs($actor);
 
     Livewire::test('users.create')
-        ->set('company_id', (string) $company->id)
+        ->set('companyId', (string) $company->id)
         ->set('name', 'John Smith')
         ->set('email', 'john@example.com')
         ->set('password', 'SecurePassword123!')
-        ->set('password_confirmation', 'SecurePassword123!')
+        ->set('passwordConfirmation', 'SecurePassword123!')
         ->call('store')
         ->assertRedirect(route('admin.users.index'));
 
@@ -143,7 +143,7 @@ test('password can be updated from show page', function (): void {
 
     Livewire::test('users.show', ['user' => $user])
         ->set('password', 'NewSecurePassword123!')
-        ->set('password_confirmation', 'NewSecurePassword123!')
+        ->set('passwordConfirmation', 'NewSecurePassword123!')
         ->call('updatePassword')
         ->assertHasNoErrors();
 });
@@ -155,9 +155,9 @@ test('password update requires confirmation', function (): void {
 
     Livewire::test('users.show', ['user' => $user])
         ->set('password', 'NewSecurePassword123!')
-        ->set('password_confirmation', 'WrongConfirmation!')
+        ->set('passwordConfirmation', 'WrongConfirmation!')
         ->call('updatePassword')
-        ->assertHasErrors(['password']);
+        ->assertHasErrors(['passwordConfirmation']);
 });
 
 test('user without delete capability cannot delete users', function (): void {

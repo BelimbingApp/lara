@@ -97,21 +97,17 @@ class PagePinResolver
 
     private function routeMatches(?string $menuRoute, string $currentRoute): bool
     {
-        if ($menuRoute === null) {
-            return false;
+        $matches = false;
+
+        if ($menuRoute !== null) {
+            $matches = $menuRoute === $currentRoute;
+
+            if (! $matches && str_ends_with($menuRoute, '.index')) {
+                $matches = str_starts_with($currentRoute, substr($menuRoute, 0, -6));
+            }
         }
 
-        if ($menuRoute === $currentRoute) {
-            return true;
-        }
-
-        if (str_ends_with($menuRoute, '.index')) {
-            $prefix = substr($menuRoute, 0, -6);
-
-            return str_starts_with($currentRoute, $prefix);
-        }
-
-        return false;
+        return $matches;
     }
 
     /**
@@ -139,24 +135,18 @@ class PagePinResolver
 
     private function normalizeParameter(mixed $value): string
     {
-        if ($value instanceof UrlRoutable) {
-            return rawurlencode((string) $value->getRouteKey());
-        }
-
-        if ($value instanceof BackedEnum) {
-            return rawurlencode((string) $value->value);
-        }
-
         if (is_array($value)) {
             ksort($value);
-
-            return rawurlencode(json_encode($value, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
         }
 
-        if (is_object($value)) {
-            return rawurlencode($value::class);
-        }
+        $normalized = match (true) {
+            $value instanceof UrlRoutable => (string) $value->getRouteKey(),
+            $value instanceof BackedEnum => (string) $value->value,
+            is_array($value) => json_encode($value, JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+            is_object($value) => $value::class,
+            default => (string) $value,
+        };
 
-        return rawurlencode((string) $value);
+        return rawurlencode($normalized);
     }
 }

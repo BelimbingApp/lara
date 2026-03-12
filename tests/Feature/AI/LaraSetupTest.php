@@ -44,7 +44,7 @@ test('lara setup shows activation step when providers exist but no model is read
     Employee::provisionLara();
     resetLaraWorkspace();
 
-    $provider = AiProvider::query()->create([
+    AiProvider::query()->create([
         'company_id' => Company::LICENSEE_ID,
         'name' => 'openai',
         'display_name' => 'OpenAI',

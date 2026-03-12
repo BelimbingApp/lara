@@ -98,7 +98,7 @@
 
             <div class="space-y-1">
                 <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Related Company') }}</label>
-                <x-ui.select wire:model="create_related_company_id">
+                <x-ui.select wire:model="createRelatedCompanyId">
                     <option value="0">{{ __('— Select Company —') }}</option>
                     @foreach($availableCompanies as $availableCompany)
                         <option value="{{ $availableCompany->id }}">{{ $availableCompany->name }}</option>
@@ -108,7 +108,7 @@
 
             <div class="space-y-1">
                 <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Relationship Type') }}</label>
-                <x-ui.select wire:model="create_relationship_type_id">
+                <x-ui.select wire:model="createRelationshipTypeId">
                     <option value="0">{{ __('— Select Type —') }}</option>
                     @foreach($relationshipTypes as $type)
                         <option value="{{ $type->id }}">{{ $type->name }}</option>
@@ -117,13 +117,13 @@
             </div>
 
             <x-ui.input
-                wire:model="create_effective_from"
+                wire:model="createEffectiveFrom"
                 label="{{ __('Effective From') }}"
                 type="date"
             />
 
             <x-ui.input
-                wire:model="create_effective_to"
+                wire:model="createEffectiveTo"
                 label="{{ __('Effective To') }}"
                 type="date"
             />
@@ -144,13 +144,13 @@
             <h3 class="text-xl font-medium tracking-tight text-ink">{{ __('Edit Relationship Dates') }}</h3>
 
             <x-ui.input
-                wire:model="edit_effective_from"
+                wire:model="editEffectiveFrom"
                 label="{{ __('Effective From') }}"
                 type="date"
             />
 
             <x-ui.input
-                wire:model="edit_effective_to"
+                wire:model="editEffectiveTo"
                 label="{{ __('Effective To') }}"
                 type="date"
             />

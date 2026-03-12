@@ -8,6 +8,7 @@ namespace App\Modules\Core\AI\Tools;
 use App\Base\AI\Enums\ToolCategory;
 use App\Base\AI\Enums\ToolRiskClass;
 use App\Base\AI\Tools\AbstractTool;
+use App\Base\AI\Tools\Concerns\ProvidesToolMetadata;
 use App\Base\AI\Tools\Schema\ToolSchemaBuilder;
 use App\Base\AI\Tools\ToolResult;
 use App\Modules\Core\Employee\Models\Employee;
@@ -33,6 +34,8 @@ use RecursiveIteratorIterator;
  */
 class MemorySearchTool extends AbstractTool
 {
+    use ProvidesToolMetadata;
+
     private const MAX_RESULTS_LIMIT = 50;
 
     private const DEFAULT_MAX_RESULTS = 10;
@@ -116,83 +119,32 @@ class MemorySearchTool extends AbstractTool
         return 'ai.tool_memory_search.execute';
     }
 
-    /**
-     * Human-friendly display name for UI surfaces.
-     */
-    public function displayName(): string
-    {
-        return 'Memory Search';
-    }
-
-    /**
-     * One-sentence plain-language summary for humans.
-     */
-    public function summary(): string
-    {
-        return 'Search across workspace knowledge using semantic and keyword matching.';
-    }
-
-    /**
-     * Longer explanation of what this tool does and does not do.
-     */
-    public function explanation(): string
-    {
-        return 'Performs hybrid vector + keyword search over markdown files in the DW workspace. '
-            .'Requires embedding provider configuration and indexed workspace content. '
-            .'This tool only reads indexed workspace files — it cannot access arbitrary files.';
-    }
-
-    /**
-     * Human-readable setup checklist items.
-     *
-     * @return list<string>
-     */
-    public function setupRequirements(): array
+    protected function toolMetadata(): array
     {
         return [
-            'Docs directory must exist',
-            'Workspace content indexed',
-        ];
-    }
-
-    /**
-     * Sample inputs for the Try-It console.
-     *
-     * @return list<array{label: string, input: array<string, mixed>, runnable?: bool}>
-     */
-    public function testExamples(): array
-    {
-        return [
-            [
-                'label' => 'Search for topic',
-                'input' => ['query' => 'authorization capabilities'],
+            'displayName' => 'Memory Search',
+            'summary' => 'Search across workspace knowledge using semantic and keyword matching.',
+            'explanation' => 'Performs hybrid vector + keyword search over markdown files in the DW workspace. '
+                .'Requires embedding provider configuration and indexed workspace content. '
+                .'This tool only reads indexed workspace files — it cannot access arbitrary files.',
+            'setupRequirements' => [
+                'Docs directory must exist',
+                'Workspace content indexed',
             ],
-        ];
-    }
-
-    /**
-     * Descriptions of health probes this tool supports.
-     *
-     * @return list<string>
-     */
-    public function healthChecks(): array
-    {
-        return [
-            'Docs directory accessible',
-            'Index up to date',
-        ];
-    }
-
-    /**
-     * Known safety limits users should understand.
-     *
-     * @return list<string>
-     */
-    public function limits(): array
-    {
-        return [
-            'Searches workspace files only',
-            'Maximum 10 results by default',
+            'testExamples' => [
+                [
+                    'label' => 'Search for topic',
+                    'input' => ['query' => 'authorization capabilities'],
+                ],
+            ],
+            'healthChecks' => [
+                'Docs directory accessible',
+                'Index up to date',
+            ],
+            'limits' => [
+                'Searches workspace files only',
+                'Maximum 10 results by default',
+            ],
         ];
     }
 

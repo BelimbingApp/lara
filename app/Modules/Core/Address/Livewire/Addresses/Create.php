@@ -21,17 +21,17 @@ class Create extends AbstractAddressForm
 
     public ?string $line3 = null;
 
-    public ?string $raw_input = null;
+    public ?string $rawInput = null;
 
     public ?string $source = 'manual';
 
-    public ?string $source_ref = null;
+    public ?string $sourceRef = null;
 
-    public ?string $parser_version = null;
+    public ?string $parserVersion = null;
 
-    public ?string $parse_confidence = null;
+    public ?string $parseConfidence = null;
 
-    public string $verification_status = 'unverified';
+    public string $verificationStatus = 'unverified';
 
     public function with(): array
     {
@@ -44,15 +44,25 @@ class Create extends AbstractAddressForm
     {
         $validated = $this->validate($this->rules());
 
-        if ($validated['country_iso']) {
-            $validated['country_iso'] = strtoupper($validated['country_iso']);
-        }
-
-        $validated['parse_confidence'] = $validated['parse_confidence'] !== null
-            ? (float) $validated['parse_confidence']
-            : null;
-
-        Address::query()->create($validated);
+        Address::query()->create([
+            'label' => $validated['label'],
+            'phone' => $validated['phone'],
+            'line1' => $validated['line1'],
+            'line2' => $validated['line2'],
+            'line3' => $validated['line3'],
+            'locality' => $validated['locality'],
+            'postcode' => $validated['postcode'],
+            'countryIso' => $validated['countryIso'] ? strtoupper($validated['countryIso']) : null,
+            'admin1Code' => $validated['admin1Code'],
+            'rawInput' => $validated['rawInput'],
+            'source' => $validated['source'],
+            'sourceRef' => $validated['sourceRef'],
+            'parserVersion' => $validated['parserVersion'],
+            'parseConfidence' => $validated['parseConfidence'] !== null
+                ? (float) $validated['parseConfidence']
+                : null,
+            'verificationStatus' => $validated['verificationStatus'],
+        ]);
 
         Session::flash('success', __('Address created successfully.'));
 
@@ -61,13 +71,23 @@ class Create extends AbstractAddressForm
 
     protected function rules(): array
     {
-        return array_merge(Address::fieldRules(), [
-            'country_iso' => ['nullable', 'string', 'size:2'],
-            'admin1_code' => ['nullable', 'string', 'max:20'],
-            'parser_version' => ['nullable', 'string', 'max:255'],
-            'parse_confidence' => ['nullable', 'numeric', 'between:0,1'],
-            'verification_status' => ['required', 'in:unverified,suggested,verified'],
-        ]);
+        return [
+            'label' => ['nullable', 'string', 'max:255'],
+            'phone' => ['nullable', 'string', 'max:255'],
+            'line1' => ['nullable', 'string'],
+            'line2' => ['nullable', 'string'],
+            'line3' => ['nullable', 'string'],
+            'locality' => ['nullable', 'string', 'max:255'],
+            'postcode' => ['nullable', 'string', 'max:255'],
+            'source' => ['nullable', 'string', 'max:255'],
+            'sourceRef' => ['nullable', 'string', 'max:255'],
+            'rawInput' => ['nullable', 'string'],
+            'countryIso' => ['nullable', 'string', 'size:2'],
+            'admin1Code' => ['nullable', 'string', 'max:20'],
+            'parserVersion' => ['nullable', 'string', 'max:255'],
+            'parseConfidence' => ['nullable', 'numeric', 'between:0,1'],
+            'verificationStatus' => ['required', 'in:unverified,suggested,verified'],
+        ];
     }
 
     public function render(): \Illuminate\Contracts\View\View

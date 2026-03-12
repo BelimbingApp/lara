@@ -139,28 +139,27 @@ class DatabaseSettingsService implements SettingsService
     {
         $ttl = (int) config('settings.cache_ttl', 3600);
         $cacheKey = $this->cacheKey($key, $scope);
+        $value = null;
 
         if ($ttl <= 0) {
-            return $this->resolveSettingValue(Setting::findByKeyAndScope($key, $scope));
+            $value = $this->resolveSettingValue(Setting::findByKeyAndScope($key, $scope));
+        } else {
+            $cached = $this->cache->get($cacheKey);
+
+            if ($cached !== self::CACHE_MISS_SENTINEL) {
+                $value = $cached;
+            }
+
+            if ($cached === null) {
+                $value = $this->resolveSettingValue(Setting::findByKeyAndScope($key, $scope));
+
+                $this->cache->put(
+                    $cacheKey,
+                    $value ?? self::CACHE_MISS_SENTINEL,
+                    $ttl
+                );
+            }
         }
-
-        $cached = $this->cache->get($cacheKey);
-
-        if ($cached === self::CACHE_MISS_SENTINEL) {
-            return null;
-        }
-
-        if ($cached !== null) {
-            return $cached;
-        }
-
-        $value = $this->resolveSettingValue(Setting::findByKeyAndScope($key, $scope));
-
-        $this->cache->put(
-            $cacheKey,
-            $value ?? self::CACHE_MISS_SENTINEL,
-            $ttl
-        );
 
         return $value;
     }

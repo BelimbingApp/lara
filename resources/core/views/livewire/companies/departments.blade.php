@@ -106,7 +106,7 @@
             <div class="space-y-4">
                 <div class="space-y-1">
                     <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Department Type') }}</label>
-                    <x-ui.select wire:model="create_department_type_id">
+                    <x-ui.select wire:model="createDepartmentTypeId">
                         <option value="0">{{ __('Select a department type...') }}</option>
                         @foreach($availableTypes as $type)
                             <option value="{{ $type->id }}">{{ $type->code ? $type->code . ' — ' : '' }}{{ $type->name }}</option>
@@ -116,7 +116,7 @@
 
                 <div class="space-y-1">
                     <label class="block text-[11px] uppercase tracking-wider font-semibold text-muted">{{ __('Status') }}</label>
-                    <x-ui.select wire:model="create_status">
+                    <x-ui.select wire:model="createStatus">
                         <option value="active">{{ __('Active') }}</option>
                         <option value="inactive">{{ __('Inactive') }}</option>
                         <option value="suspended">{{ __('Suspended') }}</option>

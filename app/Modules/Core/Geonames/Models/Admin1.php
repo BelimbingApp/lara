@@ -63,7 +63,7 @@ class Admin1 extends Model
     public function scopeWithCountryName(Builder $query): Builder
     {
         return $query
-            ->selectRaw('geonames_admin1.*, geonames_countries.country as country_name, geonames_countries.iso as country_iso')
+            ->selectRaw('geonames_admin1.*, geonames_countries.country as country_name, geonames_countries.iso as countryIso')
             ->leftJoin('geonames_countries', function ($join) {
                 $join->whereRaw("geonames_countries.iso = SPLIT_PART(geonames_admin1.code, '.', 1)");
             });

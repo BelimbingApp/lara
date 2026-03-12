@@ -14,14 +14,14 @@
         <x-ui.card>
             <form wire:submit="store" class="space-y-6">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.select wire:model="company_id" label="{{ __('Company') }}" :error="$errors->first('company_id')">
+                    <x-ui.select wire:model="companyId" label="{{ __('Company') }}" :error="$errors->first('companyId')">
                         <option value="">{{ __('Select company...') }}</option>
                         @foreach($companies as $company)
                             <option value="{{ $company->id }}">{{ $company->name }}</option>
                         @endforeach
                     </x-ui.select>
 
-                    <x-ui.select wire:model="department_id" label="{{ __('Department') }}" :error="$errors->first('department_id')">
+                    <x-ui.select wire:model="departmentId" label="{{ __('Department') }}" :error="$errors->first('departmentId')">
                         <option value="">{{ __('None') }}</option>
                         @foreach($departments as $dept)
                             <option value="{{ $dept->id }}">{{ $dept->type->name }}</option>
@@ -31,31 +31,31 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.input
-                        wire:model="employee_number"
+                        wire:model="employeeNumber"
                         label="{{ __('Employee Number') }}"
                         type="text"
                         required
                         placeholder="{{ __('Employee ID or number') }}"
-                        :error="$errors->first('employee_number')"
+                        :error="$errors->first('employeeNumber')"
                     />
 
                     <x-ui.input
-                        wire:model="full_name"
+                        wire:model="fullName"
                         label="{{ __('Full Name') }}"
                         type="text"
                         required
                         placeholder="{{ __('Full legal name') }}"
-                        :error="$errors->first('full_name')"
+                        :error="$errors->first('fullName')"
                     />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.input
-                        wire:model="short_name"
+                        wire:model="shortName"
                         label="{{ __('Short Name') }}"
                         type="text"
                         placeholder="{{ __('Preferred or display name') }}"
-                        :error="$errors->first('short_name')"
+                        :error="$errors->first('shortName')"
                     />
 
                     <x-ui.input
@@ -68,7 +68,7 @@
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.select wire:model.live="employee_type" label="{{ __('Employee Type') }}" :error="$errors->first('employee_type')">
+                    <x-ui.select wire:model.live="employeeType" label="{{ __('Employee Type') }}" :error="$errors->first('employeeType')">
                         <optgroup label="{{ __('Human') }}">
                             @foreach($employeeTypes->where('code', '!=', 'digital_worker') as $type)
                                 <option value="{{ $type->code }}">{{ $type->label }}</option>
@@ -100,50 +100,50 @@
                     />
 
                     <x-ui.input
-                        wire:model="mobile_number"
+                        wire:model="mobileNumber"
                         label="{{ __('Mobile Number') }}"
                         type="text"
                         placeholder="{{ __('Contact number') }}"
-                        :error="$errors->first('mobile_number')"
+                        :error="$errors->first('mobileNumber')"
                     />
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <x-ui.input
-                        wire:model="employment_start"
+                        wire:model="employmentStart"
                         label="{{ __('Employment Start') }}"
                         type="date"
-                        :error="$errors->first('employment_start')"
+                        :error="$errors->first('employmentStart')"
                     />
 
                     <x-ui.input
-                        wire:model="employment_end"
+                        wire:model="employmentEnd"
                         label="{{ __('Employment End') }}"
                         type="date"
-                        :error="$errors->first('employment_end')"
+                        :error="$errors->first('employmentEnd')"
                     />
                 </div>
 
-                @if($employee_type === 'digital_worker')
+                @if($employeeType === 'digital_worker')
                 <x-ui.textarea
-                    wire:model="job_description"
+                    wire:model="jobDescription"
                     label="{{ __('Job Description') }}"
                     rows="3"
                     placeholder="{{ __('Short role label, e.g. Customer support Digital Worker') }}"
-                    :error="$errors->first('job_description')"
+                    :error="$errors->first('jobDescription')"
                 />
                 @endif
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <x-ui.select wire:model="supervisor_id" label="{{ __('Supervisor') }}" :error="$errors->first('supervisor_id')">
-                        <option value="">{{ $employee_type === 'digital_worker' ? __('Select supervisor (required)') : __('None') }}</option>
+                    <x-ui.select wire:model="supervisorId" label="{{ __('Supervisor') }}" :error="$errors->first('supervisorId')">
+                        <option value="">{{ $employeeType === 'digital_worker' ? __('Select supervisor (required)') : __('None') }}</option>
                         @foreach($supervisors as $supervisor)
                             <option value="{{ $supervisor->id }}">{{ $supervisor->full_name }}</option>
                         @endforeach
                     </x-ui.select>
 
-                    @if($employee_type !== 'digital_worker')
-                    <x-ui.select wire:model="user_id" label="{{ __('User Account') }}" :error="$errors->first('user_id')">
+                        @if($employeeType !== 'digital_worker')
+                    <x-ui.select wire:model="userId" label="{{ __('User Account') }}" :error="$errors->first('userId')">
                         <option value="">{{ __('None') }}</option>
                         @foreach($users as $u)
                             <option value="{{ $u->id }}">{{ $u->name }}</option>
@@ -153,11 +153,11 @@
                 </div>
 
                 <x-ui.textarea
-                    wire:model="metadata_json"
+                    wire:model="metadataJson"
                     label="{{ __('Metadata (JSON)') }}"
                     rows="6"
                     placeholder="{{ __('{\"notes\":\"Additional employee information\"}') }}"
-                    :error="$errors->first('metadata_json')"
+                    :error="$errors->first('metadataJson')"
                 />
 
                 <div class="flex items-center gap-4">
