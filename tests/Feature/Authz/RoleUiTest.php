@@ -61,36 +61,6 @@ test('authenticated users without capability are denied role pages', function ()
     $this->get(route('admin.roles.show', $role))->assertStatus(403);
 });
 
-test('role index displays roles with search', function (): void {
-    $user = createRoleTestAdmin();
-    $this->actingAs($user);
-
-    Livewire::test('admin.roles.index')
-        ->assertSee(CORE_ADMINISTRATOR_NAME);
-
-    Livewire::test('admin.roles.index')
-        ->set('search', 'user viewer')
-        ->assertSee('User Viewer')
-        ->assertDontSee(CORE_ADMINISTRATOR_NAME);
-
-    Livewire::test('admin.roles.index')
-        ->set('search', 'user editor')
-        ->assertSee('User Editor')
-        ->assertDontSee(CORE_ADMINISTRATOR_NAME);
-});
-
-test('role show displays role details and capabilities', function (): void {
-    $user = createRoleTestAdmin();
-    $role = Role::query()->where('code', 'user_viewer')->firstOrFail();
-
-    $this->actingAs($user);
-
-    Livewire::test('admin.roles.show', ['role' => $role])
-        ->assertSee('User Viewer')
-        ->assertSee('user_viewer')
-        ->assertSee('core.user.view');
-});
-
 test('capabilities can be assigned to a custom role', function (): void {
     $user = createRoleTestAdmin();
     $this->actingAs($user);

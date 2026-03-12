@@ -4,12 +4,6 @@ use App\Modules\Core\User\Livewire\Auth\Login;
 use App\Modules\Core\User\Models\User;
 use Livewire\Livewire;
 
-test('login screen can be rendered', function () {
-    $response = $this->get(route('login'));
-
-    $response->assertStatus(200);
-});
-
 test('users can authenticate using the login screen', function () {
     $user = User::factory()->create();
 

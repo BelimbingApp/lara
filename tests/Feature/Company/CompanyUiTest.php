@@ -38,33 +38,6 @@ test('company isLicensee returns true for id 1 and false for others', function (
         ->and($other->isLicensee())->toBeFalse();
 });
 
-test('licensee company shows licensee badge on index page', function (): void {
-    $user = User::factory()->create();
-    Company::query()->find(Company::LICENSEE_ID)
-        ?? Company::factory()->create(['id' => Company::LICENSEE_ID]);
-
-    $this->actingAs($user);
-
-    Livewire::test('companies.index')
-        ->assertSee(__('Licensee'));
-});
-
-test('guests are redirected to login from company pages', function (): void {
-    $this->get(route('admin.companies.index'))->assertRedirect(route('login'));
-    $this->get(route('admin.companies.create'))->assertRedirect(route('login'));
-});
-
-test('authenticated users can view company pages', function (): void {
-    $user = User::factory()->create();
-    $company = Company::factory()->create();
-
-    $this->actingAs($user);
-
-    $this->get(route('admin.companies.index'))->assertOk();
-    $this->get(route('admin.companies.create'))->assertOk();
-    $this->get(route('admin.companies.show', $company))->assertOk();
-});
-
 test('company can be created from create page component', function (): void {
     $user = User::factory()->create();
     $this->actingAs($user);

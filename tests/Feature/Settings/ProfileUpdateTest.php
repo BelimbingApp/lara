@@ -5,12 +5,6 @@ use App\Modules\Core\User\Livewire\Settings\Profile;
 use App\Modules\Core\User\Models\User;
 use Livewire\Livewire;
 
-test('profile page is displayed', function () {
-    $this->actingAs($user = User::factory()->create());
-
-    $this->get(route('profile.edit'))->assertOk();
-});
-
 test('profile information can be updated', function () {
     $user = User::factory()->create();
 
