@@ -274,6 +274,7 @@ return [
             'capabilities' => [
                 'admin.system_migration.list',
                 'admin.system_seeder.list',
+                'admin.system_table.list',
                 'admin.system_log.list',
                 'admin.system_job.list',
                 'admin.system_failed_job.list',

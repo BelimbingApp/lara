@@ -9,6 +9,8 @@ use App\Base\Database\Models\SeederRegistry;
 
 trait RegistersSeeders
 {
+    use ExtractsModuleProvenance;
+
     /**
      * Register a seeder to be run after migration.
      * Simple interface: just pass the seeder class. Module path is auto-derived.
@@ -32,40 +34,5 @@ trait RegistersSeeders
     {
         // Delegate to model for database operations
         SeederRegistry::unregister($seederClass);
-    }
-
-    /**
-     * Extract module path from migration file path.
-     *
-     * @param  string  $migrationPath  Full path to migration file
-     * @return string|null Module path (e.g., 'app/Modules/Core/Geonames')
-     */
-    protected function extractModulePath(string $migrationPath): ?string
-    {
-        // Extract path from migration file location
-        // Pattern: .../app/Modules/{Layer}/{Module}/Database/Migrations/{file}
-        if (preg_match('#app/Modules/[^/]+/[^/]+#', $migrationPath, $matches)) {
-            return $matches[0];
-        }
-
-        // Pattern: .../app/Base/{Module}/Database/Migrations/{file}
-        if (preg_match('#app/Base/[^/]+#', $migrationPath, $matches)) {
-            return $matches[0];
-        }
-
-        return null;
-    }
-
-    /**
-     * Extract module name from module path.
-     * e.g., 'app/Modules/Core/Geonames' -> 'Geonames'
-     */
-    protected function extractModuleName(?string $modulePath): ?string
-    {
-        if (! $modulePath) {
-            return null;
-        }
-
-        return basename($modulePath);
     }
 }

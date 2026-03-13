@@ -8,6 +8,7 @@ namespace App\Base\Database\Console\Commands;
 use App\Base\Database\Concerns\InteractsWithModuleMigrations;
 use App\Base\Database\Exceptions\CircularSeederDependencyException;
 use App\Base\Database\Models\SeederRegistry;
+use App\Base\Database\Models\TableRegistry;
 use App\Base\Database\Seeders\DevSeeder;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Employee\Models\Employee;
@@ -103,6 +104,9 @@ class MigrateCommand extends IlluminateMigrateCommand
                 if ($this->option('pretend')) {
                     return;
                 }
+
+                // Auto-discover and register tables from migration files
+                TableRegistry::ensureDiscoveredRegistered();
 
                 // Handle seeding with module-aware auto-discovery
                 if ($this->option('seed')) {

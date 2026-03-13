@@ -5,6 +5,7 @@
 
 use App\Base\Database\Livewire\Migrations\Index as MigrationsIndex;
 use App\Base\Database\Livewire\Seeders\Index as SeedersIndex;
+use App\Base\Database\Livewire\Tables\Index as TablesIndex;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('auth')->group(function () {
@@ -12,4 +13,6 @@ Route::middleware('auth')->group(function () {
         ->name('admin.system.migrations.index');
     Route::get('admin/system/seeders', SeedersIndex::class)
         ->name('admin.system.seeders.index');
+    Route::get('admin/system/tables', TablesIndex::class)
+        ->name('admin.system.tables.index');
 });

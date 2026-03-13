@@ -10,7 +10,8 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * 0001_01_01_000000_create_base_database_seeders_table runs before all other migrations
+     * 0001_01_01_000001_create_base_database_seeders_table runs right after
+     * the table registry — both are self-preserving infrastructure.
      */
     public function up(): void
     {

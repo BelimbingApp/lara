@@ -132,6 +132,19 @@ php artisan migrate --seed --seeder='App\Modules\Core\Company\Database\Seeders\R
 php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 ```
 
+## Table Stability Registry
+
+Tables marked `is_stable = true` in `base_database_tables` survive `migrate:fresh` (their data is preserved). When editing a migration that **alters the schema** of a stable table (adding/removing/renaming columns, changing indexes, modifying column types), you **must** mark the table as unstable first:
+
+```bash
+# Via tinker (quick)
+php artisan tinker --execute="App\Base\Database\Models\TableRegistry::query()->where('table_name', 'ai_providers')->update(['is_stable' => false, 'stabilized_at' => null, 'stabilized_by' => null]);"
+```
+
+Or toggle it off in the admin UI at `admin/system/tables` before running `migrate:fresh`.
+
+**Rule:** Never modify the schema of a stable table without first marking it unstable. `migrate:fresh` skips stable tables — if the schema is outdated, the migration will fail or produce silent data corruption.
+
 ## Database Portability
 
 **All database operations must be DB-agnostic.** Never use raw SQL that targets a specific database engine (MySQL, PostgreSQL, SQLite). Use Laravel's Schema Builder and Query Builder abstractions instead.

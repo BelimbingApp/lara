@@ -23,5 +23,14 @@ return [
             'parent' => 'system',
             'position' => 20,
         ],
+        [
+            'id' => 'system.tables',
+            'label' => 'Table Registry',
+            'icon' => 'heroicon-o-table-cells',
+            'route' => 'admin.system.tables.index',
+            'permission' => 'admin.system_table.list',
+            'parent' => 'system',
+            'position' => 15,
+        ],
     ],
 ];
