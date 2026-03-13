@@ -44,7 +44,6 @@ class ModelCatalogService
     public function sync(bool $force = false): CatalogSyncResult
     {
         $catalogPath = $this->catalogPath();
-        $metaPath = $this->metaPath();
 
         $currentMeta = $this->readMeta();
         $currentEtag = $force ? null : ($currentMeta['etag'] ?? null);

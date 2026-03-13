@@ -35,6 +35,10 @@ source "$SCRIPTS_DIR/shared/interactive.sh" 2>/dev/null || true
 # Environment (default to local if not provided, using Laravel standard)
 APP_ENV="${1:-local}"
 
+# Constants for .env keys
+readonly ENV_KEY_DB_DATABASE="DB_DATABASE"
+readonly ENV_KEY_DB_CONNECTION="DB_CONNECTION"
+
 # Generate secure random password
 generate_password() {
     if command -v openssl >/dev/null 2>&1; then
@@ -263,7 +267,7 @@ verify_postgresql_connection() {
     if [[ (-z "$db_name" || -z "$db_user" || -z "$db_password") && -f "$PROJECT_ROOT/.env" ]]; then
         db_host=$(get_env_var "DB_HOST" "127.0.0.1")
         db_port=$(get_env_var "DB_PORT" "5432")
-        db_name=$(get_env_var "DB_DATABASE" "")
+        db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "")
         db_user=$(get_env_var "DB_USERNAME" "")
         db_password=$(get_env_var "DB_PASSWORD" "")
     fi
@@ -286,7 +290,7 @@ verify_postgresql_connection() {
 setup_postgresql_database() {
     local db_name
     local db_user
-    db_name=$(get_env_var "DB_DATABASE" "blb")
+    db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "blb")
     db_user=$(get_env_var "DB_USERNAME" "belimbing_app")
     local db_password
     db_password=$(generate_password)
@@ -312,7 +316,7 @@ setup_postgresql_database() {
             update_env_file "DB_CONNECTION" "pgsql"
             update_env_file "DB_HOST" "127.0.0.1"
             update_env_file "DB_PORT" "5432"
-            update_env_file "DB_DATABASE" "$db_name"
+            update_env_file "$ENV_KEY_DB_DATABASE" "$db_name"
             update_env_file "DB_USERNAME" "$db_user"
             update_env_file "DB_PASSWORD" "$db_password"
 
@@ -356,11 +360,11 @@ setup_sqlite() {
 
     # Ensure .env has DB_CONNECTION=sqlite and DB_DATABASE
     if [[ -f "$PROJECT_ROOT/.env" ]]; then
-        update_env_file "DB_CONNECTION" "sqlite"
-        update_env_file_if_missing "DB_DATABASE" "$db_file"
-        db_file=$(get_env_var "DB_DATABASE" "$db_file")
+        update_env_file "$ENV_KEY_DB_CONNECTION" "sqlite"
+        update_env_file_if_missing "$ENV_KEY_DB_DATABASE" "$db_file"
+        db_file=$(get_env_var "$ENV_KEY_DB_DATABASE" "$db_file")
     else
-        echo -e "${YELLOW}⚠${NC} .env not found; create it and set DB_CONNECTION=sqlite, DB_DATABASE=$db_file"
+        echo -e "${YELLOW}⚠${NC} .env not found; create it and set DB_CONNECTION=sqlite, $ENV_KEY_DB_DATABASE=$db_file"
         return 0
     fi
 
@@ -491,7 +495,7 @@ ensure_postgresql_database() {
     echo -e "${GREEN}✓${NC} PostgreSQL is installed and running"
 
     local db_name
-    db_name=$(get_env_var "DB_DATABASE" "")
+    db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "")
     if [[ -z "$db_name" ]]; then
         echo -e "${CYAN}Creating database and user...${NC}"
         setup_postgresql_database

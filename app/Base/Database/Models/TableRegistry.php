@@ -256,7 +256,7 @@ class TableRegistry extends Model
         }
 
         // Match Schema::create('table_name', ...) patterns
-        if (! preg_match_all('/Schema::create\(\s*[\'"]([a-zA-Z0-9_]+)[\'"]/', $contents, $matches)) {
+        if (! preg_match_all('/Schema::create\(\s*[\'"]([\w]+)[\'"]/', $contents, $matches)) {
             return;
         }
 
@@ -267,10 +267,9 @@ class TableRegistry extends Model
         $modulePath = null;
         $moduleName = null;
 
-        if (preg_match('#app/Modules/[^/]+/[^/]+#', $rel, $pathMatch)) {
-            $modulePath = $pathMatch[0];
-            $moduleName = basename($modulePath);
-        } elseif (preg_match('#app/Base/[^/]+#', $rel, $pathMatch)) {
+        if (preg_match('#app/Modules/[^/]+/[^/]+#', $rel, $pathMatch)
+            || preg_match('#app/Base/[^/]+#', $rel, $pathMatch)
+        ) {
             $modulePath = $pathMatch[0];
             $moduleName = basename($modulePath);
         }

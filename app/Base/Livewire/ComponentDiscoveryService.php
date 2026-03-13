@@ -107,20 +107,18 @@ class ComponentDiscoveryService
             return null;
         }
 
+        $name = null;
+
         // Match the first view('livewire.xxx') call in the file.
         // This covers: view('livewire.xxx'), view('livewire.xxx', [...]), view('livewire.xxx', $this->with())
         if (preg_match("/view\(\s*'(livewire\.[\w.\-]+)'/", $source, $matches)) {
-            // Strip the 'livewire.' prefix: 'livewire.companies.index' -> 'companies.index'
-            return substr($matches[1], strlen('livewire.'));
+            $name = substr($matches[1], strlen('livewire.'));
+        } elseif (preg_match("/const\s+string\s+VIEW_NAME\s*=\s*'(livewire\.[\w.\-]+)'/", $source, $matches)) {
+            // Fallback: check for VIEW_NAME constant with 'livewire.' prefix
+            $name = substr($matches[1], strlen('livewire.'));
         }
 
-        // Fallback: check for VIEW_NAME constant with 'livewire.' prefix
-        // Pattern: protected const string VIEW_NAME = 'livewire.xxx';
-        if (preg_match("/const\s+string\s+VIEW_NAME\s*=\s*'(livewire\.[\w.\-]+)'/", $source, $matches)) {
-            return substr($matches[1], strlen('livewire.'));
-        }
-
-        return null;
+        return $name;
     }
 
     /**

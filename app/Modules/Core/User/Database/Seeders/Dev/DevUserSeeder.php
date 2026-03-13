@@ -12,6 +12,8 @@ use App\Modules\Core\User\Models\User;
 
 class DevUserSeeder extends DevSeeder
 {
+    protected const COMPANY_STELLAR = 'Stellar Industries Sdn Bhd';
+
     protected array $dependencies = [
         \App\Modules\Core\Company\Database\Seeders\Dev\DevCompanyAddressSeeder::class,
         \App\Modules\Core\Employee\Database\Seeders\Dev\DevEmployeeSeeder::class,
@@ -102,17 +104,17 @@ class DevUserSeeder extends DevSeeder
             [
                 'name' => 'Lim Wei Jie',
                 'email' => 'weijie.lim@stellarindustries.com.my',
-                'company' => 'Stellar Industries Sdn Bhd',
+                'company' => self::COMPANY_STELLAR,
             ],
             [
                 'name' => 'Tan Siew Mei',
                 'email' => 'siewmei.tan@stellarindustries.com.my',
-                'company' => 'Stellar Industries Sdn Bhd',
+                'company' => self::COMPANY_STELLAR,
             ],
             [
                 'name' => 'Ahmad bin Ismail',
                 'email' => 'ahmad.ismail@stellarindustries.com.my',
-                'company' => 'Stellar Industries Sdn Bhd',
+                'company' => self::COMPANY_STELLAR,
             ],
 
             // Nusantara Trading — one user

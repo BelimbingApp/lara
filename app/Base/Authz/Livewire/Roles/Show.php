@@ -71,7 +71,6 @@ class Show extends Component
             } elseif ($this->role->principalRoles()->exists()) {
                 Session::flash('error', __('Cannot change scope while users are assigned to this role.'));
             } elseif ($this->isInvalidScopeCompany($newCompanyId)) {
-                return;
             } elseif ($this->scopeConflictExists($newCompanyId)) {
                 Session::flash('error', __('A role with this code already exists in the selected scope.'));
             } else {

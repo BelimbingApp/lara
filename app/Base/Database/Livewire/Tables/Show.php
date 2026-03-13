@@ -18,6 +18,8 @@ use Livewire\WithPagination;
  */
 class Show extends Component
 {
+    private const MAX_CELL_LENGTH = 120;
+
     use ResetsPaginationOnSearch;
     use WithPagination;
 
@@ -77,11 +79,9 @@ class Show extends Component
 
         $stringValue = (string) $value;
 
-        if (mb_strlen($stringValue) > 120) {
-            return mb_substr($stringValue, 0, 120).'…';
-        }
-
-        return $stringValue;
+        return mb_strlen($stringValue) > self::MAX_CELL_LENGTH
+            ? mb_substr($stringValue, 0, self::MAX_CELL_LENGTH).'…'
+            : $stringValue;
     }
 
     public function render(): \Illuminate\Contracts\View\View

@@ -46,11 +46,11 @@ class ServiceProvider extends BaseServiceProvider
      */
     protected function registerViewComposer(): void
     {
-        View::composer(["components.layouts.app", "layouts::app"], function (
+        View::composer(['components.layouts.app', 'layouts::app'], function (
             $view,
         ): void {
-            if (!auth()->check()) {
-                $view->with("menuTree", []);
+            if (! auth()->check()) {
+                $view->with('menuTree', []);
 
                 return;
             }
@@ -69,26 +69,26 @@ class ServiceProvider extends BaseServiceProvider
             );
 
             $view->with(
-                "menuTree",
+                'menuTree',
                 $builder->build($filteredItems, request()->route()?->getName()),
             );
             $view->with(
-                "menuItemsFlat",
-                $this->buildMenuItemsFlat($registry->getAll(), $filteredItems),
+                'menuItemsFlat',
+                $this->buildMenuItemsFlat($filteredItems),
             );
-            $view->with("pins", $this->resolvePins($user));
+            $view->with('pins', $this->resolvePins($user));
         });
     }
 
     private function ensureMenuRegistryIsLoaded(MenuRegistry $registry): void
     {
-        if ($this->app->environment("local")) {
+        if ($this->app->environment('local')) {
             $this->refreshMenuRegistry($registry, persist: false);
 
             return;
         }
 
-        if (!$registry->loadFromCache()) {
+        if (! $registry->loadFromCache()) {
             $this->refreshMenuRegistry($registry, persist: true);
         }
     }
@@ -102,8 +102,8 @@ class ServiceProvider extends BaseServiceProvider
 
         $errors = $registry->validate();
 
-        if (!empty($errors)) {
-            logger()->error("Menu validation errors", ["errors" => $errors]);
+        if (! empty($errors)) {
+            logger()->error('Menu validation errors', ['errors' => $errors]);
         }
 
         if ($persist) {
@@ -127,26 +127,24 @@ class ServiceProvider extends BaseServiceProvider
     }
 
     /**
-     * @param  Collection<int, MenuItem>  $allItems
      * @param  Collection<int, MenuItem>  $filteredItems
      * @return array<string, array{label: string, pinLabel: string, icon: string, href: string|null, route: string|null}>
      */
     private function buildMenuItemsFlat(
-        Collection $allItems,
         Collection $filteredItems,
     ): array {
         return $filteredItems
-            ->filter(fn(MenuItem $item) => $item->hasRoute())
+            ->filter(fn (MenuItem $item) => $item->hasRoute())
             ->mapWithKeys(
-                fn(MenuItem $item) => [
+                fn (MenuItem $item) => [
                     $item->id => [
-                        "label" => $item->label,
-                        "pinLabel" => $this->buildPinLabel($item),
-                        "icon" => $item->icon ?? "heroicon-o-squares-2x2",
-                        "href" => $item->route
+                        'label' => $item->label,
+                        'pinLabel' => $this->buildPinLabel($item),
+                        'icon' => $item->icon ?? 'heroicon-o-squares-2x2',
+                        'href' => $item->route
                             ? route($item->route)
                             : $item->url,
-                        "route" => $item->route,
+                        'route' => $item->route,
                     ],
                 ],
             )
@@ -163,7 +161,7 @@ class ServiceProvider extends BaseServiceProvider
     private function resolvePins(mixed $user): array
     {
         try {
-            return method_exists($user, "getPins") ? $user->getPins() : [];
+            return method_exists($user, 'getPins') ? $user->getPins() : [];
         } catch (\Throwable) {
             return [];
         }

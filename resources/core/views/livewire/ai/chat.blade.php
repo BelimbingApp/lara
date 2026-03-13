@@ -277,7 +277,7 @@
                                             wire:click.stop="startEditingTitle('{{ $session->id }}')"
                                             class="w-full text-left truncate font-medium hover:text-ink"
                                             title="{{ __('Edit title') }}"
-                                            aria-label="{{ __('Edit title') }}"
+                                            aria-label="{{ __('Edit title: :title', ['title' => $session->title ?? __('Untitled')]) }}"
                                         >
                                             {{ $session->title ?? __('Untitled') }}
                                         </button>

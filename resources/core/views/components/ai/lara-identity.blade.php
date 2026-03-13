@@ -6,7 +6,7 @@
 
 <x-ai.agent-identity
     name="Lara"
-    role="System Agent"
+    badge-label="System Agent"
     icon="heroicon-o-sparkles"
     :shortcut="$showShortcut ? 'Ctrl+K' : null"
     :compact="$compact"

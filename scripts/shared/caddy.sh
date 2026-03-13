@@ -25,6 +25,7 @@ BLB_CADDY_ADMIN_SOCK="/tmp/caddy-blb-admin.sock"
 
 ensure_blb_caddy_dirs() {
     mkdir -p "$BLB_CADDY_SITES"
+    return 0
 }
 
 # Create the main Caddyfile that imports all site fragments.

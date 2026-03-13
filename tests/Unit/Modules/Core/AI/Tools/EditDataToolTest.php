@@ -10,6 +10,10 @@ uses(TestCase::class, LazilyRefreshDatabase::class, AssertsToolBehavior::class);
 const EDIT_NOT_ALLOWED = 'not allowed';
 const EDIT_PROTECTED = 'protected';
 const EDIT_SUCCESSFULLY = 'successfully';
+const EDIT_TEST_TABLE_NAME = '_edit_tool_test';
+const EDIT_TEST_TABLE_SCHEMA = 'CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)';
+const EDIT_TEST_TABLE_DROP = 'DROP TABLE _edit_tool_test';
+const EDIT_ROWS_AFFECTED = '1 row affected';
 
 beforeEach(function () {
     $this->tool = new EditDataTool;
@@ -73,20 +77,20 @@ describe('SQL validation', function () {
 describe('statement execution', function () {
     it('executes an INSERT and reports affected rows', function () {
         // Create a scratch table for testing
-        DB::statement('CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)');
+        DB::statement(EDIT_TEST_TABLE_SCHEMA);
 
         $result = (string) $this->tool->execute([
             'statement' => "INSERT INTO _edit_tool_test (id, name) VALUES (1, 'test')",
         ]);
 
         expect($result)->toContain(EDIT_SUCCESSFULLY)
-            ->and($result)->toContain('1 row affected');
+            ->and($result)->toContain(EDIT_ROWS_AFFECTED);
 
-        DB::statement('DROP TABLE _edit_tool_test');
+        DB::statement(sprintf('DROP TABLE %s', EDIT_TEST_TABLE_NAME));
     });
 
     it('executes an UPDATE and reports affected rows', function () {
-        DB::statement('CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)');
+        DB::statement(EDIT_TEST_TABLE_SCHEMA);
         DB::table('_edit_tool_test')->insert([
             ['id' => 1, 'name' => 'alice'],
             ['id' => 2, 'name' => 'bob'],
@@ -97,13 +101,13 @@ describe('statement execution', function () {
         ]);
 
         expect($result)->toContain(EDIT_SUCCESSFULLY)
-            ->and($result)->toContain('1 row affected');
+            ->and($result)->toContain(EDIT_ROWS_AFFECTED);
 
-        DB::statement('DROP TABLE _edit_tool_test');
+        DB::statement(sprintf('DROP TABLE %s', EDIT_TEST_TABLE_NAME));
     });
 
     it('executes a DELETE and reports affected rows', function () {
-        DB::statement('CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)');
+        DB::statement(EDIT_TEST_TABLE_SCHEMA);
         DB::table('_edit_tool_test')->insert([
             ['id' => 1, 'name' => 'alice'],
             ['id' => 2, 'name' => 'bob'],
@@ -114,31 +118,31 @@ describe('statement execution', function () {
         ]);
 
         expect($result)->toContain(EDIT_SUCCESSFULLY)
-            ->and($result)->toContain('1 row affected');
+            ->and($result)->toContain(EDIT_ROWS_AFFECTED);
 
-        DB::statement('DROP TABLE _edit_tool_test');
+        DB::statement(sprintf('DROP TABLE %s', EDIT_TEST_TABLE_NAME));
     });
 
     it('reports query errors gracefully', function () {
         $result = (string) $this->tool->execute([
-            'statement' => "UPDATE nonexistent_table_xyz SET x = 1 WHERE id = 1",
+            'statement' => 'UPDATE nonexistent_table_xyz SET x = 1 WHERE id = 1',
         ]);
         expect($result)->toContain('error');
     });
 
     it('strips trailing semicolons', function () {
-        DB::statement('CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)');
+        DB::statement(EDIT_TEST_TABLE_SCHEMA);
 
         $result = (string) $this->tool->execute([
             'statement' => "INSERT INTO _edit_tool_test (id, name) VALUES (1, 'test');",
         ]);
         expect($result)->toContain(EDIT_SUCCESSFULLY);
 
-        DB::statement('DROP TABLE _edit_tool_test');
+        DB::statement(sprintf('DROP TABLE %s', EDIT_TEST_TABLE_NAME));
     });
 
     it('uses plural for multiple rows', function () {
-        DB::statement('CREATE TABLE _edit_tool_test (id INTEGER PRIMARY KEY, name TEXT)');
+        DB::statement(EDIT_TEST_TABLE_SCHEMA);
         DB::table('_edit_tool_test')->insert([
             ['id' => 1, 'name' => 'a'],
             ['id' => 2, 'name' => 'b'],
@@ -151,6 +155,6 @@ describe('statement execution', function () {
 
         expect($result)->toContain('2 rows affected');
 
-        DB::statement('DROP TABLE _edit_tool_test');
+        DB::statement(sprintf('DROP TABLE %s', EDIT_TEST_TABLE_NAME));
     });
 });

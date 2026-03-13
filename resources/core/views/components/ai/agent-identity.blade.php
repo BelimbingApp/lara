@@ -5,7 +5,7 @@
 
 @props([
     'name',
-    'role' => 'Agent',
+    'badgeLabel' => 'Agent',
     'icon' => 'heroicon-o-cpu-chip',
     'shortcut' => null,
     'compact' => false,
@@ -24,7 +24,7 @@
     <span class="{{ $nameClasses }}">{{ __($name) }}</span>
     @if ($showRole)
         <x-ui.badge variant="accent" class="{{ $badgeClasses }}">
-            {{ __($role) }}
+            {{ __($badgeLabel) }}
         </x-ui.badge>
     @endif
     @if ($shortcut !== null)
