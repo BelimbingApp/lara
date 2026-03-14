@@ -31,9 +31,10 @@ All commands support `--module=<name>` for selective operation:
 |---------|-------------|
 | `MigrateCommand` | Runs migrations with module filtering and seeder registry support |
 | `RollbackCommand` | Rolls back migrations, optionally filtered by module |
-| `ResetCommand` | Resets all migrations, optionally filtered by module |
-| `RefreshCommand` | Refreshes migrations with module-aware seeding |
+| `ResetCommand` | Resets all migrations (**blocked without `--module` or `--force-wipe`**) |
+| `RefreshCommand` | Refreshes migrations with module-aware seeding (**blocked without `--module` or `--force-wipe`**) |
 | `StatusCommand` | Shows migration status, optionally filtered by module |
+| `TableUnstableCommand` | `blb:table:unstable` — mark tables unstable by name or module |
 
 ```bash
 # Default: all modules (module-first architecture)
@@ -138,20 +139,34 @@ php artisan migrate --seed --seeder=Company/Dev/DevCompanyAddressSeeder
 
 **Stability is a development-only concept.** It controls whether `migrate:fresh` preserves a table's data. The stability column is hidden in the admin UI outside `APP_ENV=local` since `migrate:fresh` should never run in production/staging.
 
-### How migrate:fresh interacts with stability
+### How destructive commands interact with stability
 
 | Command | Behavior |
 |---------|----------|
 | `migrate:fresh --seed --dev` | Preserves stable tables, drops only unstable ones |
 | `migrate:fresh --seed --dev --force-wipe` | Ignores stability — drops ALL tables (true nuclear reset) |
+| `migrate:refresh` | **Blocked** — bypasses stability. Use `migrate:fresh --seed --dev` or scope with `--module` |
+| `migrate:reset` | **Blocked** — bypasses stability. Use `migrate:fresh --seed --dev` or scope with `--module` |
+| `migrate:refresh --module=Name` | Allowed — module-scoped refresh |
+| `migrate:reset --module=Name` | Allowed — module-scoped reset |
+| `migrate:refresh --force-wipe` | Allowed — explicit override for intentional full reset |
 
 ### When to mark a table unstable
 
 Mark a table unstable before editing a migration that **alters its schema** (adding/removing/renaming columns, changing indexes, modifying column types):
 
 ```bash
-# Via tinker (quick)
-php artisan tinker --execute="App\Base\Database\Models\TableRegistry::query()->where('table_name', 'ai_providers')->update(['is_stable' => false, 'stabilized_at' => null, 'stabilized_by' => null]);"
+# Mark a single table unstable
+php artisan blb:table:unstable ai_providers
+
+# Mark multiple tables
+php artisan blb:table:unstable ai_providers ai_provider_models
+
+# Mark all tables in a module
+php artisan blb:table:unstable --module=AI
+
+# Show current stability status of all tables
+php artisan blb:table:unstable --list
 ```
 
 Or toggle it off in the admin UI at `admin/system/tables` (local env only).
@@ -223,7 +238,7 @@ php artisan migrate --seed --seeder=User/Dev/DevUserSeeder
 php artisan migrate --seed --seeder='App\Base\Authz\Database\Seeders\Dev\DevAuthzCompanyAssignmentSeeder'
 ```
 
-**⚠️ Agent rule:** After running `migrate:fresh`, `migrate:reset`, or any operation that truncates tables on the local dev database, **always add `--dev`** (or run the manual steps above) to restore working dev data. An empty database is not usable for local testing.
+**⚠️ Agent rule:** `migrate:refresh` and `migrate:reset` without `--module` are **blocked at the command level** — they bypass table stability and would wipe the entire database. Use `migrate:fresh --seed --dev` for full rebuilds. After running `migrate:fresh` or any operation that truncates tables on the local dev database, **always add `--dev`** (or run the manual steps above) to restore working dev data. An empty database is not usable for local testing.
 
 If automated tests run on in-memory SQLite (`DB_CONNECTION=sqlite`, `DB_DATABASE=:memory:`), this rule does not apply because those test refreshes do not modify the local dev database.
 

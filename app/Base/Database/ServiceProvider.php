@@ -11,6 +11,7 @@ use App\Base\Database\Console\Commands\RefreshCommand;
 use App\Base\Database\Console\Commands\ResetCommand;
 use App\Base\Database\Console\Commands\RollbackCommand;
 use App\Base\Database\Console\Commands\StatusCommand;
+use App\Base\Database\Console\Commands\TableUnstableCommand;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Database\Console\Migrations\FreshCommand as LaravelFreshCommand;
 use Illuminate\Database\Console\Migrations\MigrateCommand as LaravelMigrateCommand;
@@ -58,5 +59,9 @@ class ServiceProvider extends BaseServiceProvider
         $this->app->extend(LaravelFreshCommand::class, function ($_, $app) {
             return new FreshCommand($app->make(Migrator::class));
         });
+
+        $this->commands([
+            TableUnstableCommand::class,
+        ]);
     }
 }

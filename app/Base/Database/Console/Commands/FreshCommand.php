@@ -116,6 +116,13 @@ class FreshCommand extends IlluminateFreshCommand
 
         if (empty($tablesToDrop)) {
             $this->components->info('All tables are stable — nothing to drop.');
+            $this->line('');
+            $this->line('  To mark tables unstable so they can be dropped:');
+            $this->line('');
+            $this->line('    <comment>php artisan blb:table:unstable table_name</comment>           Mark one table');
+            $this->line('    <comment>php artisan blb:table:unstable --module=AI</comment>          Mark all tables in a module');
+            $this->line('    <comment>php artisan migrate:fresh --seed --dev --force-wipe</comment>  Ignore stability (nuclear)');
+            $this->line('');
 
             return;
         }

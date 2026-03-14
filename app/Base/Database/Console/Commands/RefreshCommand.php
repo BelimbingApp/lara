@@ -5,6 +5,7 @@
 
 namespace App\Base\Database\Console\Commands;
 
+use App\Base\Database\Concerns\GuardsGlobalReset;
 use App\Base\Database\Concerns\InteractsWithModuleOption;
 use Illuminate\Console\Command;
 use Illuminate\Database\Console\Migrations\RefreshCommand as IlluminateRefreshCommand;
@@ -12,6 +13,7 @@ use Symfony\Component\Console\Input\InputOption;
 
 class RefreshCommand extends IlluminateRefreshCommand
 {
+    use GuardsGlobalReset;
     use InteractsWithModuleOption;
 
     /**
@@ -25,9 +27,14 @@ class RefreshCommand extends IlluminateRefreshCommand
      * Execute the console command.
      *
      * Extends parent by passing through --module to migrate:reset / migrate:rollback / migrate.
+     * Blocks unscoped global refresh to prevent accidental full database wipes.
      */
     public function handle(): int
     {
+        if ($result = $this->guardGlobalReset()) {
+            return $result;
+        }
+
         $moduleOption = $this->option('module');
 
         // Re-implement parent flow so we can pass --module through.
@@ -100,6 +107,13 @@ class RefreshCommand extends IlluminateRefreshCommand
             null,
             InputOption::VALUE_NONE,
             'Run dev seeders after production seeders (APP_ENV=local only). Implies --seed.',
+        ];
+
+        $options[] = [
+            'force-wipe',
+            null,
+            InputOption::VALUE_NONE,
+            'Allow destructive global refresh (bypasses safety guard).',
         ];
 
         return $options;

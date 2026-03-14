@@ -19,8 +19,7 @@ if (! function_exists('blb_log_var')) {
         string $file = 'debug.log',
         array $context = [],
         string $level = 'info',
-    ): void
-    {
+    ): void {
         $filename = basename(trim($file));
 
         if ($filename === '') {
