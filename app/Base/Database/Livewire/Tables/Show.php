@@ -36,6 +36,8 @@ class Show extends Component
 
     public bool $navigatorOpen = true;
 
+    public bool $rawValues = false;
+
     /**
      * Initialize with the table name from the route parameter.
      *
@@ -82,18 +84,27 @@ class Show extends Component
     }
 
     /**
+     * Toggle raw value display mode.
+     */
+    public function toggleRawValues(): void
+    {
+        $this->rawValues = ! $this->rawValues;
+    }
+
+    /**
      * Format a cell value for display.
      *
      * Handles nulls, booleans, long strings, and JSON.
+     * When raw mode is active, shows literal representations instead of symbols.
      */
     public function formatCell(mixed $value, string $typeName): string
     {
         if ($value === null) {
-            return '—';
+            return $this->rawValues ? 'NULL' : '—';
         }
 
         if (is_bool($value) || $typeName === 'bool' || $typeName === 'boolean') {
-            return $value ? '✓' : '✗';
+            return $this->rawValues ? ($value ? 'true' : 'false') : ($value ? '✓' : '✗');
         }
 
         $stringValue = (string) $value;

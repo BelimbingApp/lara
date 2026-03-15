@@ -7,6 +7,7 @@
 
 <div
     x-data="{
+        localTime: false,
         navFilter: '',
         navOpen: @js($this->navigatorOpen),
         navWidth: parseInt(localStorage.getItem('tableNavWidth')) || 208,
@@ -249,6 +250,30 @@
                             placeholder="{{ __('Search across text columns...') }}"
                         />
                     </div>
+                    <x-ui.button
+                        variant="ghost"
+                        size="sm"
+                        @click="localTime = !localTime"
+                        ::class="localTime ? 'ring-2 ring-accent' : ''"
+                        x-bind:aria-pressed="localTime.toString()"
+                        title="{{ __('Toggle timestamp display between UTC and Local Time.') }}"
+                        aria-label="{{ __('Toggle timestamp display between UTC and Local Time.') }}"
+                    >
+                        <x-icon name="heroicon-o-clock" class="w-4 h-4" />
+                        <span x-text="localTime ? '{{ __('Local Time') }}' : '{{ __('UTC') }}'"></span>
+                    </x-ui.button>
+                    <x-ui.button
+                        variant="ghost"
+                        size="sm"
+                        wire:click="toggleRawValues"
+                        @class(['ring-2 ring-accent' => $this->rawValues])
+                        aria-pressed="{{ $this->rawValues ? 'true' : 'false' }}"
+                        title="{{ __('Toggle between formatted display and raw database values for NULL and boolean columns.') }}"
+                        aria-label="{{ __('Toggle between formatted display and raw database values for NULL and boolean columns.') }}"
+                    >
+                        <x-icon name="heroicon-o-code-bracket" class="w-4 h-4" />
+                        {{ $this->rawValues ? __('Raw') : __('Formatted') }}
+                    </x-ui.button>
                     <span class="text-xs text-muted whitespace-nowrap tabular-nums">
                         {{ trans_choice(':count column|:count columns', count($columns), ['count' => count($columns)]) }}
                     </span>
@@ -301,10 +326,28 @@
                                             $formatted = $this->formatCell($value, $col['type_name']);
                                             $isLong = $value !== null && mb_strlen((string) $value) > 120;
                                             $outgoingFk = collect($foreignKeys['outgoing'])->firstWhere('column', $col['name']);
+                                            $isTimestamp = $value !== null && (
+                                                str_contains(strtolower($col['type_name']), 'timestamp')
+                                                || str_contains(strtolower($col['type_name']), 'datetime')
+                                            );
                                         @endphp
                                         <td
                                             class="px-table-cell-x py-table-cell-y text-sm font-mono whitespace-nowrap {{ $value === null ? 'text-muted' : 'text-ink' }}"
                                             @if($isLong) title="{{ Str::limit((string) $value, 500) }}" @endif
+                                            @if($isTimestamp)
+                                                x-data
+                                                x-effect="
+                                                    if (localTime) {
+                                                        const el = $el;
+                                                        const text = el.getAttribute('data-raw') || el.textContent;
+                                                        if (!el.getAttribute('data-raw')) el.setAttribute('data-raw', text);
+                                                        try { el.textContent = new Date(text.trim()).toLocaleString(); } catch(e) {}
+                                                    } else {
+                                                        const raw = $el.getAttribute('data-raw');
+                                                        if (raw) $el.textContent = raw;
+                                                    }
+                                                "
+                                            @endif
                                         >
                                             @if($outgoingFk && $value !== null)
                                                 <a
