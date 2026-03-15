@@ -1,0 +1,190 @@
+<?php
+
+// SPDX-License-Identifier: AGPL-3.0-only
+// (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
+
+namespace App\Base\Database\Services;
+
+use App\Base\Database\Exceptions\DbViewQueryException;
+use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Execute user-defined SQL queries in a safe, read-only manner.
+ *
+ * Uses a dedicated read-only database connection and enforces guardrails
+ * including SELECT-only validation, row limits, and query timeouts.
+ */
+class DbViewQueryExecutor
+{
+    /**
+     * Maximum number of rows that can be returned.
+     */
+    private const MAX_ROWS = 1000;
+
+    /**
+     * Default query timeout in seconds.
+     */
+    private const DEFAULT_TIMEOUT_SECONDS = 10;
+
+    /**
+     * The read-only database connection name.
+     */
+    private const CONNECTION = 'readonly';
+
+    /**
+     * Forbidden SQL keywords that indicate write operations.
+     *
+     * @var list<string>
+     */
+    private const FORBIDDEN_KEYWORDS = [
+        'INSERT',
+        'UPDATE',
+        'DELETE',
+        'DROP',
+        'ALTER',
+        'CREATE',
+        'TRUNCATE',
+        'REPLACE',
+        'GRANT',
+        'REVOKE',
+        'LOCK',
+        'UNLOCK',
+    ];
+
+    /**
+     * Execute a read-only SQL query with pagination.
+     *
+     * @param  string  $sql  The SELECT query to execute
+     * @param  int  $page  Current page number (1-based)
+     * @param  int  $perPage  Rows per page (max 1000)
+     * @return array{columns: list<string>, rows: list<array<string, mixed>>, total: int, per_page: int, current_page: int, last_page: int}
+     *
+     * @throws DbViewQueryException
+     */
+    public function execute(string $sql, int $page = 1, int $perPage = 25): array
+    {
+        $this->validate($sql);
+
+        $perPage = min(max($perPage, 1), self::MAX_ROWS);
+        $page = max($page, 1);
+
+        $connection = DB::connection(self::CONNECTION);
+
+        try {
+            return $connection->transaction(function () use ($connection, $sql, $page, $perPage): array {
+                $this->applyTimeout($connection);
+
+                $total = $this->countResults($connection, $sql);
+
+                $offset = ($page - 1) * $perPage;
+                $paginatedSql = "SELECT * FROM ({$sql}) AS __blb_view LIMIT {$perPage} OFFSET {$offset}";
+                $rows = $connection->select($paginatedSql);
+
+                $rows = array_map(fn (object $row): array => (array) $row, $rows);
+
+                $columns = $rows !== [] ? array_keys($rows[0]) : $this->extractColumnsFromEmpty($connection, $sql);
+
+                $lastPage = max((int) ceil($total / $perPage), 1);
+
+                return [
+                    'columns' => array_values($columns),
+                    'rows' => array_values($rows),
+                    'total' => $total,
+                    'per_page' => $perPage,
+                    'current_page' => $page,
+                    'last_page' => $lastPage,
+                ];
+            });
+        } catch (DbViewQueryException $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw DbViewQueryException::executionFailed($e->getMessage(), $e);
+        }
+    }
+
+    /**
+     * Validate that a SQL string is a safe SELECT query.
+     *
+     * @param  string  $sql  The SQL string to validate
+     *
+     * @throws DbViewQueryException
+     */
+    public function validate(string $sql): void
+    {
+        $trimmed = trim($sql);
+
+        if ($trimmed === '') {
+            throw DbViewQueryException::invalidQuery('Query must not be empty.');
+        }
+
+        if (! preg_match('/^\s*SELECT\b/i', $trimmed)) {
+            throw DbViewQueryException::invalidQuery('Query must start with SELECT.');
+        }
+
+        $upperSql = strtoupper($trimmed);
+        foreach (self::FORBIDDEN_KEYWORDS as $keyword) {
+            if (preg_match('/\b'.$keyword.'\b/', $upperSql)) {
+                throw DbViewQueryException::invalidQuery("Query must not contain {$keyword}.");
+            }
+        }
+    }
+
+    /**
+     * Apply a statement timeout for the current transaction.
+     *
+     * @param  Connection  $connection  The database connection
+     */
+    private function applyTimeout(Connection $connection): void
+    {
+        $timeoutSeconds = config('database.connections.'.self::CONNECTION.'.query_timeout', self::DEFAULT_TIMEOUT_SECONDS);
+        $ms = (int) $timeoutSeconds * 1000;
+        $driver = $connection->getDriverName();
+
+        match ($driver) {
+            'pgsql' => $connection->statement("SET LOCAL statement_timeout = '{$ms}'"),
+            'sqlite' => $connection->statement('PRAGMA busy_timeout = '.$ms),
+            'mysql', 'mariadb' => $connection->statement('SET SESSION MAX_EXECUTION_TIME = '.$ms),
+            default => null,
+        };
+    }
+
+    /**
+     * Count the total number of rows for the given query.
+     *
+     * @param  Connection  $connection  The database connection
+     * @param  string  $sql  The original SELECT query
+     */
+    private function countResults(Connection $connection, string $sql): int
+    {
+        $countSql = "SELECT COUNT(*) AS __blb_count FROM ({$sql}) AS __blb_count_sub";
+        $result = $connection->selectOne($countSql);
+
+        return (int) $result->__blb_count;
+    }
+
+    /**
+     * Extract column names from a query that returned no rows.
+     *
+     * @param  Connection  $connection  The database connection
+     * @param  string  $sql  The original SELECT query
+     * @return list<string>
+     */
+    private function extractColumnsFromEmpty(Connection $connection, string $sql): array
+    {
+        $emptySql = "SELECT * FROM ({$sql}) AS __blb_view LIMIT 0";
+        $statement = $connection->getPdo()->prepare($emptySql);
+        $statement->execute();
+
+        $columns = [];
+        $columnCount = $statement->columnCount();
+        for ($i = 0; $i < $columnCount; $i++) {
+            $meta = $statement->getColumnMeta($i);
+            if ($meta !== false) {
+                $columns[] = $meta['name'];
+            }
+        }
+
+        return $columns;
+    }
+}

@@ -57,6 +57,36 @@ return [
             'sslmode' => 'prefer',
         ],
 
+        // Read-only connection for DB Views feature.
+        // Mirrors the default connection. PostgreSQL enforces read-only at the
+        // transaction level via default_transaction_read_only. SQLite has no
+        // equivalent; read-only is enforced at the application level only
+        // (DbViewQueryExecutor validates SELECT-only).
+        'readonly' => match (env('DB_CONNECTION', 'pgsql')) {
+            'sqlite' => [
+                'driver' => 'sqlite',
+                'url' => env('DB_URL'),
+                'database' => env('DB_DATABASE', database_path('database.sqlite')),
+                'prefix' => '',
+                'foreign_key_constraints' => env('DB_FOREIGN_KEYS', true),
+            ],
+            default => [
+                'driver' => 'pgsql',
+                'url' => env('DB_URL'),
+                'host' => env('DB_HOST', '127.0.0.1'),
+                'port' => env('DB_PORT', '5432'),
+                'database' => env('DB_DATABASE', 'laravel'),
+                'username' => env('DB_READONLY_USERNAME', env('DB_USERNAME', 'root')),
+                'password' => env('DB_READONLY_PASSWORD', env('DB_PASSWORD', '')),
+                'charset' => env('DB_CHARSET', 'utf8'),
+                'prefix' => '',
+                'prefix_indexes' => true,
+                'search_path' => 'public',
+                'sslmode' => 'prefer',
+                'options' => '-c default_transaction_read_only=on',
+            ],
+        },
+
     ],
 
     /*

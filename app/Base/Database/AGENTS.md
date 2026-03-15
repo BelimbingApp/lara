@@ -4,6 +4,16 @@ This module provides **module-aware migration infrastructure** extending Laravel
 
 **Full architecture:** [docs/architecture/database.md](../../../docs/architecture/database.md) — naming conventions, migration registry, table naming, dependency graph.
 
+## Table naming (brief)
+
+| Layer | Pattern | Example |
+|-------|---------|---------|
+| **Base** | `base_{module}_{entity}` | `base_database_tables`, `base_authz_roles` |
+| **Core/Business** | `{module}_{entity}` | `users`, `user_pins`, `companies` |
+| **Vendor** | `{vendor}_{module}_{entity}` | `sbg_companies_ext` |
+
+The module prefix prevents name collisions. See `docs/architecture/database.md` §Table Naming Conventions for rationale.
+
 ## Migration file names (brief)
 
 - **Format:** `YYYY_MM_DD_HHMMSS_description.php`

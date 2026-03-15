@@ -14,5 +14,14 @@ return [
             'parent' => 'system',
             'position' => 10,
         ],
+        [
+            'id' => 'system.db-views',
+            'label' => 'DB Views',
+            'icon' => 'heroicon-o-circle-stack',
+            'route' => 'admin.system.db-views.index',
+            'permission' => 'admin.system_table.list',
+            'parent' => 'system',
+            'position' => 11,
+        ],
     ],
 ];
