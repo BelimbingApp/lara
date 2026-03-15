@@ -51,9 +51,9 @@
                 type="button"
                 @click.prevent="togglePin('{{ $item->id }}')"
                 class="shrink-0 w-4 h-4 transition-opacity"
-                :class="isPinned('{{ $item->id }}') ? 'text-accent opacity-100' : 'text-muted hover:text-ink opacity-0 group-hover:opacity-100'"
-                :title="isPinned('{{ $item->id }}') ? '{{ __('Unpin') }}' : '{{ __('Pin to top') }}'"
-                :aria-label="isPinned('{{ $item->id }}') ? '{{ __('Unpin :item', ['item' => $item->label]) }}' : '{{ __('Pin :item to top', ['item' => $item->label]) }}'"
+                :class="isPinnedByUrl('{{ $item->route ? route($item->route) : $item->url }}') ? 'text-accent opacity-100' : 'text-muted hover:text-ink opacity-0 group-hover:opacity-100'"
+                :title="isPinnedByUrl('{{ $item->route ? route($item->route) : $item->url }}') ? '{{ __('Unpin') }}' : '{{ __('Pin to top') }}'"
+                :aria-label="isPinnedByUrl('{{ $item->route ? route($item->route) : $item->url }}') ? '{{ __('Unpin :item', ['item' => $item->label]) }}' : '{{ __('Pin :item to top', ['item' => $item->label]) }}'"
             >
                 <x-icon name="heroicon-o-pin" class="w-3.5 h-3.5" />
             </button>

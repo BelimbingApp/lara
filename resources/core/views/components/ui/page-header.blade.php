@@ -3,6 +3,7 @@
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
 use App\Base\Menu\Services\PagePinResolver;
+use App\Base\Menu\Services\PinMetadataNormalizer;
 ?>
 
 @props(['title', 'subtitle' => null, 'actions' => null, 'help' => null, 'pinnable' => null])
@@ -12,10 +13,26 @@ use App\Base\Menu\Services\PagePinResolver;
     $hasInteractive = $help || $resolvedPinnable;
     $alpineData = [];
     if ($help) $alpineData[] = 'helpOpen: false';
-    if ($resolvedPinnable) $alpineData[] = 'pinData: ' . json_encode($resolvedPinnable, JSON_UNESCAPED_SLASHES);
+    if ($resolvedPinnable) {
+        $alpineData[] = 'pinData: ' . json_encode($resolvedPinnable, JSON_UNESCAPED_SLASHES);
+        $normalizer = app(PinMetadataNormalizer::class);
+        $normalizedPageUrl = $normalizer->normalizeUrl($resolvedPinnable['url']);
+        $isCurrentlyPinned = auth()->check()
+            && collect(auth()->user()->getPins())
+                ->contains(fn (array $p) => $normalizer->normalizeUrl($p['url']) === $normalizedPageUrl);
+        $alpineData[] = 'pagePinned: ' . ($isCurrentlyPinned ? 'true' : 'false');
+    }
 @endphp
 
-<div @if($hasInteractive) x-data="{ {{ implode(', ', $alpineData) }} }" @endif>
+<div @if($hasInteractive) x-data="{ {{ implode(', ', $alpineData) }} }" @endif
+    @if($resolvedPinnable)
+        @pins-synced.window="
+            const norm = (u) => { try { return new URL(u, location.origin).pathname.replace(/\/+$/, '') || '/'; } catch { return u; } };
+            const pageUrl = norm(pinData.url);
+            pagePinned = $event.detail.pins.some(p => norm(p.url) === pageUrl);
+        "
+    @endif
+>
     <div class="flex items-center justify-between">
         <div>
             <div class="flex items-center gap-2">
@@ -24,9 +41,10 @@ use App\Base\Menu\Services\PagePinResolver;
                     <button
                         type="button"
                         @click="$dispatch('toggle-page-pin', pinData)"
-                        class="inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted hover:text-accent transition-colors"
-                        :title="'{{ __('Pin to sidebar') }}'"
-                        aria-label="{{ __('Pin :page to sidebar', ['page' => $title]) }}"
+                        class="inline-flex items-center justify-center w-6 h-6 rounded-sm transition-colors"
+                        :class="pagePinned ? 'text-accent' : 'text-muted hover:text-accent'"
+                        :title="pagePinned ? '{{ __('Unpin from sidebar') }}' : '{{ __('Pin to sidebar') }}'"
+                        :aria-label="pagePinned ? '{{ __('Unpin :page from sidebar', ['page' => $title]) }}' : '{{ __('Pin :page to sidebar', ['page' => $title]) }}'"
                     >
                         <x-icon name="heroicon-o-pin" class="w-4 h-4" />
                     </button>

@@ -26,7 +26,7 @@
                         <h2 class="text-xl font-semibold text-ink">{{ $metadata->displayName }}</h2>
                         <button
                             type="button"
-                            x-data="{ pinData: {{ json_encode(['pinnableId' => 'ai.tools.' . $toolName, 'label' => __('Administration') . '/' . __('AI') . '/' . __('Tools') . '/' . $metadata->displayName, 'url' => route('admin.ai.tools', ['toolName' => $toolName])], JSON_UNESCAPED_SLASHES) }} }"
+                            x-data="{ pinData: {{ json_encode(['label' => __('Administration') . '/' . __('AI') . '/' . __('Tools') . '/' . $metadata->displayName, 'url' => route('admin.ai.tools', ['toolName' => $toolName]), 'icon' => 'heroicon-o-cpu-chip'], JSON_UNESCAPED_SLASHES) }} }"
                             @click="$dispatch('toggle-page-pin', pinData)"
                             class="inline-flex items-center justify-center w-6 h-6 rounded-sm text-muted hover:text-accent transition-colors"
                             title="{{ __('Pin to sidebar') }}"

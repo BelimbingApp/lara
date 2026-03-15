@@ -2,7 +2,7 @@
     <x-slot name="title">{{ $role->name }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="$role->name" :subtitle="$role->description" :pinnable="['pinnableId' => 'roles.' . $role->id, 'label' => __('Administration') . '/' . __('Authorization') . '/' . __('Roles') . '/' . $role->name, 'url' => route('admin.roles.show', $role)]">
+        <x-ui.page-header :title="$role->name" :subtitle="$role->description" :pinnable="['label' => __('Administration') . '/' . __('Authorization') . '/' . __('Roles') . '/' . $role->name, 'url' => route('admin.roles.show', $role)]">
             <x-slot name="actions">
                 @if (! $role->is_system && $canDelete)
                     <x-ui.button

@@ -2,7 +2,7 @@
     <x-slot name="title">{{ $user->name }}</x-slot>
 
     <div class="space-y-section-gap">
-        <x-ui.page-header :title="$user->name" :subtitle="__('User details')" :pinnable="['pinnableId' => 'users.' . $user->id, 'label' => __('Administration') . '/' . __('Users') . '/' . $user->name, 'url' => route('admin.users.show', $user)]">
+        <x-ui.page-header :title="$user->name" :subtitle="__('User details')" :pinnable="['label' => __('Administration') . '/' . __('Users') . '/' . $user->name, 'url' => route('admin.users.show', $user)]">
             <x-slot name="actions">
                 <form method="POST" action="{{ route('admin.impersonate.start', $user) }}">
                     @csrf

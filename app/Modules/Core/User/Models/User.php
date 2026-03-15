@@ -123,17 +123,14 @@ class User extends Authenticatable implements CompanyScoped
     /**
      * Get the ordered list of pinned items as arrays for the sidebar.
      *
-     * Each entry contains type, pinnable_id, label, url, and icon.
-     *
-     * @return list<array{type: string, pinnable_id: string, label: string, url: string, icon: string|null}>
+     * @return list<array{id: int, label: string, url: string, icon: string|null}>
      */
     public function getPins(): array
     {
         return $this->pins()
-            ->get(['type', 'pinnable_id', 'label', 'url', 'icon'])
+            ->get(['id', 'label', 'url', 'icon'])
             ->map(fn (UserPin $pin) => [
-                'type' => $pin->type,
-                'pinnable_id' => $pin->pinnable_id,
+                'id' => $pin->id,
                 'label' => $pin->label,
                 'url' => $pin->url,
                 'icon' => $pin->icon,

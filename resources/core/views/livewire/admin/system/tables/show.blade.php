@@ -184,8 +184,8 @@
                 :title="$this->tableName"
                 :subtitle="trans_choice(':count row|:count rows', $rowCount, ['count' => number_format($rowCount)])"
                 :pinnable="[
-                    'pinnableId' => 'system.table.' . $this->tableName,
                     'label' => $this->tableName,
+                    'url' => request()->url(),
                     'icon' => 'heroicon-o-table-cells',
                 ]"
             >

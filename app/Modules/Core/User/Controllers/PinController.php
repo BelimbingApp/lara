@@ -13,8 +13,7 @@ use Illuminate\Http\Request;
 /**
  * Manages the authenticated user's pinned sidebar items.
  *
- * Supports both menu item pins (from the sidebar menu) and page pins
- * (from individual pages like tool workspaces). Called from Alpine
+ * Pins are unique by normalized URL. Called from Alpine
  * components via fetch(). All endpoints return JSON and are protected
  * by the 'auth' middleware.
  */
@@ -27,31 +26,24 @@ class PinController
     /**
      * Toggle a pin for the current user.
      *
-     * Pins are unique by navigation destination, not by source type. If a menu item
-     * pin and a page pin resolve to the same normalized URL, they are treated as the
-     * same pinned destination.
+     * Pins are unique by normalized URL. If a pin with the same
+     * normalized URL already exists, it is removed. Otherwise a
+     * new pin is created.
      */
     public function toggle(Request $request): JsonResponse
     {
         $request->validate([
-            'type' => ['required', 'string', 'in:menu_item,page'],
-            'pinnable_id' => ['required', 'string', 'max:150'],
             'label' => ['required', 'string', 'max:150'],
             'url' => ['required', 'string', 'max:500'],
             'icon' => ['nullable', 'string', 'max:100'],
         ]);
 
         $user = $request->user();
-        $type = $request->input('type');
-        $pinnableId = $request->input('pinnable_id');
-        $normalizedUrl = $this->pinMetadataNormalizer->normalizeUrl(
-            $request->input('url'),
-        );
+        $urlHash = UserPin::hashUrl($request->input('url'));
 
         $existing = UserPin::query()
             ->where('user_id', $user->id)
-            ->where('type', $type)
-            ->where('pinnable_id', $pinnableId)
+            ->where('url_hash', $urlHash)
             ->first();
 
         if ($existing) {
@@ -64,48 +56,17 @@ class PinController
             ]);
         }
 
-        $existingByUrl = UserPin::query()
-            ->where('user_id', $user->id)
-            ->get()
-            ->first(
-                fn (
-                    UserPin $pin,
-                ): bool => $this->pinMetadataNormalizer->normalizeUrl(
-                    $pin->url,
-                ) === $normalizedUrl,
-            );
-
-        if ($existingByUrl !== null) {
-            $existingByUrl
-                ->fill([
-                    'label' => $this->pinMetadataNormalizer->normalizeLabel(
-                        $request->input('label'),
-                    ),
-                    'url' => $request->input('url'),
-                    'icon' => $existingByUrl->icon ?? $request->input('icon'),
-                ])
-                ->save();
-
-            $user->unsetRelation('pins');
-
-            return response()->json([
-                'pinned' => true,
-                'pins' => $user->getPins(),
-            ]);
-        }
-
         $maxOrder =
             UserPin::query()->where('user_id', $user->id)->max('sort_order') ??
             -1;
 
         UserPin::query()->create([
             'user_id' => $user->id,
-            'type' => $type,
-            'pinnable_id' => $pinnableId,
             'label' => $this->pinMetadataNormalizer->normalizeLabel(
                 $request->input('label'),
             ),
             'url' => $request->input('url'),
+            'url_hash' => $urlHash,
             'icon' => $request->input('icon'),
             'sort_order' => $maxOrder + 1,
         ]);
@@ -121,15 +82,14 @@ class PinController
     /**
      * Reorder the current user's pinned items.
      *
-     * Accepts an ordered array of pin references. Each item's sort_order
+     * Accepts an ordered array of pin IDs. Each pin's sort_order
      * is updated to match its array index.
      */
     public function reorder(Request $request): JsonResponse
     {
         $request->validate([
             'pins' => ['required', 'array', 'min:1'],
-            'pins.*.type' => ['required', 'string', 'in:menu_item,page'],
-            'pins.*.pinnable_id' => ['required', 'string', 'max:150'],
+            'pins.*.id' => ['required', 'integer'],
         ]);
 
         $user = $request->user();
@@ -138,8 +98,7 @@ class PinController
         foreach ($pins as $index => $pin) {
             UserPin::query()
                 ->where('user_id', $user->id)
-                ->where('type', $pin['type'])
-                ->where('pinnable_id', $pin['pinnable_id'])
+                ->where('id', $pin['id'])
                 ->update(['sort_order' => $index]);
         }
 
