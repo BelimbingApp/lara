@@ -1,5 +1,6 @@
 <?php
 
+use App\Base\Settings\Contracts\SettingsService;
 use App\Modules\Core\AI\Tools\WebSearchTool;
 use Illuminate\Foundation\Testing\LazilyRefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -25,6 +26,12 @@ describe('tool metadata', function () {
             ['query'],
         );
     });
+
+    it('exposes available providers as a constant', function () {
+        expect(WebSearchTool::PROVIDERS)
+            ->toBeArray()
+            ->toHaveKeys(['parallel', 'brave']);
+    });
 });
 
 describe('factory method', function () {
@@ -37,7 +44,7 @@ describe('factory method', function () {
         expect(WebSearchTool::createIfConfigured())->toBeNull();
     });
 
-    it('returns instance when API key configured', function () {
+    it('returns instance when API key configured via env/config', function () {
         config([
             'ai.tools.web_search.provider' => 'parallel',
             'ai.tools.web_search.parallel.api_key' => 'test-key',
@@ -53,6 +60,34 @@ describe('factory method', function () {
         ]);
 
         expect(WebSearchTool::createIfConfigured())->toBeInstanceOf(WebSearchTool::class);
+    });
+
+    it('returns instance when providers array is configured in settings', function () {
+        $settings = app(SettingsService::class);
+        $settings->set('ai.tools.web_search.providers', [
+            ['name' => 'parallel', 'api_key' => 'test-key', 'enabled' => true],
+        ], encrypted: true);
+
+        config([
+            'ai.tools.web_search.provider' => 'parallel',
+            'ai.tools.web_search.parallel.api_key' => null,
+        ]);
+
+        expect(WebSearchTool::createIfConfigured())->toBeInstanceOf(WebSearchTool::class);
+    });
+
+    it('returns null when all providers are disabled', function () {
+        $settings = app(SettingsService::class);
+        $settings->set('ai.tools.web_search.providers', [
+            ['name' => 'parallel', 'api_key' => 'test-key', 'enabled' => false],
+        ], encrypted: true);
+
+        config([
+            'ai.tools.web_search.provider' => 'parallel',
+            'ai.tools.web_search.parallel.api_key' => null,
+        ]);
+
+        expect(WebSearchTool::createIfConfigured())->toBeNull();
     });
 });
 
@@ -159,6 +194,92 @@ describe('brave provider', function () {
         Http::assertSent(function ($request) {
             return str_contains($request->url(), 'freshness=day');
         });
+    });
+});
+
+describe('multi-provider fallback', function () {
+    it('falls back to second provider when first fails', function () {
+        $tool = new WebSearchTool;
+
+        $settings = app(SettingsService::class);
+        $settings->set('ai.tools.web_search.providers', [
+            ['name' => 'parallel', 'api_key' => 'bad-key', 'enabled' => true],
+            ['name' => 'brave', 'api_key' => 'good-key', 'enabled' => true],
+        ], encrypted: true);
+
+        Http::fake([
+            'api.parallel.ai/*' => Http::response('Unauthorized', 401),
+            'api.search.brave.com/*' => Http::response([
+                'web' => [
+                    'results' => [
+                        ['title' => 'Brave Fallback', 'url' => SEARCH_EXAMPLE_URL, 'description' => 'Fallback result'],
+                    ],
+                ],
+            ]),
+        ]);
+
+        $result = $tool->execute(['query' => 'fallback test']);
+
+        expect((string) $result)->toContain('Brave Fallback');
+    });
+
+    it('returns error when all providers fail', function () {
+        $tool = new WebSearchTool;
+
+        $settings = app(SettingsService::class);
+        $settings->set('ai.tools.web_search.providers', [
+            ['name' => 'parallel', 'api_key' => 'bad-key-1', 'enabled' => true],
+            ['name' => 'brave', 'api_key' => 'bad-key-2', 'enabled' => true],
+        ], encrypted: true);
+
+        Http::fake([
+            'api.parallel.ai/*' => Http::response('Unauthorized', 401),
+            'api.search.brave.com/*' => Http::response('Forbidden', 403),
+        ]);
+
+        $result = $tool->execute(['query' => 'all fail test']);
+
+        expect((string) $result)->toContain('Search failed');
+    });
+
+    it('skips disabled providers', function () {
+        $tool = new WebSearchTool;
+
+        $settings = app(SettingsService::class);
+        $settings->set('ai.tools.web_search.providers', [
+            ['name' => 'parallel', 'api_key' => 'key-1', 'enabled' => false],
+            ['name' => 'brave', 'api_key' => 'key-2', 'enabled' => true],
+        ], encrypted: true);
+
+        Http::fake([
+            'api.parallel.ai/*' => Http::response([
+                'results' => [['title' => 'Should Not Appear', 'url' => SEARCH_EXAMPLE_URL, 'snippet' => 'nope']],
+            ]),
+            'api.search.brave.com/*' => Http::response([
+                'web' => [
+                    'results' => [['title' => 'Brave Only', 'url' => SEARCH_EXAMPLE_URL, 'description' => 'yes']],
+                ],
+            ]),
+        ]);
+
+        $result = $tool->execute(['query' => 'skip disabled']);
+
+        expect((string) $result)->toContain('Brave Only');
+        Http::assertNotSent(fn ($req) => str_contains($req->url(), 'parallel.ai'));
+    });
+
+    it('returns unconfigured error when no providers available', function () {
+        $tool = new WebSearchTool;
+
+        config([
+            'ai.tools.web_search.provider' => 'parallel',
+            'ai.tools.web_search.parallel.api_key' => null,
+        ]);
+
+        $result = $tool->execute(['query' => 'no providers']);
+
+        expect($result->isError)->toBeTrue()
+            ->and((string) $result)->toContain('No search providers configured');
     });
 });
 

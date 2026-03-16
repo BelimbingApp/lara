@@ -114,29 +114,6 @@ class ToolMetadataRegistry
         return match ($toolName) {
             'web_search' => [
                 new ToolConfigField(
-                    key: 'ai.tools.web_search.provider',
-                    label: 'Search Provider',
-                    type: 'select',
-                    options: ['parallel' => 'Parallel', 'brave' => 'Brave Search'],
-                    help: 'Select which search provider to use.',
-                ),
-                new ToolConfigField(
-                    key: 'ai.tools.web_search.parallel.api_key',
-                    label: 'Parallel API Key',
-                    type: 'secret',
-                    encrypted: true,
-                    help: 'API key for the Parallel search provider.',
-                    showWhen: 'ai.tools.web_search.provider=parallel',
-                ),
-                new ToolConfigField(
-                    key: 'ai.tools.web_search.brave.api_key',
-                    label: 'Brave Search API Key',
-                    type: 'secret',
-                    encrypted: true,
-                    help: 'API key for Brave Search.',
-                    showWhen: 'ai.tools.web_search.provider=brave',
-                ),
-                new ToolConfigField(
                     key: 'ai.tools.web_search.cache_ttl_minutes',
                     label: 'Cache TTL (minutes)',
                     type: 'text',

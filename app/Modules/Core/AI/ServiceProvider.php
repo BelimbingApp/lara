@@ -199,10 +199,7 @@ class ServiceProvider extends BaseServiceProvider
         }
 
         if ($webSearchTool === null) {
-            $metadataFallbacks[] = new WebSearchTool(
-                provider: 'parallel',
-                apiKey: '',
-            );
+            $metadataFallbacks[] = new WebSearchTool;
         }
 
         $this->toolInstances = [

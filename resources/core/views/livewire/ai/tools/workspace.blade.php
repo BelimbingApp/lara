@@ -215,7 +215,11 @@
                 </x-ui.card>
 
                 {{-- Configuration / Setup --}}
-                @if(count($metadata->configFields) > 0)
+                @if($toolName === 'web_search')
+                    @include('core::livewire.ai.tools.web-search-config')
+                @endif
+
+                @if($toolName !== 'web_search' && count($metadata->configFields) > 0)
                     <x-ui.card>
                         <h3 class="text-base font-semibold text-ink mb-2">{{ __('Configuration') }}</h3>
                         <p class="text-xs text-muted mb-3">{{ __('Configure this tool\'s settings. Secrets are encrypted at rest.') }}</p>

@@ -7,12 +7,14 @@
 
 namespace App\Modules\Core\AI\Livewire\Tools;
 
+use App\Base\AI\Services\WebSearchService;
 use App\Base\AI\Tools\ToolResult;
 use App\Base\Settings\Contracts\SettingsService;
 use App\Modules\Core\AI\Enums\ToolReadiness;
 use App\Modules\Core\AI\Services\AgentToolRegistry;
 use App\Modules\Core\AI\Services\ToolMetadataRegistry;
 use App\Modules\Core\AI\Services\ToolReadinessService;
+use App\Modules\Core\AI\Tools\WebSearchTool;
 use Livewire\Component;
 
 class Workspace extends Component
@@ -43,13 +45,21 @@ class Workspace extends Component
     /** @var string|null Error message when saving verification status (e.g. DB schema mismatch) */
     public ?string $verificationError = null;
 
+    // ── Web Search provider management ──────────────────────────────
+
+    /** @var list<array{name: string, api_key: string, has_key: bool, enabled: bool}> */
+    public array $webSearchProviders = [];
+
     public function mount(): void
     {
         $this->loadConfigValues();
+        $this->loadWebSearchProviders();
     }
 
     /**
      * Save configuration values via the Settings module.
+     *
+     * For web_search, also saves the providers list and re-registers the tool.
      */
     public function saveConfig(): void
     {
@@ -64,6 +74,11 @@ class Workspace extends Component
             foreach ($metadata->configFields as $field) {
                 $value = $this->configValues[$field->key] ?? null;
 
+                // Secret fields: skip empty values to preserve existing keys
+                if ($field->type === 'secret' && ($value === null || $value === '')) {
+                    continue;
+                }
+
                 if ($value === null || $value === '') {
                     $settings->forget($field->key);
 
@@ -76,6 +91,8 @@ class Workspace extends Component
 
                 $settings->set($field->key, $value, encrypted: $field->encrypted);
             }
+
+            $this->saveWebSearchProviders($settings);
         } catch (\Throwable $e) {
             report($e);
             $this->configSaveError = true;
@@ -86,10 +103,13 @@ class Workspace extends Component
             return;
         }
 
+        $this->refreshConditionalTool();
+
         $this->configSaveError = false;
         $this->configSaved = __('Configuration saved.');
         $this->clearTryItResult();
         $this->loadConfigValues();
+        $this->loadWebSearchProviders();
     }
 
     /**
@@ -148,6 +168,68 @@ class Workspace extends Component
         $this->tryItErrorPayload = null;
     }
 
+    // ── Web Search provider actions ─────────────────────────────────
+
+    public function addWebSearchProvider(): void
+    {
+        $used = array_column($this->webSearchProviders, 'name');
+        $available = array_diff(array_keys(WebSearchTool::PROVIDERS), $used);
+
+        if ($available === []) {
+            return;
+        }
+
+        $this->webSearchProviders[] = [
+            'name' => reset($available),
+            'api_key' => '',
+            'has_key' => false,
+            'enabled' => true,
+        ];
+    }
+
+    public function removeWebSearchProvider(int $index): void
+    {
+        unset($this->webSearchProviders[$index]);
+        $this->webSearchProviders = array_values($this->webSearchProviders);
+    }
+
+    /**
+     * Reorder providers from a drag-drop operation.
+     *
+     * @param  list<int>  $order  New index order
+     */
+    public function reorderWebSearchProviders(array $order): void
+    {
+        $reordered = [];
+
+        foreach ($order as $oldIndex) {
+            if (isset($this->webSearchProviders[$oldIndex])) {
+                $reordered[] = $this->webSearchProviders[$oldIndex];
+            }
+        }
+
+        $this->webSearchProviders = $reordered;
+    }
+
+    /**
+     * Reset has_key when a provider name changes (key is name-bound).
+     *
+     * Livewire lifecycle hook: fires on any update to the webSearchProviders
+     * array, including name changes via the provider dropdown.
+     */
+    public function updatedWebSearchProviders(mixed $value, string $key): void
+    {
+        // $key format: "0.name", "1.enabled", etc.
+        if (str_ends_with($key, '.name')) {
+            $index = (int) explode('.', $key, 2)[0];
+
+            if (isset($this->webSearchProviders[$index])) {
+                $this->webSearchProviders[$index]['has_key'] = false;
+                $this->webSearchProviders[$index]['api_key'] = '';
+            }
+        }
+    }
+
     public function render(): \Illuminate\Contracts\View\View
     {
         $metadataRegistry = app(ToolMetadataRegistry::class);
@@ -160,6 +242,7 @@ class Workspace extends Component
                 'metadata' => null,
                 'readiness' => ToolReadiness::UNAVAILABLE,
                 'lastVerified' => null,
+                'availableProviders' => [],
             ]);
         }
 
@@ -167,8 +250,11 @@ class Workspace extends Component
             'metadata' => $metadata,
             'readiness' => $readinessService->readiness($this->toolName),
             'lastVerified' => $this->getLastVerified(),
+            'availableProviders' => WebSearchTool::PROVIDERS,
         ]);
     }
+
+    // ── Private helpers ─────────────────────────────────────────────
 
     /**
      * Load current config values from Settings for display in the form.
@@ -191,6 +277,106 @@ class Workspace extends Component
             } else {
                 $this->configValues[$field->key] = $value ?? '';
             }
+        }
+    }
+
+    /**
+     * Load web search providers from settings for the provider management UI.
+     */
+    private function loadWebSearchProviders(): void
+    {
+        if ($this->toolName !== 'web_search') {
+            return;
+        }
+
+        $settings = app(SettingsService::class);
+        $providers = $settings->get('ai.tools.web_search.providers');
+
+        if (is_array($providers) && $providers !== []) {
+            $this->webSearchProviders = array_map(fn ($p) => [
+                'name' => $p['name'] ?? 'parallel',
+                'api_key' => '',
+                'has_key' => ! empty($p['api_key'] ?? ''),
+                'enabled' => (bool) ($p['enabled'] ?? true),
+            ], $providers);
+
+            return;
+        }
+
+        // Fallback: bootstrap from legacy single-provider config
+        $provider = $settings->get('ai.tools.web_search.provider', 'parallel');
+        $apiKey = $settings->get("ai.tools.web_search.{$provider}.api_key");
+
+        $this->webSearchProviders = [
+            [
+                'name' => is_string($provider) ? $provider : 'parallel',
+                'api_key' => '',
+                'has_key' => is_string($apiKey) && $apiKey !== '',
+                'enabled' => true,
+            ],
+        ];
+    }
+
+    /**
+     * Persist the provider list to settings.
+     *
+     * Merges user-entered API keys with existing stored keys (matched by
+     * provider name) so that masked fields don't erase saved secrets.
+     */
+    private function saveWebSearchProviders(SettingsService $settings): void
+    {
+        if ($this->toolName !== 'web_search') {
+            return;
+        }
+
+        $existing = $settings->get('ai.tools.web_search.providers') ?? [];
+
+        // Build lookup of existing API keys by provider name
+        $existingKeys = [];
+        if (is_array($existing)) {
+            foreach ($existing as $p) {
+                $existingKeys[$p['name'] ?? ''] = $p['api_key'] ?? '';
+            }
+        }
+
+        $providers = [];
+
+        foreach ($this->webSearchProviders as $p) {
+            $apiKey = trim($p['api_key'] ?? '');
+
+            // Empty key means "keep existing" (the field was masked)
+            if ($apiKey === '' && isset($existingKeys[$p['name']])) {
+                $apiKey = $existingKeys[$p['name']];
+            }
+
+            $providers[] = [
+                'name' => $p['name'],
+                'api_key' => $apiKey,
+                'enabled' => (bool) ($p['enabled'] ?? true),
+            ];
+        }
+
+        $settings->set('ai.tools.web_search.providers', $providers, encrypted: true);
+    }
+
+    /**
+     * Re-register a conditional tool after configuration changes.
+     *
+     * Conditional tools (web_search, memory_search) may not have been
+     * registered at boot if their config was missing. After saving new
+     * config, re-run the factory to register (or update) the tool.
+     */
+    private function refreshConditionalTool(): void
+    {
+        $registry = app(AgentToolRegistry::class);
+
+        $tool = match ($this->toolName) {
+            'web_search' => WebSearchTool::createIfConfigured(app(WebSearchService::class)),
+            default => null,
+        };
+
+        if ($tool !== null) {
+            $registry->register($tool);
         }
     }
 
