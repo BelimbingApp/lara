@@ -48,7 +48,7 @@ class Workspace extends Component
 
     // ── Web Search provider management ──────────────────────────────
 
-    /** @var list<array{name: string, api_key: string, has_key: bool, enabled: bool}> */
+    /** @var list<array{name: string, api_key: string, has_key: bool, key_preview: string, enabled: bool}> */
     public array $webSearchProviders = [];
 
     public function mount(): void
@@ -73,7 +73,7 @@ class Workspace extends Component
 
         try {
             foreach ($metadata->configFields as $field) {
-                $value = $this->configValues[$field->key] ?? null;
+                $value = data_get($this->configValues, $field->key);
 
                 // Secret fields: skip empty values to preserve existing keys
                 if ($field->type === 'secret' && ($value === null || $value === '')) {
@@ -184,6 +184,7 @@ class Workspace extends Component
             'name' => reset($available),
             'api_key' => '',
             'has_key' => false,
+            'key_preview' => '',
             'enabled' => true,
         ];
     }
@@ -225,8 +226,17 @@ class Workspace extends Component
             $index = (int) explode('.', $key, 2)[0];
 
             if (isset($this->webSearchProviders[$index])) {
+                $providerName = $this->webSearchProviders[$index]['name'];
+                $storedApiKey = $this->storedWebSearchApiKey(is_string($providerName) ? $providerName : '');
+
                 $this->webSearchProviders[$index]['has_key'] = false;
                 $this->webSearchProviders[$index]['api_key'] = '';
+                $this->webSearchProviders[$index]['key_preview'] = '';
+
+                if ($storedApiKey !== null && $storedApiKey !== '') {
+                    $this->webSearchProviders[$index]['has_key'] = true;
+                    $this->webSearchProviders[$index]['key_preview'] = $this->maskApiKeyPreview($storedApiKey);
+                }
             }
         }
     }
@@ -272,13 +282,14 @@ class Workspace extends Component
         }
 
         foreach ($metadata->configFields as $field) {
-            $value = $settings->get($field->key);
+            $defaultValue = config($field->key);
+            $value = $settings->get($field->key, $defaultValue);
 
             // Mask secret fields that have a value
             if ($field->type === 'secret' && $value !== null && $value !== '') {
-                $this->configValues[$field->key] = '';
+                data_set($this->configValues, $field->key, '');
             } else {
-                $this->configValues[$field->key] = $value ?? '';
+                data_set($this->configValues, $field->key, $value ?? $defaultValue ?? '');
             }
         }
     }
@@ -300,6 +311,7 @@ class Workspace extends Component
                 'name' => $p['name'] ?? 'parallel',
                 'api_key' => '',
                 'has_key' => ! empty($p['api_key'] ?? ''),
+                'key_preview' => $this->maskApiKeyPreview($p['api_key'] ?? null),
                 'enabled' => (bool) ($p['enabled'] ?? true),
             ], $providers);
 
@@ -315,9 +327,56 @@ class Workspace extends Component
                 'name' => is_string($provider) ? $provider : 'parallel',
                 'api_key' => '',
                 'has_key' => is_string($apiKey) && $apiKey !== '',
+                'key_preview' => $this->maskApiKeyPreview($apiKey),
                 'enabled' => true,
             ],
         ];
+    }
+
+    /**
+     * Build a short masked preview for a saved API key.
+     */
+    private function maskApiKeyPreview(mixed $apiKey): string
+    {
+        if (! is_string($apiKey) || $apiKey === '') {
+            return '';
+        }
+
+        $length = mb_strlen($apiKey);
+        $prefix = mb_substr($apiKey, 0, min(6, $length));
+        $suffixLength = $length > 6 ? min(4, $length - 6) : 0;
+        $suffix = $suffixLength > 0 ? mb_substr($apiKey, -$suffixLength) : '';
+
+        return $suffix !== ''
+            ? $prefix.'*******'.$suffix
+            : $prefix.'*******';
+    }
+
+    /**
+     * Resolve the currently stored API key for a given web search provider.
+     */
+    private function storedWebSearchApiKey(string $providerName): ?string
+    {
+        if ($providerName === '') {
+            return null;
+        }
+
+        $settings = app(SettingsService::class);
+        $providers = $settings->get('ai.tools.web_search.providers');
+
+        if (is_array($providers)) {
+            foreach ($providers as $provider) {
+                if (($provider['name'] ?? null) === $providerName) {
+                    $apiKey = $provider['api_key'] ?? null;
+
+                    return is_string($apiKey) && $apiKey !== '' ? $apiKey : null;
+                }
+            }
+        }
+
+        $legacyApiKey = $settings->get("ai.tools.web_search.{$providerName}.api_key");
+
+        return is_string($legacyApiKey) && $legacyApiKey !== '' ? $legacyApiKey : null;
     }
 
     /**

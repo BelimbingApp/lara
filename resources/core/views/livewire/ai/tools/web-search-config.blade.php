@@ -14,7 +14,7 @@
 ?>
 <x-ui.card>
     <h3 class="text-base font-semibold text-ink mb-2">{{ __('Configuration') }}</h3>
-    <p class="text-xs text-muted mb-3">{{ __('Configure search providers in priority order. The tool tries each enabled provider and falls back on failure. API keys are encrypted at rest.') }}</p>
+    <p class="text-xs text-muted mb-3">{{ __('Configure search providers in priority order. The tool tries each enabled provider and falls back on failure.') }}</p>
 
     <form wire:submit="saveConfig" class="space-y-4">
         {{-- Provider list with drag-to-reorder --}}
@@ -118,7 +118,7 @@
                                         type="checkbox"
                                         wire:model.live="webSearchProviders.{{ $index }}.enabled"
                                         value="1"
-                                        class="rounded border-border-input text-accent focus:ring-accent w-3.5 h-3.5"
+                                        class="w-3.5 h-3.5 rounded border border-border-input bg-surface-card accent-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
                                     >
                                     <span class="text-xs text-muted">{{ __('On') }}</span>
                                 </label>
@@ -135,11 +135,11 @@
                             </div>
 
                             {{-- API key input --}}
-                            <div class="ml-6">
+                            <div class="w-full">
                                 <x-ui.input
                                     type="password"
                                     wire:model="webSearchProviders.{{ $index }}.api_key"
-                                    placeholder="{{ $provider['has_key'] ? __('Key saved · enter to replace') : __('Enter API key') }}"
+                                    placeholder="{{ $provider['has_key'] ? ($provider['key_preview'] !== '' ? $provider['key_preview'] : __('Key saved · enter to replace')) : __('Enter API key') }}"
                                     autocomplete="off"
                                     size="sm"
                                 />
@@ -156,7 +156,7 @@
                 $showWhenMatch = true;
                 if ($field->showWhen) {
                     [$showKey, $showValue] = explode('=', $field->showWhen, 2);
-                    $showWhenMatch = ($configValues[$showKey] ?? '') === $showValue;
+                    $showWhenMatch = data_get($configValues, $showKey, '') === $showValue;
                 }
             @endphp
 
@@ -175,7 +175,7 @@
                                 type="checkbox"
                                 wire:model="configValues.{{ $field->key }}"
                                 value="1"
-                                class="rounded border-border-input text-accent focus:ring-accent"
+                                class="w-4 h-4 rounded border border-border-input bg-surface-card accent-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
                             >
                             <span class="text-sm text-ink">{{ __('Enabled') }}</span>
                         </div>

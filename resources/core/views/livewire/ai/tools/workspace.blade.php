@@ -230,7 +230,7 @@
                                     $showWhenMatch = true;
                                     if ($field->showWhen) {
                                         [$showKey, $showValue] = explode('=', $field->showWhen, 2);
-                                        $showWhenMatch = ($configValues[$showKey] ?? '') === $showValue;
+                                        $showWhenMatch = data_get($configValues, $showKey, '') === $showValue;
                                     }
                                 @endphp
 
@@ -265,7 +265,7 @@
                                                     type="checkbox"
                                                     wire:model="configValues.{{ $field->key }}"
                                                     value="1"
-                                                    class="rounded border-border-input text-accent focus:ring-accent"
+                                                    class="w-4 h-4 rounded border border-border-input bg-surface-card accent-accent focus:ring-2 focus:ring-accent focus:ring-offset-2"
                                                 >
                                                 <span class="text-sm text-ink">{{ __('Enabled') }}</span>
                                             </div>
