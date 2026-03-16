@@ -196,6 +196,18 @@ $greeting = "Hello $name";
 $message = "Line 1\nLine 2";
 ```
 
+### Debug Logging
+- **Use `blb_log_var()` for temporary, workflow-specific debugging** when output should go to a dedicated file under `storage/logs/` instead of `laravel.log`
+- Signature: `blb_log_var(mixed $value, string $file = 'debug.log', array $context = [], string $level = 'info'): void`
+- Prefer a stable, specific filename such as `web-search` or `imports`, and add a short context label like `['label' => 'parallel_response']`
+- **Do not log secrets, tokens, passwords, or personal data** with this helper
+- **Remove temporary `blb_log_var()` calls once the issue is understood**; it is a debugging aid, not permanent instrumentation
+
+```php
+blb_log_var($payload, 'web-search', ['label' => 'parallel_request_payload']);
+blb_log_var($response->body(), 'web-search', ['label' => 'parallel_response'], 'debug');
+```
+
 ### Avoiding Magic Methods
 - **Prefer direct method calls over magic methods** when alternatives are available
 - Magic methods (`__call`, `__callStatic`) reduce IDE support, type safety, and static analysis capabilities
