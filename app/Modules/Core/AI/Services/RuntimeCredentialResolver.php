@@ -6,9 +6,15 @@
 namespace App\Modules\Core\AI\Services;
 
 use App\Base\AI\Services\GithubCopilotAuthService;
+use Illuminate\Http\Client\ConnectionException;
+use Illuminate\Support\Facades\Http;
 
 /**
  * Resolves API credentials for runtime calls, including provider-specific exchanges.
+ *
+ * Beyond credential resolution, performs provider-specific pre-flight checks:
+ * - github-copilot: exchanges device token for a Copilot API token
+ * - copilot-proxy: verifies the local proxy server is reachable
  */
 class RuntimeCredentialResolver
 {
@@ -46,7 +52,47 @@ class RuntimeCredentialResolver
             }
         }
 
+        if ($config['provider_name'] === 'copilot-proxy') {
+            $connectivityError = $this->checkLocalConnectivity($baseUrl);
+
+            if ($connectivityError !== null) {
+                return $connectivityError;
+            }
+        }
+
         return ['api_key' => $apiKey, 'base_url' => $baseUrl];
+    }
+
+    /**
+     * Verify a local provider endpoint is reachable by probing its /models listing.
+     *
+     * @return array{error: string, error_type: string}|null
+     */
+    private function checkLocalConnectivity(string $baseUrl): ?array
+    {
+        try {
+            $response = Http::timeout(5)
+                ->get(rtrim($baseUrl, '/').'/models');
+
+            if ($response->failed()) {
+                return [
+                    'error' => __('Copilot Proxy at :url returned HTTP :status. Ensure the proxy extension is running in VS Code.', [
+                        'url' => $baseUrl,
+                        'status' => $response->status(),
+                    ]),
+                    'error_type' => 'connection_error',
+                ];
+            }
+        } catch (ConnectionException) {
+            return [
+                'error' => __('Could not connect to Copilot Proxy at :url — is the VS Code extension running?', [
+                    'url' => $baseUrl,
+                ]),
+                'error_type' => 'connection_error',
+            ];
+        }
+
+        return null;
     }
 
     /**
