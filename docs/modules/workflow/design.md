@@ -17,8 +17,8 @@ Every business runs on processes — leave applications, order fulfillment, scho
 
 BLB does not model workflows as separate flowchart objects that reference entities. Instead, **status is the workflow**. A process is defined entirely by:
 
-1. The **statuses** it can be in (nodes — `workflow_status_configs`)
-2. The **transitions** allowed between them (edges — `workflow_status_transitions`)
+1. The **statuses** it can be in (nodes — `base_workflow_status_configs`)
+2. The **transitions** allowed between them (edges — `base_workflow_status_transitions`)
 3. The **policies** governing each transition (capabilities, guards, actions)
 
 This is deliberately simple. A leave application and an immigration clearance share the same engine — they differ only in their status graph and the policies attached to each node.
@@ -43,7 +43,7 @@ This is deliberately simple. A leave application and an immigration clearance sh
 
 A process is a **directed graph** where:
 - **Nodes** = statuses (rows in `StatusConfig` for a given `flow`)
-- **Edges** = allowed transitions (rows in `workflow_status_transitions`)
+- **Edges** = allowed transitions (rows in `base_workflow_status_transitions`)
 
 ```
 Leave Application:
@@ -86,7 +86,7 @@ Each status node is not just a label — it carries **policy**:
 
 **What's not here — and why:**
 
-- **`next_statuses` (removed):** The transitions table (`workflow_status_transitions`) is the single source of truth for which edges exist. Storing an adjacency list in StatusConfig would create a dual source of truth requiring two coordinated writes for every edge change. The engine derives available transitions from the transitions table via `SELECT ... WHERE flow = ? AND from_code = ?`. A computed accessor on the model provides `$status->nextStatuses` for convenience.
+- **`next_statuses` (removed):** The transitions table (`base_workflow_status_transitions`) is the single source of truth for which edges exist. Storing an adjacency list in StatusConfig would create a dual source of truth requiring two coordinated writes for every edge change. The engine derives available transitions from the transitions table via `SELECT ... WHERE flow = ? AND from_code = ?`. A computed accessor on the model provides `$status->nextStatuses` for convenience.
 
 - **`permissions` (removed):** Node-level "who can view items in this status" is handled by BLB's AuthZ capability system, not by a JSON blob on the status row. Capabilities like `workflow.leave_application.view_pending_approval` or scoped queries handle visibility. Edge-level "who can trigger this transition" also uses AuthZ — see §6.
 
@@ -131,7 +131,7 @@ The engine handles three levels of complexity. Each level adds one concept on to
 ### Level 1: Simple Linear Process
 **Example:** Bug report — `open` → `in_progress` → `resolved` → `closed`
 
-`StatusConfig` rows define the nodes. `workflow_status_transitions` rows define the edges. Permissions are simple (one capability per transition). No guards, no external integrations.
+`StatusConfig` rows define the nodes. `base_workflow_status_transitions` rows define the edges. Permissions are simple (one capability per transition). No guards, no external integrations.
 
 ### Level 2: Branching / Decision Points
 **Example:** Leave application — `pending_approval` branches to `approved`, `rejected`, or `closed`
@@ -141,7 +141,7 @@ Multiple transition rows from the same `from_code`. The UI queries available tra
 ### Level 3: Conditional Transitions
 **Example:** Order fulfillment — transition to `shipped` only if payment is confirmed and inventory is reserved.
 
-Transition rows define the *possible* edges, but **transition guards** (conditions) determine if a specific transition is available *right now* for *this instance*. Edge-level policy — capabilities, guards, actions — lives in the `workflow_status_transitions` table.
+Transition rows define the *possible* edges, but **transition guards** (conditions) determine if a specific transition is available *right now* for *this instance*. Edge-level policy — capabilities, guards, actions — lives in the `base_workflow_status_transitions` table.
 
 ### 5.1 Composition Patterns (Beyond the Engine)
 
@@ -167,12 +167,12 @@ Transition hooks (before/after) trigger external integrations via Laravel jobs. 
 
 ### Purpose
 
-`StatusConfig` defines **nodes** (what a status means). `workflow_status_transitions` defines **edges** (what governs a specific move between two statuses). The transitions table is the **single source of truth** for which edges exist and the rules governing each move.
+`StatusConfig` defines **nodes** (what a status means). `base_workflow_status_transitions` defines **edges** (what governs a specific move between two statuses). The transitions table is the **single source of truth** for which edges exist and the rules governing each move.
 
 ### Schema
 
 ```
-workflow_status_transitions
+base_workflow_status_transitions
 ├── id                   (bigint PK)
 ├── flow                 (string)          same discriminator as StatusConfig
 ├── from_code            (string)          source status code
@@ -194,7 +194,7 @@ workflow_status_transitions
 Each row represents one directed edge in the status graph. The pair references `StatusConfig.code` values for the same `flow`. A unique constraint on `(flow, from_code, to_code)` prevents duplicate edges.
 
 **The transitions table is the single source of truth for edges.**
-There is no `next_statuses` column on `StatusConfig`. Adding a new edge means inserting one row in `workflow_status_transitions`. Removing an edge means deleting (or deactivating) one row. No dual writes, no consistency validation needed. The engine queries available transitions directly: `SELECT * FROM workflow_status_transitions WHERE flow = ? AND from_code = ? AND is_active = true ORDER BY position`. The StatusConfig model exposes a computed `nextStatuses` accessor that derives the list from the transitions table (cached per request).
+There is no `next_statuses` column on `StatusConfig`. Adding a new edge means inserting one row in `base_workflow_status_transitions`. Removing an edge means deleting (or deactivating) one row. No dual writes, no consistency validation needed. The engine queries available transitions directly: `SELECT * FROM base_workflow_status_transitions WHERE flow = ? AND from_code = ? AND is_active = true ORDER BY position`. The StatusConfig model exposes a computed `nextStatuses` accessor that derives the list from the transitions table (cached per request).
 
 **`label` — the action name, not the status name.**
 The status label is "Approved" (a state). The transition label is "Approve" (an action). This is what the UI button says. If null, the engine can derive it from the target status label.
@@ -221,7 +221,7 @@ Null means no guard (always allowed if capability check passes).
 Executed after the transition succeeds. Example: `NotifyCustomsAgency` sends an API call when entering `customs_review`. Same resolution pattern as guards — container-resolved, no registry. For simple cases, the Hooks system handles post-transition logic; `action_class` is for transition-specific logic tied to a particular edge. Null means no action.
 
 **`sla_seconds` — expected turnaround time.**
-How long should items typically take to move through this transition? Combined with `workflow_status_history.tat`, enables SLA breach detection: "This leave approval has a 48-hour SLA but TAT is 72 hours." Null means no SLA.
+How long should items typically take to move through this transition? Combined with `base_workflow_status_history.tat`, enables SLA breach detection: "This leave approval has a 48-hour SLA but TAT is 72 hours." Null means no SLA.
 
 **`position` — transition ordering.**
 When a status has multiple outbound transitions, `position` determines the order of action buttons in the UI. "Approve" first, "Reject" second.
@@ -249,10 +249,10 @@ INDEX       (flow, from_code, is_active)                -- "what transitions are
 
 | flow | from_code | to_code | label | capability | guard_class | action_class | sla_seconds |
 |------|-----------|---------|-------|------------|-------------|--------------|-------------|
-| order | processing | customs_review | Send to Customs | `workflow.order.send_to_customs` | — | `NotifyCustomsAgency` | — |
-| order | customs_review | customs_hold | Hold | `workflow.order.hold` | — | — | — |
-| order | customs_hold | customs_cleared | Clear | `workflow.order.clear_customs` | `HsCodeVerified` | — | 259200 (3d) |
-| order | customs_cleared | shipped | Ship | `workflow.order.ship` | `InventoryReserved` | `GenerateShippingLabel` | 86400 (1d) |
+| order_fulfillment | processing | customs_review | Send to Customs | `workflow.order_fulfillment.send_to_customs` | — | `NotifyCustomsAgency` | — |
+| order_fulfillment | customs_review | customs_hold | Hold | `workflow.order_fulfillment.hold` | — | — | — |
+| order_fulfillment | customs_hold | customs_cleared | Clear | `workflow.order_fulfillment.clear_customs` | `HsCodeVerified` | — | 259200 (3d) |
+| order_fulfillment | customs_cleared | shipped | Ship | `workflow.order_fulfillment.ship` | `InventoryReserved` | `GenerateShippingLabel` | 86400 (1d) |
 
 ### 6.1 AuthZ Integration
 
@@ -273,8 +273,8 @@ Where `{process_code}` is the process identifier from `base_workflow.code` and `
 | `workflow.leave_application.approve` | Can trigger the "Approve" transition on leave applications |
 | `workflow.leave_application.reject` | Can trigger the "Reject" transition on leave applications |
 | `workflow.leave_application.close` | Can trigger the "Close" transition on leave applications |
-| `workflow.order.send_to_customs` | Can trigger the "Send to Customs" transition on orders |
-| `workflow.order.clear_customs` | Can trigger the "Clear" transition on orders (customs) |
+| `workflow.order_fulfillment.send_to_customs` | Can trigger the "Send to Customs" transition on orders |
+| `workflow.order_fulfillment.clear_customs` | Can trigger the "Clear" transition on orders (customs) |
 | `workflow.process.manage` | Can configure statuses and transitions for a process |
 
 #### Where Capabilities Are Declared
@@ -357,9 +357,9 @@ It's the audit trail, the user-facing activity log, and the data source for SLA/
 ### 7.2 Schema
 
 ```
-workflow_status_history
+base_workflow_status_history
 ├── id                   (bigint PK)
-├── flow                 (string)          "leave_application", "order", "it_ticket"
+├── flow                 (string)          "leave_application", "order_fulfillment", "it_ticket"
 ├── flow_id              (bigint)          ID of the specific leave/order/ticket instance
 ├── status               (string)          the status being entered
 ├── tat                  (int, null)       turnaround time in seconds spent in the previous status
@@ -385,7 +385,7 @@ The "from" is always the previous row's `status` for the same `flow` + `flow_id`
 TAT is computed once at write time: `this_row.transitioned_at - previous_row.transitioned_at`. Once written, it never changes. This makes SLA queries trivial without window functions:
 ```sql
 -- All leave approvals that exceeded 48-hour SLA
-SELECT * FROM workflow_status_history
+SELECT * FROM base_workflow_status_history
 WHERE flow = 'leave_application' AND status = 'approved' AND tat > 172800;
 ```
 The first row in a lifecycle has `tat = null` (no previous status to measure from).
@@ -489,7 +489,7 @@ This is **process configuration**, not user preferences. It lives in the databas
 ### Schema
 
 ```
-workflow_kanban_columns
+base_workflow_kanban_columns
 ├── id                   (bigint PK)
 ├── flow                 (string)          same discriminator as StatusConfig
 ├── code                 (string)          the kanban_code referenced by StatusConfig
@@ -561,7 +561,7 @@ The Workflow module has five components:
 |-----------|---------------|
 | **WorkflowEngine** | Orchestrates status changes. Entry point for all status operations. |
 | **StatusManager** | CRUD and querying of `StatusConfig` records. Loads the status graph for a process. Caches aggressively. |
-| **TransitionManager** | CRUD and querying of `workflow_status_transitions` records. Loads edge-level policy for a process. |
+| **TransitionManager** | CRUD and querying of `base_workflow_status_transitions` records. Loads edge-level policy for a process. |
 | **TransitionValidator** | Evaluates whether a transition is allowed: checks transition active state, AuthZ capability, and guard classes. |
 | **Hooks/** | Before/after transition hooks. Notifications, external integrations, AI prompts. |
 
@@ -598,6 +598,36 @@ WorkflowEngine::transition($leaveApp, 'approved', $context)
     │
     └── return TransitionResult
 ```
+
+### Transaction and Failure Policy
+
+The transition call flow wraps the critical path in a **database transaction**:
+
+- **Inside the transaction:** Model status update, history recording, and `action_class` execution. If any of these fail, the entire transition rolls back — the model's status is unchanged, no history is written, and the action's side effects (if DB-only) are reverted.
+- **Outside the transaction (best-effort):** `Hooks::fireBefore()` runs before the transaction opens (can abort the transition by throwing). `Hooks::fireAfter()` runs after commit — notifications, event dispatching, and external integrations. These are best-effort: a failed notification does not undo an approved leave application.
+- **`action_class` with external side effects:** If an action calls an external API (e.g., `NotifyCustomsAgency`), it should dispatch a queued job rather than making the call synchronously inside the transaction. This prevents holding the transaction open on network I/O and avoids the problem of rolling back a DB change after an external call has already succeeded.
+- **Partial failure surfacing:** `TransitionResult` carries success/failure state and a reason. Guards return `GuardResult` with a denial reason. The engine does not silently swallow failures.
+
+### Guard and Action Placement
+
+Engine contracts (`TransitionGuard`, `TransitionAction`) live in `app/Base/Workflow/Contracts/`. Process-specific implementations live in the **owning business module**:
+
+```
+app/Base/Workflow/Contracts/
+├── TransitionGuard.php
+└── TransitionAction.php
+
+app/Modules/Business/Leave/Workflow/
+├── Guards/LeaveBalanceGuard.php        ← implements TransitionGuard
+└── Actions/NotifyApplicant.php         ← implements TransitionAction
+
+app/Modules/Business/Logistics/Workflow/
+├── Guards/HsCodeVerified.php
+├── Guards/InventoryReserved.php
+└── Actions/NotifyCustomsAgency.php
+```
+
+The `guard_class` and `action_class` columns in `base_workflow_status_transitions` store fully qualified class names (e.g., `App\Modules\Business\Leave\Workflow\Guards\LeaveBalanceGuard`). The engine resolves them through Laravel's service container — no registry, no autoloader configuration. The business module is responsible for ensuring its guard/action classes are autoloadable (standard Composer PSR-4).
 
 ---
 
@@ -696,11 +726,10 @@ The admin refines conversationally: *"Add a guard on the approve transition that
 
 This document captures the big picture. Before writing code:
 
-1. **Resolve the open questions** — especially #1 (layer placement)
-2. **Define the public interface** — `WorkflowEngine`, `StatusManager`, `TransitionManager`, `TransitionValidator` method signatures
-3. **Pick one real use case** (e.g., leave application) and walk through it end-to-end against this design
-4. **Write migrations** — all five tables, following BLB naming and timestamp conventions
-5. **Then build** — models first, engine second, UI last
+1. **Define the public interface** — `WorkflowEngine`, `StatusManager`, `TransitionManager`, `TransitionValidator` method signatures
+2. **Walk through IT tickets end-to-end** against this design (first use case), followed by quality assurance control (second use case)
+3. **Write migrations** — all five tables, following BLB naming and timestamp conventions
+4. **Then build** — models first, engine second, UI last
 
 ---
 
