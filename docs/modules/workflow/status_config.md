@@ -1,16 +1,15 @@
 - The workflow is status-centric.
-- The statues are configurable in admin panel.
+- The statuses are configurable in admin panel.
+- **Superseded by `design.md`** — this file is kept for reference only. The design doc is the canonical source.
 
 #### **Status Configuration**
 ```ts
 class StatusConfig {
-    entity: string
+    flow: string
     code: string
     label: string
-    permissions: object
     pic: string[]
     notifications: object
-    nextStatuses: string[]
     position: int
     commentTags: object
     prompt: string
@@ -19,19 +18,21 @@ class StatusConfig {
 }
 ```
 
+**Removed fields (see `design.md` §4.2 for rationale):**
+- `permissions` — replaced by AuthZ capabilities on transitions (§6.1)
+- `nextStatuses` — transitions table is the single source of truth for edges (§6)
+
 #### **Database Schema**
 
 **PostgreSQL SQL:**
 ```sql
-CREATE TABLE status_configs (
-    id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-    entity VARCHAR(255) NOT NULL,
+CREATE TABLE workflow_status_configs (
+    id BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    flow VARCHAR(255) NOT NULL,
     code VARCHAR(255) NOT NULL,
     label VARCHAR(255) NOT NULL,
-    permissions JSONB NULL,
     pic JSONB NULL,
     notifications JSONB NULL,
-    next_statuses JSONB NULL,
     position INTEGER NOT NULL DEFAULT 0,
     comment_tags JSONB NULL,
     prompt TEXT NULL,
@@ -40,25 +41,23 @@ CREATE TABLE status_configs (
     created_at TIMESTAMP NULL,
     updated_at TIMESTAMP NULL,
 
-    CONSTRAINT unique_entity_code UNIQUE (entity, code)
+    CONSTRAINT unique_flow_code UNIQUE (flow, code)
 );
 
-CREATE INDEX idx_entity ON status_configs (entity);
-CREATE INDEX idx_entity_active ON status_configs (entity, is_active);
-CREATE INDEX idx_kanban_code ON status_configs (kanban_code);
+CREATE INDEX idx_flow ON workflow_status_configs (flow);
+CREATE INDEX idx_flow_active ON workflow_status_configs (flow, is_active);
+CREATE INDEX idx_kanban_code ON workflow_status_configs (kanban_code);
 ```
 
 **Laravel Migration:**
 ```php
-Schema::create('status_configs', function (Blueprint $table) {
-    $table->increments('id');
-    $table->string('entity');
+Schema::create('workflow_status_configs', function (Blueprint $table) {
+    $table->id();
+    $table->string('flow');
     $table->string('code');
     $table->string('label');
-    $table->json('permissions')->nullable();
     $table->json('pic')->nullable();
     $table->json('notifications')->nullable();
-    $table->json('next_statuses')->nullable();
     $table->integer('position')->default(0);
     $table->json('comment_tags')->nullable();
     $table->text('prompt')->nullable();
@@ -66,17 +65,18 @@ Schema::create('status_configs', function (Blueprint $table) {
     $table->boolean('is_active')->default(true);
     $table->timestamps();
 
-    $table->unique(['entity', 'code'], 'unique_entity_code');
-    $table->index('entity', 'idx_entity');
-    $table->index(['entity', 'is_active'], 'idx_entity_active');
+    $table->unique(['flow', 'code'], 'unique_flow_code');
+    $table->index('flow', 'idx_flow');
+    $table->index(['flow', 'is_active'], 'idx_flow_active');
     $table->index('kanban_code', 'idx_kanban_code');
 });
 ```
 
 **Schema Notes:**
-- `entity` and `code` form a unique composite key to prevent duplicate status codes per entity type
-- JSON columns store structured data (permissions, pic array, notifications, nextStatuses array, commentTags)
-- `position` determines ordering within the same entity
+- `flow` and `code` form a unique composite key to prevent duplicate status codes per flow type
+- JSON columns store structured data (pic array, notifications, commentTags)
+- `position` determines ordering within the same flow
 - `kanban_code` is indexed for quick lookups in kanban views
 - `is_active` allows soft disabling of statuses without deletion
-
+- Uses `$table->id()` for bigint PK per BLB convention
+- Table name uses `workflow_` prefix per Core module naming convention

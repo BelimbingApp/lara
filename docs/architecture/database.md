@@ -113,12 +113,13 @@ This registry tracks the YYYY_MM_DD prefixes assigned to each module to prevent 
 | `0100_01_01_*` | Base | Other module | None |
 | `0100_01_11_*` | Base | Authz | Database |
 | `0100_01_13_*` | Base | Settings | Database |
-| `0200_02_01_*` | Modules/Core | AI | Company, Employee |
+| `0100_01_15_*` | Base | Workflow | None |
 | `0200_01_03_*` | Modules/Core | Geonames | None |
 | `0200_01_05_*` | Modules/Core | Address | Geonames |
 | `0200_01_07_*` | Modules/Core | Company | Geonames, Address |
 | `0200_01_09_*` | Modules/Core | Employee | Company, Address |
 | `0200_01_20_*` | Modules/Core | User | Company, Employee |
+| `0200_02_01_*` | Modules/Core | AI | Company, Employee |
 
 ### Business Module Categories (0300+)
 
@@ -157,14 +158,17 @@ Extensions use real calendar years. The MM_DD can be the actual date or a module
 
 ```bash
 Base Layer (0100)
-  └─ cache, jobs (no dependencies)
+  ├─ Database (01_01) → [no dependencies]
+  ├─ Authz (01_11) → [depends on: Database]
+  ├─ Settings (01_13) → [depends on: Database]
+  └─ Workflow (01_15) → [no dependencies]
 
 Core Layer (0200)
   ├─ Geonames (01_03) → [no dependencies, runs first]
   ├─ Address (01_05) → [depends on: Geonames]
   ├─ Company (01_07) → [depends on: Address]
   ├─ User (01_20) → [depends on: Company]
-  └─ Workflow (01_21) → [to do depends on: User]
+  └─ AI (02_01) → [depends on: Company, Employee]
 
 Business Layer (0300+)
   └─ (modules depend on Core modules)
