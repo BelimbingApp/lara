@@ -3,11 +3,12 @@
     'error' => null,
     'required' => false,
     'rows' => 4,
+    'id' => 'textarea-' . \Illuminate\Support\Str::random(8),
 ])
 
 <div class="space-y-1">
     @if($label)
-        <label {{ $attributes->only('for')->class(['block text-[11px] uppercase tracking-wider font-semibold text-muted']) }}>
+        <label for="{{ $id }}" class="block text-[11px] uppercase tracking-wider font-semibold text-muted">
             {{ $label }}
             @if($required)
                 <span class="text-status-danger">*</span>
@@ -16,8 +17,9 @@
     @endif
 
     <textarea
+        id="{{ $id }}"
         rows="{{ $rows }}"
-        {{ $attributes->except(['label', 'error', 'required', 'rows'])->class([
+        {{ $attributes->except(['label', 'error', 'required', 'rows', 'id'])->class([
             'w-full px-input-x py-input-y text-sm border rounded-2xl transition-colors',
             'border-border-input',
             'bg-surface-card',
