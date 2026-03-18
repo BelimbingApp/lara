@@ -1,12 +1,14 @@
 @props([
     'label' => null,
     'error' => null,
+    'id' => 'checkbox-' . \Illuminate\Support\Str::random(8),
 ])
 
 <div class="flex items-center gap-2">
     <input
+        id="{{ $id }}"
         type="checkbox"
-        {{ $attributes->class([
+        {{ $attributes->except(['id'])->class([
             'w-4 h-4 rounded border transition-colors',
             'border-border-input',
             'bg-surface-card',
@@ -17,7 +19,7 @@
     >
 
     @if($label)
-        <label {{ $attributes->only('for')->class(['text-sm font-medium text-ink']) }}>
+        <label for="{{ $id }}" class="text-sm font-medium text-ink">
             {{ $label }}
         </label>
     @endif

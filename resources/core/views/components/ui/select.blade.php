@@ -16,7 +16,7 @@
         <select
             id="{{ $id }}"
             @if($name) name="{{ $name }}" @endif
-            {{ $attributes->except(['label', 'error'])->class([
+            {{ $attributes->except(['label', 'error', 'id'])->class([
                 'w-full pl-input-x pr-10 py-input-y text-sm appearance-none',
                 'border border-border-input rounded-2xl',
                 'bg-surface-card text-ink',
