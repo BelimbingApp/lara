@@ -107,7 +107,7 @@ Artisan commands under `app/Base/Workflow/Console/Commands/`. Lara uses these vi
 |---|-----------|-------|--------|
 | 1 | Unit: `StatusConfig` model | Computed accessors, relationships | ✅ |
 | 2 | Unit: `TransitionValidator` | Capability check, guard evaluation, active state | ✅ |
-| 3 | Feature: `WorkflowEngine::transition()` | Full call flow with DB | ⬜ (engine integration test deferred until HasWorkflowStatus is used by a real model) |
+| 3 | Feature: `WorkflowEngine::transition()` | Full call flow with DB (using real Ticket model) | ✅ |
 | 4 | Feature: AuthZ integration | Capability-gated transitions | ✅ |
 
 ---

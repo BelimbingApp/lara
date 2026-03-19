@@ -11,10 +11,13 @@ use App\Base\Workflow\Console\Commands\WorkflowAddTransitionCommand;
 use App\Base\Workflow\Console\Commands\WorkflowCreateCommand;
 use App\Base\Workflow\Console\Commands\WorkflowDescribeCommand;
 use App\Base\Workflow\Console\Commands\WorkflowValidateCommand;
+use App\Base\Workflow\Events\TransitionCompleted;
+use App\Base\Workflow\Listeners\SendTransitionNotification;
 use App\Base\Workflow\Services\StatusManager;
 use App\Base\Workflow\Services\TransitionManager;
 use App\Base\Workflow\Services\TransitionValidator;
 use App\Base\Workflow\Services\WorkflowEngine;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider as BaseServiceProvider;
 
 class ServiceProvider extends BaseServiceProvider
@@ -31,10 +34,12 @@ class ServiceProvider extends BaseServiceProvider
     }
 
     /**
-     * Bootstrap workflow commands.
+     * Bootstrap workflow commands and event listeners.
      */
     public function boot(): void
     {
+        Event::listen(TransitionCompleted::class, SendTransitionNotification::class);
+
         if ($this->app->runningInConsole()) {
             $this->commands([
                 WorkflowCreateCommand::class,

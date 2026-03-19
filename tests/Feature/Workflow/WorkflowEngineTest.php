@@ -3,6 +3,8 @@
 use App\Base\Authz\DTO\Actor;
 use App\Base\Authz\Enums\PrincipalType;
 use App\Base\Workflow\DTO\GuardResult;
+use App\Base\Workflow\DTO\TransitionContext;
+use App\Base\Workflow\Events\TransitionCompleted;
 use App\Base\Workflow\Models\StatusConfig;
 use App\Base\Workflow\Models\StatusHistory;
 use App\Base\Workflow\Models\StatusTransition;
@@ -10,40 +12,53 @@ use App\Base\Workflow\Models\Workflow;
 use App\Base\Workflow\Services\StatusManager;
 use App\Base\Workflow\Services\TransitionManager;
 use App\Base\Workflow\Services\TransitionValidator;
+use App\Base\Workflow\Services\WorkflowEngine;
+use App\Modules\Business\IT\Models\Ticket;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
 
 const WF_TEST_FLOW = 'test_ticket';
+const WF_IT_TICKET_FLOW = 'it_ticket';
 
+/**
+ * Seed a test workflow graph for unit-level engine tests.
+ *
+ * Also seeds the it_ticket flow (same graph) so integration tests
+ * using the real Ticket model work without the full seeder.
+ */
 function seedTestWorkflow(): void
 {
-    Workflow::query()->create([
-        'code' => WF_TEST_FLOW,
-        'label' => 'Test Ticket',
-        'module' => 'test',
-    ]);
+    $flows = [WF_TEST_FLOW, WF_IT_TICKET_FLOW];
 
-    $statuses = [
-        ['flow' => WF_TEST_FLOW, 'code' => 'open', 'label' => 'Open', 'position' => 0],
-        ['flow' => WF_TEST_FLOW, 'code' => 'in_progress', 'label' => 'In Progress', 'position' => 1],
-        ['flow' => WF_TEST_FLOW, 'code' => 'resolved', 'label' => 'Resolved', 'position' => 2],
-        ['flow' => WF_TEST_FLOW, 'code' => 'closed', 'label' => 'Closed', 'position' => 3],
-    ];
+    foreach ($flows as $flow) {
+        Workflow::query()->create([
+            'code' => $flow,
+            'label' => $flow === WF_TEST_FLOW ? 'Test Ticket' : 'IT Ticket',
+            'module' => 'test',
+        ]);
 
-    foreach ($statuses as $status) {
-        StatusConfig::query()->create($status);
-    }
+        $statuses = [
+            ['flow' => $flow, 'code' => 'open', 'label' => 'Open', 'position' => 0],
+            ['flow' => $flow, 'code' => 'in_progress', 'label' => 'In Progress', 'position' => 1],
+            ['flow' => $flow, 'code' => 'resolved', 'label' => 'Resolved', 'position' => 2],
+            ['flow' => $flow, 'code' => 'closed', 'label' => 'Closed', 'position' => 3],
+        ];
 
-    $transitions = [
-        ['flow' => WF_TEST_FLOW, 'from_code' => 'open', 'to_code' => 'in_progress', 'label' => 'Start Work'],
-        ['flow' => WF_TEST_FLOW, 'from_code' => 'in_progress', 'to_code' => 'resolved', 'label' => 'Resolve'],
-        ['flow' => WF_TEST_FLOW, 'from_code' => 'resolved', 'to_code' => 'closed', 'label' => 'Close'],
-        ['flow' => WF_TEST_FLOW, 'from_code' => 'resolved', 'to_code' => 'open', 'label' => 'Reopen', 'position' => 1],
-    ];
+        foreach ($statuses as $status) {
+            StatusConfig::query()->create($status);
+        }
 
-    foreach ($transitions as $transition) {
-        StatusTransition::query()->create($transition);
+        $transitions = [
+            ['flow' => $flow, 'from_code' => 'open', 'to_code' => 'in_progress', 'label' => 'Start Work'],
+            ['flow' => $flow, 'from_code' => 'in_progress', 'to_code' => 'resolved', 'label' => 'Resolve'],
+            ['flow' => $flow, 'from_code' => 'resolved', 'to_code' => 'closed', 'label' => 'Close'],
+            ['flow' => $flow, 'from_code' => 'resolved', 'to_code' => 'open', 'label' => 'Reopen', 'position' => 1],
+        ];
+
+        foreach ($transitions as $transition) {
+            StatusTransition::query()->create($transition);
+        }
     }
 }
 
@@ -61,44 +76,20 @@ function createTestActor(): Actor
 }
 
 /**
- * Create a minimal Eloquent model stand-in for testing transitions.
- * Uses the base_workflow table as a convenient existing table with the right columns.
+ * Create a Ticket model instance backed by the real it_tickets table.
  */
-function createTicketModel(): Model
+function createTestTicket(?Actor $actor = null): Ticket
 {
-    // Use a simple anonymous model backed by an actual DB table
-    $model = new class extends Model
-    {
-        protected $table = 'base_workflow';
+    $actor ??= createTestActor();
 
-        protected $fillable = ['code', 'label', 'module', 'description', 'model_class', 'settings', 'is_active'];
-
-        // Add a 'status' column via attribute — we'll store it in settings for testing
-        public function getAttribute($key)
-        {
-            if ($key === 'status') {
-                return $this->attributes['status'] ?? null;
-            }
-
-            return parent::getAttribute($key);
-        }
-
-        public function setAttribute($key, $value)
-        {
-            if ($key === 'status') {
-                $this->attributes['status'] = $value;
-
-                return $this;
-            }
-
-            return parent::setAttribute($key, $value);
-        }
-    };
-
-    // We need a real table for testing. Use a dedicated test row.
-    // Actually, let's just use the workflow table itself since it exists.
-    // We'll create a temporary test table instead.
-    return $model;
+    return Ticket::query()->create([
+        'company_id' => $actor->companyId,
+        'reporter_id' => $actor->id,
+        'title' => 'Test printer not working',
+        'status' => 'open',
+        'priority' => 'medium',
+        'category' => 'hardware',
+    ]);
 }
 
 beforeEach(function (): void {
@@ -291,4 +282,96 @@ test('transition resolve label falls back to target status label', function (): 
     // Without explicit label
     $transition->label = null;
     expect($transition->resolveLabel())->toBe('In Progress');
+});
+
+// -- WorkflowEngine Integration Tests (using real Ticket model) --
+
+test('engine transitions a ticket and records history', function (): void {
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+    $engine = app(WorkflowEngine::class);
+
+    $context = new TransitionContext(actor: $actor, comment: 'Assigning to IT team');
+    $result = $engine->transition($ticket, 'test_ticket', 'in_progress', $context);
+
+    expect($result->success)->toBeTrue();
+    expect($result->history)->not->toBeNull();
+    expect($result->history->status)->toBe('in_progress');
+    expect($result->history->comment)->toBe('Assigning to IT team');
+    expect($result->history->actor_id)->toBe($actor->id);
+
+    // Model status is updated in DB
+    expect($ticket->fresh()->getAttribute('status'))->toBe('in_progress');
+});
+
+test('engine records TAT between consecutive transitions', function (): void {
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+    $engine = app(WorkflowEngine::class);
+
+    // First transition: open → in_progress
+    $context = new TransitionContext(actor: $actor);
+    $result1 = $engine->transition($ticket, 'test_ticket', 'in_progress', $context);
+    expect($result1->success)->toBeTrue();
+    expect($result1->history->tat)->toBeNull(); // first transition — no previous history
+
+    // Second transition: in_progress → resolved
+    $result2 = $engine->transition($ticket, 'test_ticket', 'resolved', $context);
+    expect($result2->success)->toBeTrue();
+    expect($result2->history->tat)->toBeInt();
+    expect($result2->history->tat)->toBeGreaterThanOrEqual(0);
+});
+
+test('engine rejects transition when no edge exists', function (): void {
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+    $engine = app(WorkflowEngine::class);
+
+    $context = new TransitionContext(actor: $actor);
+    $result = $engine->transition($ticket, 'test_ticket', 'closed', $context);
+
+    expect($result->success)->toBeFalse();
+    expect($result->reason)->toContain('No transition defined');
+    expect($ticket->fresh()->getAttribute('status'))->toBe('open'); // unchanged
+});
+
+test('engine dispatches TransitionCompleted event after successful transition', function (): void {
+    Event::fake([TransitionCompleted::class]);
+
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+    $engine = app(WorkflowEngine::class);
+
+    $context = new TransitionContext(actor: $actor);
+    $engine->transition($ticket, 'test_ticket', 'in_progress', $context);
+
+    Event::assertDispatched(TransitionCompleted::class, function (TransitionCompleted $event) {
+        return $event->flow === 'test_ticket' && $event->history->status === 'in_progress';
+    });
+});
+
+test('HasWorkflowStatus trait provides transition shorthand on model', function (): void {
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+
+    $context = new TransitionContext(actor: $actor, comment: 'Starting work');
+    $result = $ticket->transitionTo('in_progress', $context);
+
+    expect($result->success)->toBeTrue();
+    expect($ticket->fresh()->getAttribute('status'))->toBe('in_progress');
+});
+
+test('HasWorkflowStatus trait returns status timeline', function (): void {
+    $actor = createTestActor();
+    $ticket = createTestTicket($actor);
+
+    $ticket->transitionTo('in_progress', new TransitionContext(actor: $actor));
+    $ticket->transitionTo('resolved', new TransitionContext(actor: $actor, comment: 'Fixed'));
+
+    $timeline = $ticket->statusTimeline();
+
+    expect($timeline)->toHaveCount(2);
+    expect($timeline->first()->status)->toBe('in_progress');
+    expect($timeline->last()->status)->toBe('resolved');
+    expect($timeline->last()->comment)->toBe('Fixed');
 });
