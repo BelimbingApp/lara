@@ -33,6 +33,8 @@ source "$SCRIPTS_DIR/shared/interactive.sh" 2>/dev/null || true
 
 # Environment (default to local if not provided, using Laravel standard)
 APP_ENV="${1:-local}"
+readonly UNKNOWN_VERSION='unknown'
+readonly PHP_VERSION_COMMAND='echo PHP_VERSION;'
 
 # Check PHP version (requires 8.5+)
 check_php_version() {
@@ -41,7 +43,7 @@ check_php_version() {
     fi
 
     local php_version
-    php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "0.0.0")
+    php_version=$(php -r "$PHP_VERSION_COMMAND" 2>/dev/null || echo "0.0.0")
 
     # Use version helper function from versions.sh
     if check_php_version_meets_minimum "$php_version"; then
@@ -92,7 +94,7 @@ upgrade_php() {
                 # Check current PHP version to determine what to remove
                 local current_php_version
                 if command_exists php; then
-                    current_php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "0.0.0")
+                    current_php_version=$(php -r "$PHP_VERSION_COMMAND" 2>/dev/null || echo "0.0.0")
                     echo -e "${CYAN}Current PHP version: $current_php_version${NC}"
 
                     # Remove old PHP versions (only if version is less than required)
@@ -161,7 +163,7 @@ upgrade_php() {
     # Verify upgrade
     if check_php_version; then
         local php_version
-        php_version=$(php -r "echo PHP_VERSION;")
+        php_version=$(php -r "$PHP_VERSION_COMMAND")
         echo ""
         echo -e "${GREEN}✓${NC} PHP upgraded successfully: $php_version"
         return 0
@@ -247,7 +249,7 @@ install_php() {
     # Verify installation
     if check_php_version; then
         local php_version
-        php_version=$(php -r "echo PHP_VERSION;")
+        php_version=$(php -r "$PHP_VERSION_COMMAND")
         echo ""
         echo -e "${GREEN}✓${NC} PHP installed successfully: $php_version"
         return 0
@@ -361,7 +363,7 @@ install_composer() {
     # Verify installation
     if command_exists composer; then
         local composer_version
-        composer_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
+        composer_version=$(composer --version 2>/dev/null | head -1 || echo "$UNKNOWN_VERSION")
         echo ""
         echo -e "${GREEN}✓${NC} Composer installed successfully: $composer_version"
 
@@ -391,14 +393,14 @@ main() {
 
     if check_php_version; then
         local php_version
-        php_version=$(php -r "echo PHP_VERSION;")
+        php_version=$(php -r "$PHP_VERSION_COMMAND")
         echo -e "${GREEN}✓${NC} PHP already installed: $php_version (meets requirement: ${required_php_version}+)"
 
         ensure_php_extensions_installed "$required_php_version"
     else
         if command_exists php; then
             local php_version
-            php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "unknown")
+            php_version=$(php -r "$PHP_VERSION_COMMAND" 2>/dev/null || echo "$UNKNOWN_VERSION")
             echo -e "${YELLOW}⚠${NC} PHP version too old: $php_version (requires ${required_php_version}+)"
 
             if [[ -t 0 ]]; then
@@ -455,14 +457,14 @@ main() {
     print_subsection_header "Composer Installation"
     if command_exists composer; then
         local composer_version
-        composer_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
+        composer_version=$(composer --version 2>/dev/null | head -1 || echo "$UNKNOWN_VERSION")
         echo -e "${GREEN}✓${NC} Composer already installed: $composer_version"
 
         # Update Composer to latest version
         echo -e "${CYAN}Updating Composer to latest version...${NC}"
         composer self-update --quiet 2>/dev/null || sudo composer self-update --quiet 2>/dev/null || true
         local updated_version
-        updated_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
+        updated_version=$(composer --version 2>/dev/null | head -1 || echo "$UNKNOWN_VERSION")
         if [[ "$composer_version" != "$updated_version" ]]; then
             echo -e "${GREEN}✓${NC} Composer updated: $updated_version"
         fi
@@ -494,10 +496,10 @@ main() {
 
     # Save state
     if command_exists php; then
-        save_to_setup_state "PHP_VERSION" "$(php -r "echo PHP_VERSION;")"
+        save_to_setup_state "PHP_VERSION" "$(php -r "$PHP_VERSION_COMMAND")"
     fi
     if command_exists composer; then
-        save_to_setup_state "COMPOSER_VERSION" "$(composer --version 2>/dev/null | head -1 || echo "unknown")"
+        save_to_setup_state "COMPOSER_VERSION" "$(composer --version 2>/dev/null | head -1 || echo "$UNKNOWN_VERSION")"
     fi
 
     print_divider
@@ -506,7 +508,7 @@ main() {
     echo ""
     if command_exists php && command_exists composer; then
         echo -e "${CYAN}Installed:${NC}"
-        echo -e "  • PHP: $(php -r "echo PHP_VERSION;")"
+        echo -e "  • PHP: $(php -r "$PHP_VERSION_COMMAND")"
         echo -e "  • Composer: $(composer --version 2>/dev/null | head -1)"
     fi
     echo ""

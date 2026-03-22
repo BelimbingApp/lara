@@ -31,6 +31,7 @@ source "$SCRIPT_DIR/shared/validation.sh" 2>/dev/null || true
 
 # Environment (default to local if not provided)
 APP_ENV="${1:-local}"
+readonly UNKNOWN_VERSION='unknown'
 
 # Minimum requirements
 MIN_DISK_GB=2
@@ -47,7 +48,7 @@ DB_CONNECTION=$(get_db_connection)
 # Check OS version
 check_os() {
     local os_type
-    os_type=$(detect_os 2>/dev/null || echo "unknown")
+    os_type=$(detect_os 2>/dev/null || echo "$UNKNOWN_VERSION")
 
     case "$os_type" in
         linux|wsl2|macos)
@@ -95,7 +96,7 @@ check_disk_space() {
 check_ram() {
     local total_ram_gb
     local os_type
-    os_type=$(detect_os 2>/dev/null || echo "unknown")
+    os_type=$(detect_os 2>/dev/null || echo "$UNKNOWN_VERSION")
 
     case "$os_type" in
         linux|wsl2)
@@ -233,7 +234,7 @@ check_php() {
 
     if command_exists php; then
         local php_version
-        php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "unknown")
+        php_version=$(php -r "echo PHP_VERSION;" 2>/dev/null || echo "$UNKNOWN_VERSION")
 
         if check_php_version_meets_minimum "$php_version"; then
             echo -e "${GREEN}✓${NC} PHP: $php_version (${required_php_version}+ required)"
@@ -255,7 +256,7 @@ check_php() {
 check_composer() {
     if command_exists composer; then
         local composer_version
-        composer_version=$(composer --version 2>/dev/null | head -1 || echo "unknown")
+        composer_version=$(composer --version 2>/dev/null | head -1 || echo "$UNKNOWN_VERSION")
         echo -e "${GREEN}✓${NC} Composer: $composer_version"
         PASSED+=("Composer: Installed")
         return 0
@@ -273,12 +274,12 @@ check_js_runtime() {
 
     if command_exists node && command_exists npm; then
         has_node=true
-        node_version=$(node --version 2>/dev/null || echo "unknown")
+        node_version=$(node --version 2>/dev/null || echo "$UNKNOWN_VERSION")
     fi
 
     if command_exists bun; then
         local bun_version
-        bun_version=$(bun --version 2>/dev/null || echo "unknown")
+        bun_version=$(bun --version 2>/dev/null || echo "$UNKNOWN_VERSION")
         echo -e "${GREEN}✓${NC} Bun: $bun_version (preferred)"
         if [[ "$has_node" = true ]]; then
             echo -e "${YELLOW}  ℹ${NC} Node.js $node_version is also installed but won't be used"
@@ -287,7 +288,7 @@ check_js_runtime() {
         return 0
     elif [[ "$has_node" = true ]]; then
         local npm_version
-        npm_version=$(npm --version 2>/dev/null || echo "unknown")
+        npm_version=$(npm --version 2>/dev/null || echo "$UNKNOWN_VERSION")
         echo -e "${GREEN}✓${NC} Node.js: $node_version, npm: $npm_version"
         echo -e "${YELLOW}  ℹ${NC} Bun is preferred - Node.js will be replaced if Bun is installed"
         PASSED+=("JavaScript Runtime: Node.js $node_version")
@@ -306,10 +307,10 @@ check_git() {
 
     if command_exists git; then
         local git_version
-        git_version=$(git --version 2>/dev/null | awk '{print $3}' || echo "unknown")
+        git_version=$(git --version 2>/dev/null | awk '{print $3}' || echo "$UNKNOWN_VERSION")
 
         # Use version comparison helper from versions.sh
-        if [[ "$git_version" != "unknown" ]]; then
+        if [[ "$git_version" != "$UNKNOWN_VERSION" ]]; then
             if check_git_version_meets_latest "$git_version"; then
                 echo -e "${GREEN}✓${NC} Git: $git_version (latest: ${latest_git_version})"
                 PASSED+=("Git: $git_version")
