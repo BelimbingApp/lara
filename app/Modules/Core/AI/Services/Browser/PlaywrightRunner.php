@@ -5,7 +5,6 @@
 
 namespace App\Modules\Core\AI\Services\Browser;
 
-use RuntimeException;
 use Symfony\Component\Process\Process;
 
 /**
@@ -65,53 +64,16 @@ class PlaywrightRunner
      * @param  array<string, mixed>  $arguments  Action-specific arguments
      * @return array{ok: bool, action: string, ...} Parsed JSON result
      *
-     * @throws RuntimeException If the process fails, times out, or returns invalid output
+     * @throws PlaywrightRunnerException If the process fails, times out, or returns invalid output
      */
     public function execute(string $action, array $arguments = []): array
     {
         $scriptPath = $this->scriptPath();
-
-        if (! file_exists($scriptPath)) {
-            throw new RuntimeException(
-                'Browser runner script not found at: '.$scriptPath
-            );
-        }
-
-        // Per-call headless override takes priority over config.
-        // The 'headless' key is consumed here and removed from $arguments
-        // so it doesn't leak into the runner's action-specific input.
-        if (array_key_exists('headless', $arguments)) {
-            $headless = (bool) $arguments['headless'];
-            unset($arguments['headless']);
-        } else {
-            $headless = (bool) config('ai.tools.browser.headless', true);
-        }
-
-        $displayEnv = [];
-
-        if (! $headless) {
-            $displayEnv = $this->resolveDisplayEnvironment();
-
-            if (! isset($displayEnv['DISPLAY'])) {
-                // No display server available — fall back to headless silently.
-                // The runner script will include a fallback notice in the result.
-                $headless = true;
-            }
-        }
-
-        // In headful mode, keep the browser window open after action so
-        // the user can inspect the page. The runner writes its result and
-        // then enters a keep-alive loop until the user closes the window
-        // or the timeout expires.
+        $this->assertScriptExists($scriptPath);
+        [$arguments, $headless, $displayEnv] = $this->resolveExecutionOptions($arguments);
         $keepOpen = ! $headless;
 
-        $input = json_encode([
-            'action' => $action,
-            'headless' => $headless,
-            'keepOpen' => $keepOpen,
-            'executablePath' => config('ai.tools.browser.executable_path'),
-            ...$arguments,
-        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+        $input = $this->buildInput($action, $arguments, $headless, $keepOpen);
 
         // Headful + keepOpen: launch as detached background process so PHP
         // can return the result without waiting for the browser to close.
@@ -119,53 +81,7 @@ class PlaywrightRunner
             return $this->executeDetached($input, $scriptPath, $displayEnv);
         }
 
-        // Headless: synchronous execution via Symfony Process.
-        $process = new Process(['node', $scriptPath]);
-        $process->setInput($input);
-        $process->setTimeout(self::PROCESS_TIMEOUT);
-
-        // Explicitly set display vars so Chromium can find the X/Wayland
-        // server. Symfony Process inherits the parent env, but the PHP
-        // process (web server, queue worker) may not carry display vars.
-        if ($displayEnv !== []) {
-            $process->setEnv($displayEnv);
-        }
-
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            $stderr = trim($process->getErrorOutput());
-            $stdout = trim($process->getOutput());
-
-            // Try to parse stdout for structured error from the runner
-            if ($stdout !== '') {
-                $parsed = json_decode($stdout, true);
-                if (is_array($parsed) && isset($parsed['ok'])) {
-                    return $parsed;
-                }
-            }
-
-            throw new RuntimeException(
-                'Browser process failed (exit '.$process->getExitCode().'): '
-                .($stderr !== '' ? $stderr : 'No error output')
-            );
-        }
-
-        $output = trim($process->getOutput());
-
-        if ($output === '') {
-            throw new RuntimeException('Browser runner returned empty output.');
-        }
-
-        $result = json_decode($output, true);
-
-        if (! is_array($result) || ! isset($result['ok'])) {
-            throw new RuntimeException(
-                'Browser runner returned invalid JSON: '.substr($output, 0, 200)
-            );
-        }
-
-        return $result;
+        return $this->executeSynchronously($input, $scriptPath, $displayEnv);
     }
 
     /**
@@ -184,7 +100,7 @@ class PlaywrightRunner
      * @param  array<string, string>  $displayEnv  Display environment variables
      * @return array{ok: bool, action: string, ...} Parsed JSON result
      *
-     * @throws RuntimeException If the process fails to start, times out, or returns invalid output
+     * @throws PlaywrightRunnerException If the process fails to start, times out, or returns invalid output
      */
     private function executeDetached(string $input, string $scriptPath, array $displayEnv): array
     {
@@ -223,15 +139,7 @@ class PlaywrightRunner
                 if ($content !== false && $content !== '') {
                     @unlink($outputFile);
 
-                    $result = json_decode($content, true);
-
-                    if (! is_array($result) || ! isset($result['ok'])) {
-                        throw new RuntimeException(
-                            'Browser runner returned invalid JSON: '.substr($content, 0, 200)
-                        );
-                    }
-
-                    return $result;
+                    return $this->decodeRunnerResult($content);
                 }
             }
 
@@ -242,7 +150,136 @@ class PlaywrightRunner
         @unlink($inputFile);
         @unlink($outputFile);
 
-        throw new RuntimeException('Browser runner timed out waiting for result.');
+        throw new PlaywrightRunnerException('Browser runner timed out waiting for result.');
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     * @return array{0: array<string, mixed>, 1: bool, 2: array<string, string>}
+     */
+    private function resolveExecutionOptions(array $arguments): array
+    {
+        $headless = $this->extractHeadlessOverride($arguments);
+        $displayEnv = [];
+
+        if (! $headless) {
+            $displayEnv = $this->resolveDisplayEnvironment();
+
+            if (! isset($displayEnv['DISPLAY'])) {
+                // No display server available — fall back to headless silently.
+                // The runner script will include a fallback notice in the result.
+                $headless = true;
+            }
+        }
+
+        return [$arguments, $headless, $displayEnv];
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     */
+    private function extractHeadlessOverride(array &$arguments): bool
+    {
+        if (! array_key_exists('headless', $arguments)) {
+            return (bool) config('ai.tools.browser.headless', true);
+        }
+
+        $headless = (bool) $arguments['headless'];
+        unset($arguments['headless']);
+
+        return $headless;
+    }
+
+    /**
+     * @param  array<string, mixed>  $arguments
+     */
+    private function buildInput(string $action, array $arguments, bool $headless, bool $keepOpen): string
+    {
+        return json_encode([
+            'action' => $action,
+            'headless' => $headless,
+            'keepOpen' => $keepOpen,
+            'executablePath' => config('ai.tools.browser.executable_path'),
+            ...$arguments,
+        ], JSON_THROW_ON_ERROR | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * @param  array<string, string>  $displayEnv
+     * @return array{ok: bool, action: string, ...}
+     */
+    private function executeSynchronously(string $input, string $scriptPath, array $displayEnv): array
+    {
+        $process = new Process(['node', $scriptPath]);
+        $process->setInput($input);
+        $process->setTimeout(self::PROCESS_TIMEOUT);
+
+        // Explicitly set display vars so Chromium can find the X/Wayland
+        // server. Symfony Process inherits the parent env, but the PHP
+        // process (web server, queue worker) may not carry display vars.
+        if ($displayEnv !== []) {
+            $process->setEnv($displayEnv);
+        }
+
+        $process->run();
+
+        if (! $process->isSuccessful()) {
+            return $this->parseFailedProcess($process);
+        }
+
+        return $this->decodeRunnerResult(trim($process->getOutput()), 'Browser runner returned empty output.');
+    }
+
+    /**
+     * @return array{ok: bool, action: string, ...}
+     */
+    private function parseFailedProcess(Process $process): array
+    {
+        $stdout = trim($process->getOutput());
+
+        if ($stdout !== '') {
+            $parsed = json_decode($stdout, true);
+
+            if (is_array($parsed) && isset($parsed['ok'])) {
+                return $parsed;
+            }
+        }
+
+        $stderr = trim($process->getErrorOutput());
+
+        throw new PlaywrightRunnerException(
+            'Browser process failed (exit '.$process->getExitCode().'): '
+            .($stderr !== '' ? $stderr : 'No error output')
+        );
+    }
+
+    /**
+     * @return array{ok: bool, action: string, ...}
+     */
+    private function decodeRunnerResult(string $output, string $emptyOutputMessage = 'Browser runner returned empty output.'): array
+    {
+        if ($output === '') {
+            throw new PlaywrightRunnerException($emptyOutputMessage);
+        }
+
+        $result = json_decode($output, true);
+
+        if (! is_array($result) || ! isset($result['ok'])) {
+            throw new PlaywrightRunnerException(
+                'Browser runner returned invalid JSON: '.substr($output, 0, 200)
+            );
+        }
+
+        return $result;
+    }
+
+    private function assertScriptExists(string $scriptPath): void
+    {
+        if (file_exists($scriptPath)) {
+            return;
+        }
+
+        throw new PlaywrightRunnerException('Browser runner script not found at: '.$scriptPath);
     }
 
     /**

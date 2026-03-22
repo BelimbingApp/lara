@@ -419,4 +419,4 @@ async function keepAlive(browser, timeoutMs) {
     });
 }
 
-main();
+await main();

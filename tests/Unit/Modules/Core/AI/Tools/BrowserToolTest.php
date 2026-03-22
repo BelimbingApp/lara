@@ -10,6 +10,9 @@ use Tests\TestCase;
 uses(TestCase::class, AssertsToolBehavior::class);
 
 const BROWSER_EXAMPLE_URL = 'https://example.com';
+const BROWSER_EXAMPLE_DOMAIN_TITLE = 'Example Domain';
+const BROWSER_WAIT_SELECTOR_MAIN = '#main';
+const BROWSER_WAIT_URL_DONE = 'https://example.com/done';
 
 /**
  * Build a runner result array matching the Node.js runner format.
@@ -104,7 +107,7 @@ describe('navigate action', function () {
             ->with('navigate', ['url' => BROWSER_EXAMPLE_URL])
             ->andReturn(runnerSuccess('navigate', [
                 'url' => BROWSER_EXAMPLE_URL,
-                'title' => 'Example Domain',
+                'title' => BROWSER_EXAMPLE_DOMAIN_TITLE,
                 'status' => 'navigated',
                 'httpStatus' => 200,
             ]));
@@ -113,7 +116,7 @@ describe('navigate action', function () {
 
         expect($data['ok'])->toBeTrue()
             ->and($data['status'])->toBe('navigated')
-            ->and($data['title'])->toBe('Example Domain');
+            ->and($data['title'])->toBe(BROWSER_EXAMPLE_DOMAIN_TITLE);
     });
 
     it('returns error when runner fails', function () {
@@ -133,7 +136,7 @@ describe('snapshot action', function () {
             ->with('snapshot', Mockery::on(fn ($args) => $args['format'] === 'ai'))
             ->andReturn(runnerSuccess('snapshot', [
                 'format' => 'ai',
-                'content' => 'Example Domain',
+                'content' => BROWSER_EXAMPLE_DOMAIN_TITLE,
                 'status' => 'captured',
             ]));
 
@@ -149,7 +152,7 @@ describe('snapshot action', function () {
             ->with('snapshot', Mockery::on(fn ($args) => $args['format'] === 'aria'))
             ->andReturn(runnerSuccess('snapshot', [
                 'format' => 'aria',
-                'content' => '- heading "Example Domain"',
+                'content' => '- heading "'.BROWSER_EXAMPLE_DOMAIN_TITLE.'"',
                 'status' => 'captured',
             ]));
 
@@ -287,7 +290,7 @@ describe('evaluate action', function () {
         $this->runner->shouldReceive('execute')
             ->with('evaluate', ['script' => 'document.title'])
             ->andReturn(runnerSuccess('evaluate', [
-                'result' => 'Example Domain',
+                'result' => BROWSER_EXAMPLE_DOMAIN_TITLE,
                 'status' => 'evaluated',
             ]));
 
@@ -295,7 +298,7 @@ describe('evaluate action', function () {
 
         expect($data['ok'])->toBeTrue()
             ->and($data['status'])->toBe('evaluated')
-            ->and($data['result'])->toBe('Example Domain');
+            ->and($data['result'])->toBe(BROWSER_EXAMPLE_DOMAIN_TITLE);
     });
 });
 
@@ -408,13 +411,13 @@ describe('wait action', function () {
 
     it('waits for selector condition via runner', function () {
         $this->runner->shouldReceive('execute')
-            ->with('wait', Mockery::on(fn ($args) => $args['selector'] === '#main'))
+            ->with('wait', Mockery::on(fn ($args) => $args['selector'] === BROWSER_WAIT_SELECTOR_MAIN))
             ->andReturn(runnerSuccess('wait', [
-                'selector' => '#main',
+                'selector' => BROWSER_WAIT_SELECTOR_MAIN,
                 'status' => 'matched',
             ]));
 
-        $data = $this->decodeToolExecution(['action' => 'wait', 'selector' => '#main']);
+        $data = $this->decodeToolExecution(['action' => 'wait', 'selector' => BROWSER_WAIT_SELECTOR_MAIN]);
 
         expect($data['ok'])->toBeTrue()
             ->and($data['status'])->toBe('matched');
@@ -422,13 +425,13 @@ describe('wait action', function () {
 
     it('waits for url condition via runner', function () {
         $this->runner->shouldReceive('execute')
-            ->with('wait', Mockery::on(fn ($args) => $args['url'] === 'https://example.com/done'))
+            ->with('wait', Mockery::on(fn ($args) => $args['url'] === BROWSER_WAIT_URL_DONE))
             ->andReturn(runnerSuccess('wait', [
-                'url' => 'https://example.com/done',
+                'url' => BROWSER_WAIT_URL_DONE,
                 'status' => 'matched',
             ]));
 
-        $data = $this->decodeToolExecution(['action' => 'wait', 'url' => 'https://example.com/done']);
+        $data = $this->decodeToolExecution(['action' => 'wait', 'url' => BROWSER_WAIT_URL_DONE]);
 
         expect($data['ok'])->toBeTrue()
             ->and($data['status'])->toBe('matched');
