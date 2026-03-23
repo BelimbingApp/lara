@@ -66,7 +66,7 @@ cd belimbing
 
 All contributors must agree to the [CLA](./CLA.md).
 
-For the complete workflow and remote strategy, see [docs/guide/contributing.md](./docs/guide/contributing.md).
+For the complete workflow and remote strategy, see [docs/guides/contributing.md](./docs/guides/contributing.md).
 
 ## License
 
