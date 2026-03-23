@@ -70,7 +70,7 @@ git push -u fork feature/short-description
 gh pr create \
   --repo BelimbingApp/belimbing \
   --base main \
-  --head <your-org>:feature/short-description \
+  --head <your-github-username-or-org>:feature/short-description \
   --fill
 ```
 
