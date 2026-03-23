@@ -281,15 +281,19 @@ verify_postgresql_connection() {
     fi
 }
 
-# Create PostgreSQL database and user
+# Prompt for PostgreSQL connection credentials, create database and user.
 setup_postgresql_database() {
-    local db_name
-    local db_user
-    db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "blb")
-    db_user=$(get_env_var "DB_USERNAME" "belimbing_app")
-    local db_password
-    db_password=$(generate_password)
+    local default_db_name
+    default_db_name=$(get_default_database_name "$APP_ENV")
 
+    local db_host db_port db_name db_user db_password
+    db_host=$(ask_input "DB_HOST" "$(get_env_var "DB_HOST" "127.0.0.1")")
+    db_port=$(ask_input "DB_PORT" "$(get_env_var "DB_PORT" "$DEFAULT_DB_PORT")")
+    db_name=$(ask_input "DB_DATABASE" "$(get_env_var "$ENV_KEY_DB_DATABASE" "$default_db_name")")
+    db_user=$(ask_input "DB_USERNAME" "$(get_env_var "DB_USERNAME" "$DEFAULT_DB_USER")")
+    db_password=$(ask_input "DB_PASSWORD" "$(get_env_var "DB_PASSWORD" "$(generate_password)")")
+
+    echo ""
     echo -e "${CYAN}Setting up PostgreSQL database...${NC}"
 
     # Try to connect as postgres user
@@ -309,8 +313,8 @@ setup_postgresql_database() {
         # Save to .env
         if [[ -f "$PROJECT_ROOT/.env" ]]; then
             update_env_file "DB_CONNECTION" "pgsql"
-            update_env_file "DB_HOST" "127.0.0.1"
-            update_env_file "DB_PORT" "5432"
+            update_env_file "DB_HOST" "$db_host"
+            update_env_file "DB_PORT" "$db_port"
             update_env_file "$ENV_KEY_DB_DATABASE" "$db_name"
             update_env_file "DB_USERNAME" "$db_user"
             update_env_file "DB_PASSWORD" "$db_password"
@@ -319,7 +323,7 @@ setup_postgresql_database() {
 
             # Verify connection using the saved credentials
             echo -e "${CYAN}Verifying database connection...${NC}"
-            if verify_postgresql_connection "127.0.0.1" "5432" "$db_name" "$db_user" "$db_password"; then
+            if verify_postgresql_connection "$db_host" "$db_port" "$db_name" "$db_user" "$db_password"; then
                 echo -e "${GREEN}✓${NC} Database connection verified successfully"
             else
                 echo -e "${YELLOW}⚠${NC} Could not verify database connection with saved credentials" >&2
@@ -483,26 +487,55 @@ install_redis() {
     return 1
 }
 
-# PostgreSQL is running: create database if missing, otherwise verify connection.
+# Diagnose why a PostgreSQL connection failed and print actionable guidance.
+# Checks service, credentials, and database existence individually.
+diagnose_postgresql_connection() {
+    local db_host db_port db_name db_user db_password
+    db_host=$(get_env_var "DB_HOST" "127.0.0.1")
+    db_port=$(get_env_var "DB_PORT" "5432")
+    db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "")
+    db_user=$(get_env_var "DB_USERNAME" "")
+    db_password=$(get_env_var "DB_PASSWORD" "")
+
+    echo ""
+    echo -e "${RED}✗${NC} Database connection failed. Diagnosing..." >&2
+    echo ""
+
+    # 1. Is PostgreSQL reachable at all?
+    if ! pg_isready -h "$db_host" -p "$db_port" >/dev/null 2>&1; then
+        echo -e "  ${RED}✗${NC} PostgreSQL is not reachable at ${CYAN}${db_host}:${db_port}${NC}" >&2
+        echo -e "    ${YELLOW}Fix:${NC} Start the service: ${CYAN}sudo systemctl start postgresql${NC}" >&2
+        return 1
+    fi
+    echo -e "  ${GREEN}✓${NC} PostgreSQL is reachable at ${db_host}:${db_port}"
+
+    # 2. Can we authenticate with these credentials?
+    if ! PGPASSWORD="$db_password" psql -h "$db_host" -p "$db_port" -U "$db_user" -d "postgres" -c "SELECT 1;" >/dev/null 2>&1; then
+        echo -e "  ${RED}✗${NC} Authentication failed for user ${CYAN}${db_user}${NC}" >&2
+        echo -e "    ${YELLOW}Fix:${NC} Check DB_USERNAME and DB_PASSWORD in ${CYAN}.env${NC}" >&2
+        echo -e "    ${YELLOW}Or reset:${NC} ${CYAN}sudo -u postgres psql -c \"ALTER USER ${db_user} WITH PASSWORD 'new_password';\"${NC}" >&2
+        return 1
+    fi
+    echo -e "  ${GREEN}✓${NC} Authentication successful for user ${db_user}"
+
+    # 3. Does the database exist?
+    if ! PGPASSWORD="$db_password" psql -h "$db_host" -p "$db_port" -U "$db_user" -d "$db_name" -c "SELECT 1;" >/dev/null 2>&1; then
+        echo -e "  ${RED}✗${NC} Database ${CYAN}${db_name}${NC} does not exist or is not accessible" >&2
+        echo -e "    ${YELLOW}Fix:${NC} ${CYAN}sudo -u postgres psql -c \"CREATE DATABASE ${db_name} OWNER ${db_user};\"${NC}" >&2
+        return 1
+    fi
+    echo -e "  ${GREEN}✓${NC} Database ${db_name} is accessible"
+
+    # If we got here, individual checks passed but verify_postgresql_connection failed — unexpected
+    echo -e "  ${YELLOW}⚠${NC} Individual checks passed but combined verification failed" >&2
+    return 1
+}
+
+# PostgreSQL is running: prompt for credentials, create database if needed.
 ensure_postgresql_database() {
     echo -e "${GREEN}✓${NC} PostgreSQL is installed and running"
-
-    local db_name
-    db_name=$(get_env_var "$ENV_KEY_DB_DATABASE" "")
-    if [[ -z "$db_name" ]]; then
-        echo -e "${CYAN}Creating database and user...${NC}"
-        setup_postgresql_database
-    else
-        echo -e "${GREEN}✓${NC} Database configuration found in .env"
-        echo -e "${CYAN}Verifying database connection...${NC}"
-        if verify_postgresql_connection; then
-            echo -e "${GREEN}✓${NC} Database connection verified successfully"
-        else
-            echo -e "${YELLOW}⚠${NC} Could not verify database connection" >&2
-            echo -e "  ${YELLOW}Note:${NC} Please check database credentials in .env" >&2
-        fi
-    fi
-    return 0
+    echo ""
+    setup_postgresql_database
 }
 
 # PostgreSQL is installed but not running: start service then create/verify database.
@@ -632,11 +665,9 @@ main() {
 
     if [[ "$db_connection" = "sqlite" ]]; then
         # SQLite: no server install, just .env and file path
-        print_subsection_header "SQLite"
         setup_sqlite "database/database.sqlite"
     else
         # PostgreSQL Setup
-        print_subsection_header "PostgreSQL"
         if check_postgresql; then
             ensure_postgresql_database
         elif command_exists psql; then
@@ -649,7 +680,6 @@ main() {
     echo ""
 
     # Redis Setup
-    print_subsection_header "Redis"
     if check_redis; then
         echo -e "${GREEN}✓${NC} Redis is installed and running"
     elif command_exists redis-cli; then
@@ -666,7 +696,6 @@ main() {
         save_to_setup_state "POSTGRESQL_INSTALLED" "true"
     fi
 
-    print_divider
     echo ""
     echo -e "${GREEN}✓ Database & Redis setup complete!${NC}"
     echo ""

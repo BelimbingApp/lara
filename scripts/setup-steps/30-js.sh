@@ -203,10 +203,7 @@ handle_bun_success() {
     bun_version=$(get_bun_version)
     save_to_setup_state "JS_RUNTIME" "bun"
     save_to_setup_state "BUN_VERSION" "$bun_version"
-    print_divider
-    echo ""
     echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
-    echo ""
     exit 0
 }
 
@@ -226,10 +223,7 @@ handle_node_success() {
     save_to_setup_state "JS_RUNTIME" "node"
     save_to_setup_state "NODE_VERSION" "$node_version"
     save_to_setup_state "NPM_VERSION" "$npm_version"
-    print_divider
-    echo ""
     echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
-    echo ""
     exit 0
 }
 
@@ -342,8 +336,6 @@ main() {
     fi
 
     # Step 2: Bun not found - offer to install
-    print_subsection_header "JavaScript Runtime Installation"
-
     # Check for Node.js only if we need to show it as context or fallback
     local has_node=false
     if check_node_as_fallback; then

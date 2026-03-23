@@ -194,9 +194,6 @@ main() {
     fi
 
     # Install Git
-    print_subsection_header "Git Installation"
-    echo ""
-
     if install_git; then
         echo -e "${GREEN}✓${NC} Git is ready"
     else
@@ -214,7 +211,6 @@ main() {
     # Save state
     save_to_setup_state "GIT_VERSION" "$CURRENT_GIT_VERSION" "$PROJECT_ROOT"
 
-    print_divider
     echo -e "${GREEN}✓ Git setup complete!${NC}"
     echo -e "${CYAN}Installed:${NC}"
     echo -e "  • Git: $(git --version)"

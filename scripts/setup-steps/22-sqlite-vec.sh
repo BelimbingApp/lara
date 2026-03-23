@@ -178,8 +178,6 @@ main() {
     # Load existing configuration
     load_setup_state
 
-    print_subsection_header "SQLite-Vec Installation"
-
     # Check if already installed
     if check_existing; then
         local installed_version
@@ -189,7 +187,6 @@ main() {
 
         save_to_setup_state "SQLITE_VEC_VERSION" "$SQLITE_VEC_VERSION"
 
-        print_divider
         echo ""
         echo -e "${GREEN}${CHECK_MARK} SQLite-Vec setup complete!${NC}"
         echo ""
@@ -216,7 +213,6 @@ main() {
     echo ""
 
     # Verify the extension loads in PHP
-    print_subsection_header "Verification"
     echo -e "${CYAN}Verifying extension loads in PHP...${NC}"
 
     local vec_version
@@ -234,7 +230,6 @@ main() {
     # Save state
     save_to_setup_state "SQLITE_VEC_VERSION" "$SQLITE_VEC_VERSION"
 
-    print_divider
     echo ""
     echo -e "${GREEN}${CHECK_MARK} SQLite-Vec setup complete!${NC}"
     echo ""
