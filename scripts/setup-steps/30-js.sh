@@ -197,12 +197,44 @@ get_bun_version() {
     return 0
 }
 
+# Install project JS dependencies using the active runtime.
+# Must be called after the runtime binary is confirmed available.
+install_js_dependencies() {
+    local runtime=$1
+
+    echo -e "${CYAN}Installing JavaScript dependencies...${NC}"
+
+    case "$runtime" in
+        bun)
+            (cd "$PROJECT_ROOT" && bun install) || {
+                echo -e "${RED}✗${NC} bun install failed" >&2
+                return 1
+            }
+            ;;
+        node)
+            (cd "$PROJECT_ROOT" && npm install) || {
+                echo -e "${RED}✗${NC} npm install failed" >&2
+                return 1
+            }
+            ;;
+        *)
+            echo -e "${RED}✗${NC} Unknown runtime: $runtime" >&2
+            return 1
+            ;;
+    esac
+
+    echo -e "${GREEN}✓${NC} JavaScript dependencies installed"
+}
+
 # Handle successful Bun setup/installation
 handle_bun_success() {
     local bun_version
     bun_version=$(get_bun_version)
     save_to_setup_state "JS_RUNTIME" "bun"
     save_to_setup_state "BUN_VERSION" "$bun_version"
+
+    install_js_dependencies bun || exit 1
+
     echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
     exit 0
 }
@@ -223,6 +255,9 @@ handle_node_success() {
     save_to_setup_state "JS_RUNTIME" "node"
     save_to_setup_state "NODE_VERSION" "$node_version"
     save_to_setup_state "NPM_VERSION" "$npm_version"
+
+    install_js_dependencies node || exit 1
+
     echo -e "${GREEN}✓ JavaScript runtime setup complete!${NC}"
     exit 0
 }
