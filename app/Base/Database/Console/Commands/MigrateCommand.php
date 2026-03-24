@@ -249,12 +249,14 @@ class MigrateCommand extends IlluminateMigrateCommand
      * Values are read from env vars (passed transiently by the setup script).
      * Defaults allow day-to-day `migrate:fresh --seed --dev` to work without
      * env vars since `is_stable` preserves the users table across fresh runs.
+     * Reads LICENSEE_COMPANY_NAME and optional LICENSEE_COMPANY_CODE.
      */
     private function ensureFrameworkPrimitives(): void
     {
         $companyName = env('LICENSEE_COMPANY_NAME', 'My Company');
+        $companyCode = env('LICENSEE_COMPANY_CODE');
 
-        if (Company::provisionLicensee($companyName)) {
+        if (Company::provisionLicensee($companyName, $companyCode)) {
             $this->line("  Created licensee company: {$companyName}");
         }
 

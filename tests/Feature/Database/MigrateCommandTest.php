@@ -7,12 +7,15 @@ use App\Base\Database\Console\Commands\MigrateCommand;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Console\OutputStyle;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 
 const BLB_MIGRATE_COMMAND_TEST_ADMIN_EMAIL = 'setup-admin@example.com';
 const BLB_MIGRATE_COMMAND_TEST_ADMIN_NAME = 'Setup Admin';
 const BLB_MIGRATE_COMMAND_TEST_ADMIN_PASSWORD = 'password123';
+const BLB_MIGRATE_COMMAND_TEST_COMPANY_NAME = 'Setup Company';
+const BLB_MIGRATE_COMMAND_TEST_COMPANY_CODE = 'setup_company_code';
 
 function invokeEnsureAdminUser(): void
 {
@@ -39,9 +42,39 @@ afterEach(function (): void {
     putenv('ADMIN_EMAIL');
     putenv('ADMIN_NAME');
     putenv('ADMIN_PASSWORD');
+    putenv('LICENSEE_COMPANY_NAME');
+    putenv('LICENSEE_COMPANY_CODE');
 
     unset($_ENV['ADMIN_EMAIL'], $_ENV['ADMIN_NAME'], $_ENV['ADMIN_PASSWORD']);
+    unset($_ENV['LICENSEE_COMPANY_NAME'], $_ENV['LICENSEE_COMPANY_CODE']);
     unset($_SERVER['ADMIN_EMAIL'], $_SERVER['ADMIN_NAME'], $_SERVER['ADMIN_PASSWORD']);
+    unset($_SERVER['LICENSEE_COMPANY_NAME'], $_SERVER['LICENSEE_COMPANY_CODE']);
+});
+
+test('migrate command provisions licensee with preferred company code from env', function (): void {
+    DB::table('companies')->where('id', Company::LICENSEE_ID)->delete();
+
+    putenv('LICENSEE_COMPANY_NAME='.BLB_MIGRATE_COMMAND_TEST_COMPANY_NAME);
+    putenv('LICENSEE_COMPANY_CODE='.BLB_MIGRATE_COMMAND_TEST_COMPANY_CODE);
+
+    $_ENV['LICENSEE_COMPANY_NAME'] = BLB_MIGRATE_COMMAND_TEST_COMPANY_NAME;
+    $_ENV['LICENSEE_COMPANY_CODE'] = BLB_MIGRATE_COMMAND_TEST_COMPANY_CODE;
+    $_SERVER['LICENSEE_COMPANY_NAME'] = BLB_MIGRATE_COMMAND_TEST_COMPANY_NAME;
+    $_SERVER['LICENSEE_COMPANY_CODE'] = BLB_MIGRATE_COMMAND_TEST_COMPANY_CODE;
+
+    $command = app(MigrateCommand::class);
+    $command->setLaravel(app());
+    $command->setOutput(new OutputStyle(new ArrayInput([]), new BufferedOutput));
+
+    $method = new ReflectionMethod($command, 'ensureFrameworkPrimitives');
+    $method->invoke($command);
+
+    $company = Company::query()->findOrFail(Company::LICENSEE_ID);
+
+    expect($company->name)
+        ->toBe(BLB_MIGRATE_COMMAND_TEST_COMPANY_NAME)
+        ->and($company->code)
+        ->toBe(BLB_MIGRATE_COMMAND_TEST_COMPANY_CODE);
 });
 
 test('migrate command assigns core admin role when creating the fresh install admin user', function (): void {

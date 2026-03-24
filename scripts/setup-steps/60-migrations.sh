@@ -70,6 +70,17 @@ detect_admin_email() {
     return 0
 }
 
+# Derive a default company code from company name (snake_case).
+default_company_code_from_name() {
+    local company_name="${1:-}"
+
+    echo "$company_name" \
+        | tr '[:upper:]' '[:lower:]' \
+        | sed -E 's/[^a-z0-9]+/_/g; s/^_+//; s/_+$//'
+
+    return 0
+}
+
 # Rebuild application caches
 rebuild_caches() {
     echo -e "${CYAN}Rebuilding application caches...${NC}"
@@ -123,8 +134,9 @@ main() {
 
     # Prompt for framework primitives (licensee company, admin user).
     # These are passed as transient env vars to php artisan migrate.
-    local company_name admin_name admin_email admin_password
+    local company_name company_code admin_name admin_email admin_password
     company_name=$(ask_input "Licensee company name" "My Company")
+    company_code=$(ask_input "Licensee company code" "$(default_company_code_from_name "$company_name")")
     admin_name=$(ask_input "Admin name" "Administrator")
     admin_email=$(ask_input "Admin email" "$(detect_admin_email)")
     admin_password=$(ask_password "Admin password (min 8 chars)")
@@ -146,6 +158,7 @@ main() {
     echo -e "${CYAN}ℹ${NC} migrate ${migrate_args[*]}"
 
     if ! LICENSEE_COMPANY_NAME="$company_name" \
+            LICENSEE_COMPANY_CODE="$company_code" \
          ADMIN_NAME="$admin_name" \
          ADMIN_EMAIL="$admin_email" \
          ADMIN_PASSWORD="$admin_password" \
