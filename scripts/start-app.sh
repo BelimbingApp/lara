@@ -302,10 +302,22 @@ get_ports() {
         VITE_PORT=$(next_free_port 5173)
     fi
 
+    # REVERB_SERVER_PORT: .env pin → free port from 8080
+    preferred=$(get_env_var "REVERB_SERVER_PORT" "")
+    if [[ -n "$preferred" ]] && [[ "$preferred" =~ ^[0-9]+$ ]]; then
+        REVERB_SERVER_PORT="$preferred"
+    else
+        REVERB_SERVER_PORT=$(next_free_port 8080)
+    fi
+
+    # Keep Laravel broadcasting and Vite aligned with the actual Reverb listener.
+    REVERB_PORT="$REVERB_SERVER_PORT"
+    VITE_REVERB_PORT="$REVERB_SERVER_PORT"
+
     # HTTPS_PORT: always 443 (shared Caddy handles all instances on :443 via host routing)
     HTTPS_PORT="443"
 
-    export APP_ENV APP_PORT VITE_PORT HTTPS_PORT
+    export APP_ENV APP_PORT VITE_PORT REVERB_PORT REVERB_SERVER_PORT VITE_REVERB_PORT HTTPS_PORT
 
     # Write runtime ports so stop-app and cleanup know what to stop
     local runtime_dir="$PROJECT_ROOT/storage/app/.devops"
@@ -313,9 +325,10 @@ get_ports() {
     cat > "$runtime_dir/ports.env" <<EOF
 APP_PORT=$APP_PORT
 VITE_PORT=$VITE_PORT
+REVERB_SERVER_PORT=$REVERB_SERVER_PORT
 EOF
 
-    echo -e "${CYAN}ℹ${NC} Ports: Laravel ${APP_PORT}, Vite ${VITE_PORT}, HTTPS ${HTTPS_PORT}"
+    echo -e "${CYAN}ℹ${NC} Ports: Laravel ${APP_PORT}, Vite ${VITE_PORT}, Reverb ${REVERB_SERVER_PORT}, HTTPS ${HTTPS_PORT}"
     return 0
 }
 
@@ -366,7 +379,7 @@ cleanup() {
     deregister_caddy
 
     if [[ -n "${APP_ENV:-}" ]]; then
-        stop_dev_services "$APP_ENV" "$APP_PORT" "$VITE_PORT"
+        stop_dev_services "$APP_ENV" "$APP_PORT" "$VITE_PORT" "$REVERB_SERVER_PORT"
     else
         stop_dev_services "local"
     fi
@@ -439,6 +452,7 @@ start_caddy() {
     export APP_HOST="127.0.0.1"
     export VITE_PORT="$VITE_PORT"
     export VITE_HOST="127.0.0.1"
+    export REVERB_SERVER_PORT="$REVERB_SERVER_PORT"
     export HTTPS_PORT="$HTTPS_PORT"
 
     local tls_mode tls_directive
@@ -591,7 +605,7 @@ main() {
     echo -e "${CYAN}Internal services:${NC}"
     echo -e "  ${BULLET} Laravel: http://127.0.0.1:$APP_PORT"
     echo -e "  ${BULLET} Vite:    http://127.0.0.1:$VITE_PORT"
-    echo -e "  ${BULLET} Reverb:  ws://127.0.0.1:8080"
+    echo -e "  ${BULLET} Reverb:  ws://127.0.0.1:$REVERB_SERVER_PORT"
     echo ""
 
     # Start Caddy only when PROXY_TYPE=caddy. Start if not running, skip if already running (or reload if our config).

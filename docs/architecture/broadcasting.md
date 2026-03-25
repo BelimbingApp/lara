@@ -171,6 +171,9 @@ Broadcast::channel('user.{id}', function ($user, $id) {
 
 Add these to your `.env` file. The `VITE_REVERB_*` variables expose connection details to the frontend via Vite:
 
+- Local `./scripts/start-app.sh` runs do not need a pinned `REVERB_SERVER_PORT`; the script auto-selects a free listener port and exports matching `REVERB_PORT` / `VITE_REVERB_PORT` values at runtime.
+- Manual, staging, or production deployments should set the Reverb listener / public connection values explicitly for their process manager or container runtime.
+
 ```dotenv
 BROADCAST_CONNECTION=reverb
 
@@ -179,6 +182,8 @@ REVERB_APP_KEY=my-app-key
 REVERB_APP_SECRET=my-app-secret
 REVERB_HOST=localhost
 REVERB_PORT=8080
+# Optional: Reverb server listener override when not using start-app auto-assignment
+# REVERB_SERVER_PORT=8080
 REVERB_SCHEME=http
 
 VITE_REVERB_APP_KEY="${REVERB_APP_KEY}"
