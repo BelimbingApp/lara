@@ -86,6 +86,8 @@ cd ~/belimbing # go to the project root
 ./scripts/start-app.sh
 ```
 
+`./scripts/start-app.sh` automatically chooses free internal ports for Laravel, Vite, and Reverb when they are not pinned in `.env`, so multiple local BLB instances can run side-by-side without manual port edits.
+
 Once the app is running, you can access it at https://local.blb.lara. To stop the app, ctrl+c in the terminal. The script will automatically stop the app when you exit the terminal. You can also stop the app manually using the following command:
 
 **Stop:**

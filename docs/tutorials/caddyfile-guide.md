@@ -220,7 +220,7 @@ Caddy receives HTTPS request
     ↓
 Caddy matches /build/* handle
     ↓
-Caddy forwards to Vite: http://127.0.0.1:5173/build/app.js
+Caddy forwards to Vite: http://127.0.0.1:${VITE_PORT}/build/app.js
     ↓
 Vite compiles and serves the file
     ↓
@@ -236,12 +236,14 @@ Caddy receives HTTPS request
     ↓
 Caddy doesn't match /build/* or /assets/* handles
     ↓
-Caddy forwards to Laravel: http://127.0.0.1:8000/api/users
+Caddy forwards to Laravel: http://127.0.0.1:${APP_PORT}/api/users
     ↓
 Laravel processes request and returns response
     ↓
 Caddy returns response to browser
 ```
+
+In normal local development, `start-app.sh` resolves `${APP_PORT}`, `${VITE_PORT}`, and Reverb's listener port at runtime, then writes the concrete values to `storage/app/.devops/ports.env` before Caddy reloads.
 
 ---
 
@@ -251,11 +253,11 @@ Caddy returns response to browser
 
 ```caddyfile
 frontend.blb.lara {
-    reverse_proxy http://127.0.0.1:5174
+    reverse_proxy http://127.0.0.1:{$VITE_PORT}
 }
 
 api.blb.lara {
-    reverse_proxy http://127.0.0.1:8000
+    reverse_proxy http://127.0.0.1:{$APP_PORT}
 }
 ```
 
@@ -264,7 +266,7 @@ api.blb.lara {
 ```caddyfile
 https://local.blb.lara {
     tls certs/local.blb.lara.pem certs/local.blb.lara-key.pem
-    reverse_proxy http://127.0.0.1:5174
+    reverse_proxy http://127.0.0.1:{$APP_PORT}
 }
 ```
 
@@ -273,15 +275,15 @@ https://local.blb.lara {
 ```caddyfile
 local.blb.lara {
     handle /api/* {
-        reverse_proxy http://127.0.0.1:8000
+        reverse_proxy http://127.0.0.1:{$APP_PORT}
     }
 
     handle /admin/* {
-        reverse_proxy http://127.0.0.1:8001
+        reverse_proxy http://127.0.0.1:{$APP_PORT}
     }
 
     handle {
-        reverse_proxy http://127.0.0.1:5174
+        reverse_proxy http://127.0.0.1:{$VITE_PORT}
     }
 }
 ```
@@ -297,7 +299,7 @@ local.blb.lara {
     }
 
     handle {
-        reverse_proxy http://127.0.0.1:5174
+        reverse_proxy http://127.0.0.1:{$APP_PORT}
     }
 }
 ```
