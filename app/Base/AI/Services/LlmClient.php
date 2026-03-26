@@ -93,7 +93,23 @@ class LlmClient
         }
 
         $data = $response->json();
+        if (! is_array($data)) {
+            return [
+                'error' => __('Model ":model" returned an unsupported response payload from the provider.', ['model' => $model]),
+                'error_type' => 'unsupported_response_shape',
+                'latency_ms' => $latencyMs,
+            ];
+        }
+
         $choice = $data['choices'][0]['message'] ?? [];
+        if (! is_array($choice)) {
+            return [
+                'error' => __('Model ":model" returned an unsupported message format from the provider.', ['model' => $model]),
+                'error_type' => 'unsupported_response_shape',
+                'latency_ms' => $latencyMs,
+            ];
+        }
+
         $content = $choice['content'] ?? '';
         $toolCalls = $choice['tool_calls'] ?? null;
         $hasToolCalls = is_array($toolCalls) && count($toolCalls) > 0;
@@ -101,7 +117,7 @@ class LlmClient
 
         if (($content === '' || $content === null) && ! $hasToolCalls) {
             return [
-                'error' => "Model \"{$model}\" returned an empty response — it may be unavailable via this provider.",
+                'error' => __('Model ":model" produced no text content. It may be unavailable for this provider key, endpoint, or response format.', ['model' => $model]),
                 'error_type' => 'empty_response',
                 'latency_ms' => $latencyMs,
             ];
