@@ -10,6 +10,7 @@ use App\Base\Workflow\DTO\TransitionContext;
 use App\Base\Workflow\DTO\TransitionResult;
 use App\Base\Workflow\Models\StatusHistory;
 use App\Modules\Core\Quality\Contracts\NumberingService;
+use App\Modules\Core\Quality\Exceptions\NumberGenerationExhaustedException;
 use App\Modules\Core\Quality\Models\Ncr;
 use App\Modules\Core\Quality\Models\Scar;
 use Illuminate\Database\QueryException;
@@ -102,7 +103,7 @@ class ScarService
             }
         }
 
-        throw new \RuntimeException('Failed to generate a unique SCAR number.');
+        throw new NumberGenerationExhaustedException('SCAR');
     }
 
     /**

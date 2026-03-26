@@ -22,7 +22,7 @@ beforeEach(function (): void {
         '--path' => base_path('app/Modules/Core/Quality/Database/Migrations'),
         '--realpath' => true,
     ]);
-    require base_path('app/Modules/Core/Quality/Routes/web.php');
+    require_once base_path('app/Modules/Core/Quality/Routes/web.php');
     (new NcrWorkflowSeeder)->run();
     (new ScarWorkflowSeeder)->run();
 });

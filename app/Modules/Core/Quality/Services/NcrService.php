@@ -10,6 +10,7 @@ use App\Base\Workflow\DTO\TransitionContext;
 use App\Base\Workflow\DTO\TransitionResult;
 use App\Base\Workflow\Models\StatusHistory;
 use App\Modules\Core\Quality\Contracts\NumberingService;
+use App\Modules\Core\Quality\Exceptions\NumberGenerationExhaustedException;
 use App\Modules\Core\Quality\Models\Capa;
 use App\Modules\Core\Quality\Models\Ncr;
 use Illuminate\Database\QueryException;
@@ -100,7 +101,7 @@ class NcrService
             }
         }
 
-        throw new \RuntimeException('Failed to generate a unique NCR number.');
+        throw new NumberGenerationExhaustedException('NCR');
     }
 
     /**
