@@ -14,13 +14,16 @@ use App\Modules\Core\Quality\Models\Scar;
  *
  * Generates numbers in the format PREFIX-000001. Licensees can
  * override this binding with their own NumberingService implementation.
+ * The default BLB strategy keeps a single NCR sequence across kinds; the
+ * create services retry on duplicate-key collisions to stay safe under
+ * concurrent writes.
  */
 class DefaultNumberingService implements NumberingService
 {
     /**
-     * Generate the next NCR number.
+     * Generate the next NCR number candidate from the shared NCR sequence.
      *
-     * @param  string  $ncrKind  The NCR kind (internal, customer, etc.)
+     * @param  string  $ncrKind  The NCR kind (internal, customer, etc.); unused by the default implementation
      */
     public function nextNcrNumber(string $ncrKind): string
     {

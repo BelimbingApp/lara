@@ -30,7 +30,9 @@
             <div class="mb-2 flex flex-col sm:flex-row gap-2">
                 <div class="flex-1">
                     <x-ui.search-input
+                        id="ncr-search"
                         wire:model.live.debounce.300ms="search"
+                        aria-label="{{ __('Search NCRs') }}"
                         placeholder="{{ __('Search by NCR number, title, or reporter...') }}"
                     />
                 </div>

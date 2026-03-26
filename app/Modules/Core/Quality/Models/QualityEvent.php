@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $capa_id
  * @property int|null $scar_id
  * @property string $event_type
+ * @property string $actor_type
  * @property int|null $actor_id
  * @property array<string, mixed>|null $payload
  * @property Carbon|null $occurred_at
@@ -54,6 +55,7 @@ class QualityEvent extends Model
         'capa_id',
         'scar_id',
         'event_type',
+        'actor_type',
         'actor_id',
         'payload',
         'occurred_at',

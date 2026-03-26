@@ -12,8 +12,10 @@ use App\Base\Workflow\Models\StatusHistory;
 use App\Modules\Core\Quality\Contracts\NumberingService;
 use App\Modules\Core\Quality\Models\Capa;
 use App\Modules\Core\Quality\Models\Ncr;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Domain service for NCR operations.
@@ -23,6 +25,8 @@ use Illuminate\Support\Facades\DB;
  */
 class NcrService
 {
+    private const NUMBERING_RETRY_LIMIT = 5;
+
     public function __construct(
         private readonly NumberingService $numbering,
     ) {}
@@ -35,53 +39,68 @@ class NcrService
      */
     public function open(Actor $actor, array $data): Ncr
     {
-        return DB::transaction(function () use ($actor, $data): Ncr {
-            $ncr = Ncr::query()->create([
-                'company_id' => $data['company_id'],
-                'ncr_no' => $this->numbering->nextNcrNumber($data['ncr_kind']),
-                'ncr_kind' => $data['ncr_kind'],
-                'source' => $data['source'] ?? null,
-                'status' => 'open',
-                'severity' => $data['severity'] ?? null,
-                'classification' => $data['classification'] ?? null,
-                'title' => $data['title'],
-                'summary' => $data['summary'] ?? null,
-                'product_name' => $data['product_name'] ?? null,
-                'product_code' => $data['product_code'] ?? null,
-                'quantity_affected' => $data['quantity_affected'] ?? null,
-                'uom' => $data['uom'] ?? null,
-                'reported_at' => $data['reported_at'] ?? Carbon::now(),
-                'reported_by_name' => $data['reported_by_name'],
-                'reported_by_email' => $data['reported_by_email'] ?? null,
-                'created_by_user_id' => $actor->id,
-                'is_supplier_related' => $data['is_supplier_related'] ?? false,
-                'metadata' => $data['metadata'] ?? null,
-            ]);
+        for ($attempt = 1; $attempt <= self::NUMBERING_RETRY_LIMIT; $attempt++) {
+            try {
+                return DB::transaction(function () use ($actor, $data): Ncr {
+                    $ncr = Ncr::query()->create([
+                        'company_id' => $data['company_id'],
+                        'ncr_no' => $this->numbering->nextNcrNumber($data['ncr_kind']),
+                        'ncr_kind' => $data['ncr_kind'],
+                        'source' => $data['source'] ?? null,
+                        'status' => 'open',
+                        'severity' => $data['severity'] ?? null,
+                        'classification' => $data['classification'] ?? null,
+                        'title' => $data['title'],
+                        'summary' => $data['summary'] ?? null,
+                        'product_name' => $data['product_name'] ?? null,
+                        'product_code' => $data['product_code'] ?? null,
+                        'quantity_affected' => $data['quantity_affected'] ?? null,
+                        'uom' => $data['uom'] ?? null,
+                        'reported_at' => $data['reported_at'] ?? Carbon::now(),
+                        'reported_by_name' => $data['reported_by_name'],
+                        'reported_by_email' => $data['reported_by_email'] ?? null,
+                        'created_by_user_id' => $actor->id,
+                        'is_supplier_related' => $data['is_supplier_related'] ?? false,
+                        'metadata' => $data['metadata'] ?? null,
+                    ]);
 
-            Capa::query()->create([
-                'ncr_id' => $ncr->id,
-                'workflow_status' => 'triage_pending',
-            ]);
+                    Capa::query()->create([
+                        'ncr_id' => $ncr->id,
+                        'workflow_status' => 'triage_pending',
+                    ]);
 
-            StatusHistory::query()->create([
-                'flow' => 'quality_ncr',
-                'flow_id' => $ncr->id,
-                'status' => 'open',
-                'actor_id' => $actor->id,
-                'actor_role' => $actor->attributes['role'] ?? null,
-                'actor_department' => $actor->attributes['department'] ?? null,
-                'actor_company' => $actor->attributes['company'] ?? null,
-                'comment' => $data['summary'] ?? null,
-                'comment_tag' => 'report',
-                'metadata' => [
-                    'ncr_kind' => $data['ncr_kind'],
-                    'severity' => $data['severity'] ?? null,
-                ],
-                'transitioned_at' => Carbon::now(),
-            ]);
+                    StatusHistory::query()->create([
+                        'flow' => 'quality_ncr',
+                        'flow_id' => $ncr->id,
+                        'status' => 'open',
+                        'actor_id' => $actor->id,
+                        'actor_role' => $actor->attributes['role'] ?? null,
+                        'actor_department' => $actor->attributes['department'] ?? null,
+                        'actor_company' => $actor->attributes['company'] ?? null,
+                        'comment' => $data['summary'] ?? null,
+                        'comment_tag' => 'report',
+                        'metadata' => [
+                            'ncr_kind' => $data['ncr_kind'],
+                            'severity' => $data['severity'] ?? null,
+                        ],
+                        'transitioned_at' => Carbon::now(),
+                    ]);
 
-            return $ncr;
-        });
+                    return $ncr;
+                });
+            } catch (QueryException $exception) {
+                if ($attempt < self::NUMBERING_RETRY_LIMIT && $this->causedByDuplicateNumber($exception, [
+                    'quality_ncrs.ncr_no',
+                    'quality_ncrs_ncr_no_unique',
+                ])) {
+                    continue;
+                }
+
+                throw $exception;
+            }
+        }
+
+        throw new \RuntimeException('Failed to generate a unique NCR number.');
     }
 
     /**
@@ -167,6 +186,37 @@ class NcrService
                 'assigned_at' => $now,
                 'workflow_status' => 'assigned',
             ], fn ($v) => $v !== null));
+
+            return $result;
+        });
+    }
+
+    /**
+     * Start investigation work without submitting a response.
+     *
+     * @param  Ncr  $ncr  The NCR to move into active investigation
+     * @param  Actor  $actor  The principal starting the investigation
+     * @param  array{comment?: string|null, metadata?: array<string, mixed>|null}  $data
+     */
+    public function startInvestigation(Ncr $ncr, Actor $actor, array $data = []): TransitionResult
+    {
+        return DB::transaction(function () use ($ncr, $actor, $data): TransitionResult {
+            $context = new TransitionContext(
+                actor: $actor,
+                comment: $data['comment'] ?? null,
+                commentTag: 'investigation_started',
+                metadata: $data['metadata'] ?? null,
+            );
+
+            $result = $ncr->transitionTo('in_progress', $context);
+
+            if (! $result->success) {
+                return $result;
+            }
+
+            $ncr->capa?->update([
+                'workflow_status' => 'in_progress',
+            ]);
 
             return $result;
         });
@@ -378,5 +428,22 @@ class NcrService
 
             return $result;
         });
+    }
+
+    /**
+     * Detect duplicate-number collisions so callers can retry with a fresh candidate.
+     *
+     * @param  array<int, string>  $needles
+     */
+    private function causedByDuplicateNumber(QueryException $exception, array $needles): bool
+    {
+        $message = Str::lower($exception->getMessage());
+        $normalizedNeedles = array_map(
+            static fn (string $needle): string => Str::lower($needle),
+            $needles
+        );
+
+        return in_array((string) $exception->getCode(), ['19', '23000', '23505'], true)
+            && Str::contains($message, $normalizedNeedles);
     }
 }

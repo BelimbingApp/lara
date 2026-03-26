@@ -36,10 +36,10 @@ class Show extends Component
             'acknowledged' => 'acknowledge',
             'containment_submitted' => 'submitContainment',
             'response_submitted' => 'submitResponse',
-            'under_review' => 'review',
+            'under_review' => 'beginReview',
             'verification_pending' => 'review',
             'action_required' => 'review',
-            'closed' => 'close',
+            'closed' => 'verify',
         ];
 
         $method = $methodMap[$toCode] ?? null;

@@ -32,7 +32,7 @@ class Show extends Component
         $methodMap = [
             'under_triage' => 'triage',
             'assigned' => 'assign',
-            'in_progress' => 'submitResponse',
+            'in_progress' => 'startInvestigation',
             'under_review' => 'submitResponse',
             'verified' => 'verify',
             'closed' => 'close',
@@ -55,10 +55,6 @@ class Show extends Component
 
         if ($toCode === 'verified') {
             $data['verification_result'] = 'effective';
-        }
-
-        if ($method === 'review') {
-            $data['approved'] = true;
         }
 
         $result = $ncrService->$method($this->ncr, $actor, $data);

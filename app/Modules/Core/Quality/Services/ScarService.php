@@ -12,8 +12,10 @@ use App\Base\Workflow\Models\StatusHistory;
 use App\Modules\Core\Quality\Contracts\NumberingService;
 use App\Modules\Core\Quality\Models\Ncr;
 use App\Modules\Core\Quality\Models\Scar;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Domain service for SCAR operations.
@@ -23,6 +25,8 @@ use Illuminate\Support\Facades\DB;
  */
 class ScarService
 {
+    private const NUMBERING_RETRY_LIMIT = 5;
+
     public function __construct(
         private readonly NumberingService $numbering,
     ) {}
@@ -36,54 +40,69 @@ class ScarService
      */
     public function create(Actor $actor, Ncr $ncr, array $data): Scar
     {
-        return DB::transaction(function () use ($actor, $ncr, $data): Scar {
-            $scar = Scar::query()->create([
-                'ncr_id' => $ncr->id,
-                'scar_no' => $this->numbering->nextScarNumber(),
-                'status' => 'draft',
-                'supplier_name' => $data['supplier_name'],
-                'supplier_site' => $data['supplier_site'] ?? null,
-                'supplier_contact_name' => $data['supplier_contact_name'] ?? null,
-                'supplier_contact_email' => $data['supplier_contact_email'] ?? null,
-                'supplier_contact_phone' => $data['supplier_contact_phone'] ?? null,
-                'po_do_invoice_no' => $data['po_do_invoice_no'] ?? null,
-                'product_name' => $data['product_name'] ?? null,
-                'product_code' => $data['product_code'] ?? null,
-                'detected_area' => $data['detected_area'] ?? null,
-                'issued_by' => $actor->attributes['name'] ?? null,
-                'request_type' => $data['request_type'] ?? null,
-                'severity' => $data['severity'] ?? null,
-                'claim_quantity' => $data['claim_quantity'] ?? null,
-                'uom' => $data['uom'] ?? null,
-                'claim_value' => $data['claim_value'] ?? null,
-                'problem_description' => $data['problem_description'] ?? null,
-                'issue_owner_user_id' => $actor->id,
-                'acknowledgement_due_at' => $data['acknowledgement_due_at'] ?? null,
-                'containment_due_at' => $data['containment_due_at'] ?? null,
-                'response_due_at' => $data['response_due_at'] ?? null,
-                'verification_due_at' => $data['verification_due_at'] ?? null,
-                'metadata' => $data['metadata'] ?? null,
-            ]);
+        for ($attempt = 1; $attempt <= self::NUMBERING_RETRY_LIMIT; $attempt++) {
+            try {
+                return DB::transaction(function () use ($actor, $ncr, $data): Scar {
+                    $scar = Scar::query()->create([
+                        'ncr_id' => $ncr->id,
+                        'scar_no' => $this->numbering->nextScarNumber(),
+                        'status' => 'draft',
+                        'supplier_name' => $data['supplier_name'],
+                        'supplier_site' => $data['supplier_site'] ?? null,
+                        'supplier_contact_name' => $data['supplier_contact_name'] ?? null,
+                        'supplier_contact_email' => $data['supplier_contact_email'] ?? null,
+                        'supplier_contact_phone' => $data['supplier_contact_phone'] ?? null,
+                        'po_do_invoice_no' => $data['po_do_invoice_no'] ?? null,
+                        'product_name' => $data['product_name'] ?? null,
+                        'product_code' => $data['product_code'] ?? null,
+                        'detected_area' => $data['detected_area'] ?? null,
+                        'issued_by' => $actor->attributes['name'] ?? null,
+                        'request_type' => $data['request_type'] ?? null,
+                        'severity' => $data['severity'] ?? null,
+                        'claim_quantity' => $data['claim_quantity'] ?? null,
+                        'uom' => $data['uom'] ?? null,
+                        'claim_value' => $data['claim_value'] ?? null,
+                        'problem_description' => $data['problem_description'] ?? null,
+                        'issue_owner_user_id' => $actor->id,
+                        'acknowledgement_due_at' => $data['acknowledgement_due_at'] ?? null,
+                        'containment_due_at' => $data['containment_due_at'] ?? null,
+                        'response_due_at' => $data['response_due_at'] ?? null,
+                        'verification_due_at' => $data['verification_due_at'] ?? null,
+                        'metadata' => $data['metadata'] ?? null,
+                    ]);
 
-            StatusHistory::query()->create([
-                'flow' => 'quality_scar',
-                'flow_id' => $scar->id,
-                'status' => 'draft',
-                'actor_id' => $actor->id,
-                'actor_role' => $actor->attributes['role'] ?? null,
-                'actor_department' => $actor->attributes['department'] ?? null,
-                'actor_company' => $actor->attributes['company'] ?? null,
-                'comment' => $data['problem_description'] ?? null,
-                'comment_tag' => 'creation',
-                'transitioned_at' => Carbon::now(),
-            ]);
+                    StatusHistory::query()->create([
+                        'flow' => 'quality_scar',
+                        'flow_id' => $scar->id,
+                        'status' => 'draft',
+                        'actor_id' => $actor->id,
+                        'actor_role' => $actor->attributes['role'] ?? null,
+                        'actor_department' => $actor->attributes['department'] ?? null,
+                        'actor_company' => $actor->attributes['company'] ?? null,
+                        'comment' => $data['problem_description'] ?? null,
+                        'comment_tag' => 'creation',
+                        'transitioned_at' => Carbon::now(),
+                    ]);
 
-            if (! $ncr->is_supplier_related) {
-                $ncr->update(['is_supplier_related' => true]);
+                    if (! $ncr->is_supplier_related) {
+                        $ncr->update(['is_supplier_related' => true]);
+                    }
+
+                    return $scar;
+                });
+            } catch (QueryException $exception) {
+                if ($attempt < self::NUMBERING_RETRY_LIMIT && $this->causedByDuplicateNumber($exception, [
+                    'quality_scars.scar_no',
+                    'quality_scars_scar_no_unique',
+                ])) {
+                    continue;
+                }
+
+                throw $exception;
             }
+        }
 
-            return $scar;
-        });
+        throw new \RuntimeException('Failed to generate a unique SCAR number.');
     }
 
     /**
@@ -205,6 +224,25 @@ class ScarService
     }
 
     /**
+     * Move a submitted supplier response into formal review.
+     *
+     * @param  Scar  $scar  The SCAR to move into review
+     * @param  Actor  $actor  The principal beginning the review
+     * @param  array{comment?: string|null, metadata?: array<string, mixed>|null}  $data
+     */
+    public function beginReview(Scar $scar, Actor $actor, array $data = []): TransitionResult
+    {
+        $context = new TransitionContext(
+            actor: $actor,
+            comment: $data['comment'] ?? null,
+            commentTag: 'review_started',
+            metadata: $data['metadata'] ?? null,
+        );
+
+        return $scar->transitionTo('under_review', $context);
+    }
+
+    /**
      * Review a supplier response: accept or request revision.
      *
      * @param  Scar  $scar  The SCAR under review
@@ -305,5 +343,22 @@ class ScarService
 
             return $result;
         });
+    }
+
+    /**
+     * Detect duplicate-number collisions so callers can retry with a fresh candidate.
+     *
+     * @param  array<int, string>  $needles
+     */
+    private function causedByDuplicateNumber(QueryException $exception, array $needles): bool
+    {
+        $message = Str::lower($exception->getMessage());
+        $normalizedNeedles = array_map(
+            static fn (string $needle): string => Str::lower($needle),
+            $needles
+        );
+
+        return in_array((string) $exception->getCode(), ['19', '23000', '23505'], true)
+            && Str::contains($message, $normalizedNeedles);
     }
 }

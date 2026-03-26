@@ -8,7 +8,10 @@ namespace App\Modules\Core\Quality\Contracts;
 interface NumberingService
 {
     /**
-     * Generate the next NCR number.
+     * Generate the next NCR number candidate.
+     *
+     * Implementations may choose kind-specific numbering, but callers must not
+     * assume the kind changes the prefix or sequence semantics.
      *
      * @param  string  $ncrKind  The NCR kind (internal, customer, etc.)
      */

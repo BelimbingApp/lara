@@ -50,7 +50,16 @@ class Create extends Component
 
     public function mount(): void
     {
-        $this->ncr_id = (int) request()->query('ncr') ?: null;
+        $ncrId = request()->query('ncr');
+
+        if ($ncrId === null) {
+            Session::flash('error', __('Select an NCR before creating a SCAR.'));
+            $this->redirect(route('quality.ncr.index'), navigate: true);
+
+            return;
+        }
+
+        $this->ncr_id = (int) $ncrId;
     }
 
     public function store(ScarService $scarService): void

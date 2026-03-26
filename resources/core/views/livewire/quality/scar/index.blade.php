@@ -11,9 +11,9 @@
     <div class="space-y-section-gap">
         <x-ui.page-header :title="__('Supplier Corrective Action Requests')" :subtitle="__('Manage supplier SCARs')">
             <x-slot name="actions">
-                <x-ui.button variant="primary" as="a" href="{{ route('quality.scar.create') }}" wire:navigate>
-                    <x-icon name="heroicon-o-plus" class="w-4 h-4" />
-                    {{ __('New SCAR') }}
+                <x-ui.button variant="primary" as="a" href="{{ route('quality.ncr.index') }}" wire:navigate>
+                    <x-icon name="heroicon-o-plus" class="h-4 w-4" />
+                    {{ __('Create from NCR') }}
                 </x-ui.button>
             </x-slot>
         </x-ui.page-header>
@@ -30,7 +30,9 @@
             <div class="mb-2 flex flex-col sm:flex-row gap-2">
                 <div class="flex-1">
                     <x-ui.search-input
+                        id="scar-search"
                         wire:model.live.debounce.300ms="search"
+                        aria-label="{{ __('Search SCARs') }}"
                         placeholder="{{ __('Search by SCAR number, supplier, or product...') }}"
                     />
                 </div>
