@@ -155,7 +155,8 @@ We use a single file that adapts via environment variables:
 ```
 
 **Key Points:**
-- Uses different ports for staging (8001, 5174) to allow both environments simultaneously
+- `start-app.sh` auto-assigns free internal Laravel, Vite, and Reverb ports when they are not pinned in `.env`
+- Host-based routing keeps external URLs stable while internal ports remain runtime-managed
 - Automatic HTTPS with `tls internal` for `.blb` domains
 - Proper proxy headers for Laravel to detect HTTPS and real client IP
 - Separate log files for each environment
@@ -197,9 +198,9 @@ export default defineConfig({
 });
 ```
 
-**Environment-specific ports:**
-- Development: VITE_PORT=5173 (default)
-- Staging: VITE_PORT=5174
+**Runtime port behavior:**
+- `VITE_PORT`, `APP_PORT`, and `REVERB_SERVER_PORT` may be pinned for explicit overrides
+- When unset, `./scripts/start-app.sh` chooses free ports automatically and writes them to `storage/app/.devops/ports.env`
 
 ### Phase 2: Service Orchestration
 
@@ -236,14 +237,12 @@ fi
 
 # Set environment variables
 export APP_ENV=local
-export VITE_PORT=5173
-export APP_PORT=8000
 
-# Check if services are already running
-if lsof -Pi :8000 -sTCP:LISTEN -t >/dev/null ; then
-    echo -e "${YELLOW}Port 8000 is already in use. Stopping existing services...${NC}"
-    "$SCRIPT_DIR/stop-services.sh" dev
-fi
+# Resolve free runtime ports when overrides are not pinned in .env
+APP_PORT=$(next_free_port 8000)
+VITE_PORT=$(next_free_port 5173)
+REVERB_SERVER_PORT=$(next_free_port 8080)
+export APP_PORT VITE_PORT REVERB_SERVER_PORT
 
 # Start all services using concurrently
 echo -e "${GREEN}Starting Laravel server, Vite, queue worker, and log watcher...${NC}"
@@ -368,22 +367,20 @@ APP_URL=https://stage.lara.blb
 
 #### 4.2 Composer Script Enhancement
 
-Update `composer.json` to support environment-specific ports:
+Update `composer.json` so the dev workflow consumes runtime-managed ports instead of hardcoded local/staging values:
 
 ```json
 {
     "scripts": {
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve --port=8000\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"VITE_PORT=5173 npm run dev\" --names=server,queue,logs,vite --kill-others"
-        ],
-        "dev:staging": [
-            "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185,#fdba74\" \"php artisan serve --port=8001\" \"php artisan queue:listen --tries=1\" \"php artisan pail --timeout=0\" \"VITE_PORT=5174 npm run dev\" --names=server,queue,logs,vite --kill-others"
+            "bunx concurrently -c \"#93c5fd,#c4b5fd,#86efac,#fdba74\" \"php artisan serve --port=${APP_PORT:-8000}\" \"php artisan queue:listen --tries=1\" \"php artisan reverb:start\" \"bun run dev\" --names=server,queue,reverb,vite"
         ]
     }
 }
 ```
+
+In this model, `start-app.sh` owns port selection and exports the resolved values before `composer run dev` starts the processes.
 
 ### Phase 5: Auto-Start on System Boot
 

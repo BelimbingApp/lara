@@ -94,7 +94,7 @@ EOF
 # Uses pure bash string ops to avoid sed escaping issues with {$...} syntax.
 resolve_caddyfile_vars() {
     local input_file=$1
-    local vars=(APP_DOMAIN BACKEND_DOMAIN APP_HOST APP_PORT VITE_HOST VITE_PORT HTTPS_PORT TLS_DIRECTIVE CADDY_LOG_DIR)
+    local vars=(APP_DOMAIN BACKEND_DOMAIN APP_HOST APP_PORT VITE_HOST VITE_PORT REVERB_SERVER_PORT HTTPS_PORT TLS_DIRECTIVE CADDY_LOG_DIR)
     local content
     content=$(<"$input_file")
 
@@ -565,4 +565,3 @@ ensure_ssl_trust() {
         return 1
     fi
 }
-
