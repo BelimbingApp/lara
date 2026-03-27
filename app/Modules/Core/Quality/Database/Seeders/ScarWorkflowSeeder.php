@@ -12,9 +12,6 @@ class ScarWorkflowSeeder extends Seeder
 {
     use SeedsWorkflowDefinition;
 
-    /**
-     * @return array{code: string, label: string, module: string, description: string, model_class: class-string, is_active: bool}
-     */
     protected function workflowDefinition(): array
     {
         return [
@@ -27,9 +24,6 @@ class ScarWorkflowSeeder extends Seeder
         ];
     }
 
-    /**
-     * @return list<array{code: string, label: string, position: int, kanban_code: string}>
-     */
     protected function workflowStatuses(): array
     {
         return [
@@ -48,9 +42,6 @@ class ScarWorkflowSeeder extends Seeder
         ];
     }
 
-    /**
-     * @return list<array{from_code: string, to_code: string, label: string, capability: ?string, position: int}>
-     */
     protected function workflowTransitions(): array
     {
         return [

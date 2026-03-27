@@ -8,11 +8,9 @@ namespace App\Modules\Core\Quality\Models;
 use App\Base\Workflow\Concerns\HasWorkflowStatus;
 use App\Modules\Core\Company\Models\Company;
 use App\Modules\Core\Quality\Database\Factories\NcrFactory;
-use App\Modules\Core\Quality\Models\Concerns\HasQualityRecordRelations;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -62,10 +60,9 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, QualityEvent> $events
  * @property-read Collection<int, QualityActionItem> $actionItems
  */
-class Ncr extends Model
+class Ncr extends QualityRecord
 {
     use HasFactory, HasWorkflowStatus;
-    use HasQualityRecordRelations;
 
     /**
      * The table associated with the model.

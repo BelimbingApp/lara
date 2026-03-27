@@ -5,11 +5,9 @@
 
 namespace App\Modules\Core\Quality\Models;
 
-use App\Modules\Core\Quality\Models\Concerns\HasQualityRecordRelations;
 use App\Modules\Core\User\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
 
@@ -61,10 +59,9 @@ use Illuminate\Support\Carbon;
  * @property-read Collection<int, QualityEvidence> $evidence
  * @property-read Collection<int, QualityEvent> $events
  */
-class Capa extends Model
+class Capa extends QualityRecord
 {
     use HasFactory;
-    use HasQualityRecordRelations;
 
     /**
      * The table associated with the model.
