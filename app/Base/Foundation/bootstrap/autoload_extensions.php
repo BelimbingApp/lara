@@ -1,5 +1,7 @@
 <?php
 
+use App\Base\Foundation\ExtensionAutoloader;
+
 // SPDX-License-Identifier: AGPL-3.0-only
 // (c) Ng Kiat Siong <kiatsiong.ng@gmail.com>
 
@@ -7,6 +9,6 @@
 // resolve to kebab-case directories under extensions/.
 // Loaded via composer.json "autoload.files" — runs before any provider.
 
-require __DIR__.'/../ExtensionAutoloader.php';
+require_once __DIR__.'/../ExtensionAutoloader.php';
 
-App\Base\Foundation\ExtensionAutoloader::register();
+ExtensionAutoloader::register();

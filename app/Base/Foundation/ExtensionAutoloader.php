@@ -63,7 +63,7 @@ final class ExtensionAutoloader
         $file = $basePath.'/extensions/'.$owner.'/'.$module.'/'.implode('/', $remaining).'.php';
 
         if (file_exists($file)) {
-            require $file;
+            require_once $file;
         }
     }
 
