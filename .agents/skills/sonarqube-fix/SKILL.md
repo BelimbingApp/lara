@@ -12,24 +12,28 @@ description: >
 
 # SonarQube Issue Fixer
 
-Retrieve open SonarCloud issues for the BLB project, triage them using
-BLB-specific rules, **mark false positives on SonarCloud via API**, apply code
-fixes to real issues, validate, and create a PR. All in one pass — no user
-prompts needed.
+Retrieve SonarCloud findings for the BLB project, including both rule-backed
+issues and metric-only quality gate failures such as **duplication on new
+code**, triage them using BLB-specific rules, **mark false positives on
+SonarCloud via API**, apply behavior-preserving fixes, validate, and create a
+PR. All in one pass — no user prompts needed.
 
 ## Gotchas
 
 - Use BLB-specific triage rules, not generic Sonar advice.
 - Mark false positives and safe hotspots before applying code fixes.
 - Skip metric-only fixes that worsen the design; note them for human review.
-- Work in the quality worktree on `sonar-gate`, never directly on `main`.
+- A red quality gate with **zero open issues** often means a metric failure, not a clean project. Check measures before concluding there is nothing to fix.
+- `new_*` metrics are usually stored in SonarCloud's `periods[0].value`, not `value`. Parse both.
+- Work in the quality worktree, but create a fresh topic branch from `origin/main` before committing if `sonar-gate` is dirty or diverged.
 
 ## Workflow Checklist
 
 - [ ] Read and validate `SONAR_TOKEN` from `.env`
 - [ ] Switch `blb-quality-tree` to `sonar-gate` and reset to the remote default branch
-- [ ] Fetch open Sonar issues and hotspots
-- [ ] Triage into false positives, safe hotspots, fixable issues, and skipped issues
+- [ ] Fetch open Sonar issues, hotspots, and quality-gate metrics
+- [ ] If the gate is failing with zero issues, fetch per-file metric breakdown for new-code duplication / other metric-only failures
+- [ ] Triage into false positives, safe hotspots, fixable issues, skipped issues, and metric-only refactors
 - [ ] Mark false positives and safe hotspots via API
 - [ ] Apply code fixes
 - [ ] Validate with tests, Pint, and build when needed
@@ -84,6 +88,12 @@ curl -sS "https://sonarcloud.io/api/issues/search?componentKeys=BelimbingApp_lar
 
 # Security hotspots
 curl -sS "https://sonarcloud.io/api/hotspots/search?projectKey=BelimbingApp_lara&branch=main&status=TO_REVIEW"
+
+# Project-level quality-gate metrics (useful when there are zero open issues)
+curl -sS "https://sonarcloud.io/api/measures/component?component=BelimbingApp_lara&branch=main&metricKeys=alert_status,new_duplicated_lines_density,new_duplicated_lines,new_lines,duplicated_lines_density"
+
+# Per-file new-code duplication metrics
+curl -sS "https://sonarcloud.io/api/measures/component_tree?component=BelimbingApp_lara&branch=main&metricKeys=new_duplicated_lines_density,new_duplicated_lines,new_lines&qualifiers=FIL&ps=500&p=1"
 ```
 
 From each issue record, capture:
@@ -95,6 +105,25 @@ From each issue record, capture:
 - `type` — BUG / VULNERABILITY / CODE_SMELL / SECURITY_HOTSPOT
 
 Sort by severity descending (BLOCKER first) before proceeding to triage.
+
+### When the failing gate is "duplication on new code"
+
+Do **not** stop after `issues/search` returns zero issues. SonarCloud often
+reports duplication only through measures and quality-gate status.
+
+Use this workflow:
+1. Read project-level measures from `/api/measures/component`.
+2. If `new_duplicated_lines` or `new_duplicated_lines_density` is non-zero, fetch `/api/measures/component_tree` for files.
+3. For each file, read both `measure.value` and `measure.periods[0].value` because new-code metrics are often stored only in the period value.
+4. Filter to files with `new_duplicated_lines > 0` or `new_duplicated_lines_density > 0`.
+5. Correlate those files with the current branch diff so you focus on code introduced since the new-code baseline.
+
+Capture for each flagged file:
+- file path
+- `new_duplicated_lines`
+- `new_duplicated_lines_density`
+- the duplicated block theme (e.g. repeated relation methods, repeated prompt file loader, repeated workflow seeder persistence)
+- the smallest safe refactor that removes duplication without changing behavior
 
 ## Step 3: Triage issues (fix vs false positive)
 
@@ -129,6 +158,26 @@ Triage every issue before touching code.
 - **`Web:S5256` — Missing table headers** — Add `<thead>` with `<th scope="col">`; use `class="sr-only"` if visually unnecessary
 - **`Web:S7927` — aria-label mismatch** — Align `aria-label` with visible text, or remove it if visible text is sufficient
 - **`php:S1192` — Duplicate literals in production code** — Extract to a `private const`
+
+### Metric-only duplication fixes
+
+When Sonar fails on `new_duplicated_lines_density` or similar metric-only
+signals, there may be no individual issue keys to transition. Treat the work as
+structural cleanup instead of false-positive management.
+
+Preferred fixes by duplication shape:
+- **Repeated Livewire setup / glue across sibling components** — extract a shared concern when three or more methods move together and the concern exposes a simple interface.
+- **Repeated service file-loading / exception boundaries** — extract a dedicated helper/service rather than repeating `is_file()` / `file_get_contents()` / exception handling blocks.
+- **Repeated model relations across sibling models** — extract a trait only when the relation semantics are truly identical; do not abstract unrelated fillable/cast definitions just to satisfy Sonar.
+- **Repeated workflow seeder persistence shape** — extract a trait or base seeder for the common persistence loop, while keeping workflow definitions inline per module.
+- **Repeated test scaffolding** — prefer helper builders, datasets, and file-level constants over abstract test classes.
+- **Repeated migration column/index bundles** — extract only if the helper makes the migration easier to read; do not hide important schema shape behind vague helpers.
+
+Avoid these anti-patterns:
+- extracting a trait/helper used only twice when the resulting API is less obvious
+- creating abstractions that mix unrelated responsibilities just to reduce line similarity
+- moving code out of place when the duplication is better handled with a local private method or constant
+- forcing DRY across migrations or tests when the shared helper obscures the domain intent
 
 ### Apply carefully (requires judgement)
 
@@ -197,6 +246,9 @@ Process by rule:
 
 Apply fixes only after marking false positives and safe hotspots.
 
+For metric-only duplication failures, there may be nothing to mark in SonarCloud;
+go straight from triage to refactor.
+
 ### Boy-Scout Rule
 
 While fixing the flagged issue, also clean up *immediately surrounding code*:
@@ -224,6 +276,20 @@ A fix is acceptable only if it:
 
 If a Sonar-only fix would harm the design, skip it and note it for human review.
 
+### Duplication-specific heuristics
+
+When choosing between possible refactors, prefer this order:
+1. extract a private method inside the same class
+2. extract a focused concern/trait shared by sibling classes in the same module
+3. extract a small service/helper with a domain name
+4. introduce a broader base abstraction only when the duplication spans multiple callers and the resulting contract is obvious
+
+For BLB specifically:
+- Shared Livewire concerns are often the right answer for repeated admin setup logic.
+- Shared model concerns are appropriate for repeated evidence/event relations across quality records.
+- Seeder traits are appropriate when multiple workflow seeders repeat the same `updateOrCreate` orchestration.
+- Do not abstract whole models or whole components merely because Sonar found a duplicated block.
+
 ## Step 6: Validate
 
 Use this validation loop:
@@ -236,17 +302,38 @@ npm run build
 
 If a step fails, fix or revert the offending change before proceeding.
 
+For metric-only duplication refactors, start with the narrowest useful checks for
+the touched area, then widen only as needed. Example:
+
+```bash
+# Targeted tests for touched domain first
+php artisan test tests/Unit/Modules/Core/AI/Services/LaraPromptFactoryExceptionTest.php
+
+# Then formatting
+vendor/bin/pint --dirty
+
+# Then broader/regression checks if the change touched shared primitives
+php artisan test --stop-on-failure
+
+# Build only if frontend assets or browser-facing resources changed
+npm run build
+```
+
 ## Step 7: Commit and create PR
 
 ```bash
 git switch sonar-gate
+git fetch --prune origin
+
+# If sonar-gate has existing work, create a fresh topic branch from origin/main
+git switch -c quality/sonar-fix origin/main
 
 git add .
 git commit -m "quality: fix Sonar issues"
 
-git push -u origin sonar-gate
+git push -u origin quality/sonar-fix
 
-gh pr create --base main --head sonar-gate --title "quality: fix Sonar issues" --body "$(cat <<'EOF'
+gh pr create --base main --head quality/sonar-fix --title "quality: fix Sonar issues" --body "$(cat <<'EOF'
 ## Summary
 - Fix Sonar findings (no behavior change)
 
@@ -264,5 +351,12 @@ Report:
 - **Marked as false positive:** count by rule, with comment reason used
 - **Marked as safe (hotspots):** count by rule, with comment reason used
 - **Issues fixed:** rule, file, brief description of fix
+- **Metric-only fixes:** metric, file, duplication theme, refactor used
 - **Issues skipped:** rule, file, reason skipped
 - **Issues requiring human review:** rule, file, why you couldn't fix it (behavior change needed, architectural question, etc.)
+
+When the original failure was `new_duplicated_lines_density`, explicitly report:
+- project-level metric before the fix if you captured it
+- files that contributed to the new duplication budget
+- which duplicated structures were extracted
+- which known duplication hotspots still remain after this pass
