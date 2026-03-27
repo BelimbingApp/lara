@@ -5,12 +5,11 @@
 
 namespace App\Modules\Core\Quality\Livewire\Ncr;
 
-use App\Base\Foundation\Livewire\SearchablePaginatedList;
+use App\Modules\Core\Quality\Livewire\StatusFilteredSearchableIndex;
 use App\Modules\Core\Quality\Models\Ncr;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 
-class Index extends SearchablePaginatedList
+class Index extends StatusFilteredSearchableIndex
 {
     protected const string VIEW_NAME = 'livewire.quality.ncr.index';
 
@@ -18,9 +17,12 @@ class Index extends SearchablePaginatedList
 
     protected const string SORT_COLUMN = 'created_at';
 
-    public string $search = '';
+    /**
+     * @var list<string>
+     */
+    protected const array SEARCH_COLUMNS = ['ncr_no', 'title', 'reported_by_name'];
 
-    public string $statusFilter = '';
+    public string $search = '';
 
     public function severityVariant(string $severity): string
     {
@@ -48,21 +50,9 @@ class Index extends SearchablePaginatedList
         };
     }
 
-    protected function query(): EloquentBuilder|QueryBuilder
+    protected function baseQuery(): EloquentBuilder
     {
         return Ncr::query()
-            ->with('createdByUser', 'currentOwner')
-            ->when($this->statusFilter !== '', function (EloquentBuilder $query): void {
-                $query->where('status', $this->statusFilter);
-            });
-    }
-
-    protected function applySearch(EloquentBuilder|QueryBuilder $query, string $search): void
-    {
-        $query->where(function (EloquentBuilder $builder) use ($search): void {
-            $builder->where('ncr_no', 'like', '%'.$search.'%')
-                ->orWhere('title', 'like', '%'.$search.'%')
-                ->orWhere('reported_by_name', 'like', '%'.$search.'%');
-        });
+            ->with('createdByUser', 'currentOwner');
     }
 }

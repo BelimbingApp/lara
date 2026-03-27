@@ -5,12 +5,11 @@
 
 namespace App\Modules\Core\Quality\Livewire\Scar;
 
-use App\Base\Foundation\Livewire\SearchablePaginatedList;
+use App\Modules\Core\Quality\Livewire\StatusFilteredSearchableIndex;
 use App\Modules\Core\Quality\Models\Scar;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Query\Builder as QueryBuilder;
 
-class Index extends SearchablePaginatedList
+class Index extends StatusFilteredSearchableIndex
 {
     protected const string VIEW_NAME = 'livewire.quality.scar.index';
 
@@ -18,9 +17,12 @@ class Index extends SearchablePaginatedList
 
     protected const string SORT_COLUMN = 'created_at';
 
-    public string $search = '';
+    /**
+     * @var list<string>
+     */
+    protected const array SEARCH_COLUMNS = ['scar_no', 'supplier_name', 'product_name'];
 
-    public string $statusFilter = '';
+    public string $search = '';
 
     public function statusVariant(string $status): string
     {
@@ -41,21 +43,9 @@ class Index extends SearchablePaginatedList
         };
     }
 
-    protected function query(): EloquentBuilder|QueryBuilder
+    protected function baseQuery(): EloquentBuilder
     {
         return Scar::query()
-            ->with('ncr', 'issueOwner')
-            ->when($this->statusFilter !== '', function (EloquentBuilder $query): void {
-                $query->where('status', $this->statusFilter);
-            });
-    }
-
-    protected function applySearch(EloquentBuilder|QueryBuilder $query, string $search): void
-    {
-        $query->where(function (EloquentBuilder $builder) use ($search): void {
-            $builder->where('scar_no', 'like', '%'.$search.'%')
-                ->orWhere('supplier_name', 'like', '%'.$search.'%')
-                ->orWhere('product_name', 'like', '%'.$search.'%');
-        });
+            ->with('ncr', 'issueOwner');
     }
 }
