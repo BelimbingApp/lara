@@ -5,16 +5,18 @@
 
 namespace App\Modules\Core\Quality\Livewire\Scar;
 
-use App\Base\Foundation\Livewire\Concerns\ResetsPaginationOnSearch;
+use App\Base\Foundation\Livewire\SearchablePaginatedList;
 use App\Modules\Core\Quality\Models\Scar;
-use Illuminate\Contracts\View\View;
-use Livewire\Component;
-use Livewire\WithPagination;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Query\Builder as QueryBuilder;
 
-class Index extends Component
+class Index extends SearchablePaginatedList
 {
-    use ResetsPaginationOnSearch;
-    use WithPagination;
+    protected const string VIEW_NAME = 'livewire.quality.scar.index';
+
+    protected const string VIEW_DATA_KEY = 'scars';
+
+    protected const string SORT_COLUMN = 'created_at';
 
     public string $search = '';
 
@@ -39,23 +41,21 @@ class Index extends Component
         };
     }
 
-    public function render(): View
+    protected function query(): EloquentBuilder|QueryBuilder
     {
-        return view('livewire.quality.scar.index', [
-            'scars' => Scar::query()
-                ->with('ncr', 'issueOwner')
-                ->when($this->search, function ($query, $search): void {
-                    $query->where(function ($q) use ($search): void {
-                        $q->where('scar_no', 'like', '%'.$search.'%')
-                            ->orWhere('supplier_name', 'like', '%'.$search.'%')
-                            ->orWhere('product_name', 'like', '%'.$search.'%');
-                    });
-                })
-                ->when($this->statusFilter, function ($query, $status): void {
-                    $query->where('status', $status);
-                })
-                ->latest()
-                ->paginate(25),
-        ]);
+        return Scar::query()
+            ->with('ncr', 'issueOwner')
+            ->when($this->statusFilter !== '', function (EloquentBuilder $query): void {
+                $query->where('status', $this->statusFilter);
+            });
+    }
+
+    protected function applySearch(EloquentBuilder|QueryBuilder $query, string $search): void
+    {
+        $query->where(function (EloquentBuilder $builder) use ($search): void {
+            $builder->where('scar_no', 'like', '%'.$search.'%')
+                ->orWhere('supplier_name', 'like', '%'.$search.'%')
+                ->orWhere('product_name', 'like', '%'.$search.'%');
+        });
     }
 }
