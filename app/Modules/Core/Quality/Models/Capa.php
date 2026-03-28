@@ -41,11 +41,14 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $effective_date_occurred
  * @property string|null $corrective_action_leakage
  * @property Carbon|null $effective_date_leakage
+ * @property string|null $investigation_result
  * @property string|null $quality_review_comment
  * @property string|null $quality_feedback
  * @property string|null $verification_result
  * @property int|null $verified_by_user_id
  * @property Carbon|null $verified_at
+ * @property int|null $response_by_user_id
+ * @property Carbon|null $responded_at
  * @property int|null $closed_by_user_id
  * @property Carbon|null $closed_at
  * @property array<string, mixed>|null $metadata
@@ -54,6 +57,7 @@ use Illuminate\Support\Carbon;
  * @property-read Ncr $ncr
  * @property-read User|null $assignedByUser
  * @property-read User|null $approvedByUser
+ * @property-read User|null $respondedByUser
  * @property-read User|null $verifiedByUser
  * @property-read User|null $closedByUser
  * @property-read Collection<int, QualityEvidence> $evidence
@@ -90,9 +94,12 @@ class Capa extends QualityRecord
         'effective_date_leakage',
         'quality_review_comment',
         'quality_feedback',
+        'investigation_result',
         'verification_result',
         'verified_by_user_id',
         'verified_at',
+        'response_by_user_id',
+        'responded_at',
         'closed_by_user_id',
         'closed_at',
         'metadata',
@@ -106,6 +113,7 @@ class Capa extends QualityRecord
             'approved_at' => 'datetime',
             'effective_date_occurred' => 'date',
             'effective_date_leakage' => 'date',
+            'responded_at' => 'datetime',
             'verified_at' => 'datetime',
             'closed_at' => 'datetime',
             'metadata' => 'json',
@@ -134,6 +142,14 @@ class Capa extends QualityRecord
     public function approvedByUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    /**
+     * Get the user who submitted the department response.
+     */
+    public function respondedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'response_by_user_id');
     }
 
     /**

@@ -204,6 +204,9 @@ class SeederRegistry extends Model
             return;
         }
         $fqcn = 'App\\'.str_replace(['/', '.php'], ['\\', ''], substr($rel, 4));
+        if (! class_exists($fqcn) || ! is_subclass_of($fqcn, \Illuminate\Database\Seeder::class)) {
+            return;
+        }
         if (self::query()->where('seeder_class', $fqcn)->exists()) {
             return;
         }

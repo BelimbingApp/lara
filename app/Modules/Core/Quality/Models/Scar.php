@@ -32,6 +32,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $product_name
  * @property string|null $product_code
  * @property string|null $detected_area
+ * @property string|null $dimension
  * @property string|null $issued_by
  * @property Carbon|null $issuing_date
  * @property string|null $request_type
@@ -40,6 +41,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $uom
  * @property string|null $claim_value
  * @property string|null $problem_description
+ * @property string|null $review_comment
  * @property int|null $issue_owner_user_id
  * @property Carbon|null $acknowledgement_due_at
  * @property Carbon|null $containment_due_at
@@ -52,6 +54,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $commercial_resolution_type
  * @property string|null $commercial_resolution_amount
  * @property Carbon|null $commercial_resolution_at
+ * @property string|null $verification_result
  * @property int|null $verified_by_user_id
  * @property Carbon|null $verified_at
  * @property int|null $closed_by_user_id
@@ -85,6 +88,7 @@ class Scar extends QualityRecord
         'product_name',
         'product_code',
         'detected_area',
+        'dimension',
         'issued_by',
         'issuing_date',
         'request_type',
@@ -93,6 +97,7 @@ class Scar extends QualityRecord
         'uom',
         'claim_value',
         'problem_description',
+        'review_comment',
         'issue_owner_user_id',
         'acknowledgement_due_at',
         'containment_due_at',
@@ -105,6 +110,7 @@ class Scar extends QualityRecord
         'commercial_resolution_type',
         'commercial_resolution_amount',
         'commercial_resolution_at',
+        'verification_result',
         'verified_by_user_id',
         'verified_at',
         'closed_by_user_id',
