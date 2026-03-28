@@ -67,7 +67,83 @@ class DevNcrSeeder extends DevSeeder
         $this->seedUnderReviewNcrs($ncrService, $company, $reporter, $qualityMgr, $prodMgr);
         $this->seedClosedNcrs($ncrService, $company, $reporter, $qualityMgr, $prodMgr);
         $this->seedRejectedNcr($ncrService, $company, $reporter, $qualityMgr);
-        $this->seedNcrWithScar($ncrService, $scarService, $company, $reporter, $qualityMgr, $prodMgr);
+        $this->seedNcrWithScar($ncrService, $scarService, $company, $reporter, $qualityMgr);
+    }
+
+    /**
+     * Seed a single NCR scenario when the title is not already present.
+     *
+     * @param  array<string, mixed>  $openData
+     * @param  array<int, array{action: string, actor?: User, payload?: array<string, mixed>}>  $steps
+     */
+    private function seedNcrScenario(
+        NcrService $ncrService,
+        Company $company,
+        User $reporter,
+        string $title,
+        array $openData,
+        array $steps = [],
+    ): ?Ncr {
+        if ($this->ncrExists($company, $title)) {
+            return null;
+        }
+
+        $ncr = $this->openNcr($ncrService, $company, $reporter, ['title' => $title] + $openData);
+
+        foreach ($steps as $step) {
+            $ncr->refresh();
+            $this->applyNcrStep($ncrService, $ncr, $step);
+        }
+
+        return $ncr;
+    }
+
+    /**
+     * Open an NCR with the shared dev-seeding defaults.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function openNcr(NcrService $ncrService, Company $company, User $reporter, array $data): Ncr
+    {
+        return $ncrService->open(
+            Actor::forUser($reporter),
+            [
+                'company_id' => $company->id,
+                'reported_by_name' => $reporter->name,
+                'source' => 'manual',
+                ...$data,
+            ],
+        );
+    }
+
+    /**
+     * Apply one workflow step to an NCR scenario.
+     *
+     * @param  array{action: string, actor?: User, payload?: array<string, mixed>}  $step
+     */
+    private function applyNcrStep(NcrService $ncrService, Ncr $ncr, array $step): void
+    {
+        match ($step['action']) {
+            'triage' => $ncrService->triage($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'assign' => $ncrService->assign($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'submit_response' => $ncrService->submitResponse($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'review' => $ncrService->review($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'reject' => $ncrService->reject($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'close' => $ncrService->close($ncr, Actor::forUser($step['actor']), $step['payload'] ?? []),
+            'capa_update' => $ncr->capa?->update($step['payload'] ?? []),
+            default => throw new \InvalidArgumentException('Unknown NCR seeding step ['.$step['action'].'].'),
+        };
+    }
+
+    /**
+     * Determine whether an NCR title is already seeded for the company.
+     */
+    private function ncrExists(Company $company, string $title): bool
+    {
+        return Ncr::query()
+            ->where('title', $title)
+            ->where('company_id', $company->id)
+            ->exists();
     }
 
     /**
@@ -109,19 +185,7 @@ class DevNcrSeeder extends DevSeeder
         ];
 
         foreach ($cases as $data) {
-            $exists = Ncr::query()
-                ->where('title', $data['title'])
-                ->where('company_id', $company->id)
-                ->exists();
-
-            if ($exists) {
-                continue;
-            }
-
-            $ncrService->open(
-                Actor::forUser($reporter),
-                ['company_id' => $company->id, 'reported_by_name' => $reporter->name, 'source' => 'manual'] + $data,
-            );
+            $this->seedNcrScenario($ncrService, $company, $reporter, $data['title'], $data);
         }
     }
 
@@ -130,34 +194,32 @@ class DevNcrSeeder extends DevSeeder
      */
     private function seedTriagedNcrs(NcrService $ncrService, Company $company, User $reporter, User $qualityMgr): void
     {
-        $title = 'Packaging damage during internal transfer';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Packaging damage during internal transfer',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'minor',
                 'summary' => 'Forklift damage to 3 cartons during transfer from warehouse to shipping area. Outer packaging torn, inner product needs inspection.',
                 'product_name' => 'Finished Goods Carton',
                 'product_code' => 'FG-8800',
                 'quantity_affected' => '3.0000',
                 'uom' => 'cartons',
-                'reported_by_name' => $reporter->name,
-                'source' => 'manual',
+            ],
+            [
+                [
+                    'action' => 'triage',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'triage_summary' => 'Minor packaging damage. Products inside appear intact but require visual inspection. Root cause likely forklift operator error.',
+                        'severity' => 'minor',
+                        'classification' => 'handling_damage',
+                    ],
+                ],
             ],
         );
-
-        $ncrService->triage($ncr, Actor::forUser($qualityMgr), [
-            'triage_summary' => 'Minor packaging damage. Products inside appear intact but require visual inspection. Root cause likely forklift operator error.',
-            'severity' => 'minor',
-            'classification' => 'handling_damage',
-        ]);
     }
 
     /**
@@ -165,45 +227,48 @@ class DevNcrSeeder extends DevSeeder
      */
     private function seedAssignedNcrs(NcrService $ncrService, Company $company, User $reporter, User $qualityMgr): void
     {
-        $title = 'Welding porosity on frame assembly';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Welding porosity on frame assembly',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'major',
                 'summary' => 'Visual inspection revealed porosity in TIG welds on 12 frame assemblies. Welding parameters may have drifted. Lot FA-2026-0089.',
                 'product_name' => 'Frame Assembly FA-100',
                 'product_code' => 'FA-100',
                 'quantity_affected' => '12.0000',
                 'uom' => 'pcs',
-                'reported_by_name' => $reporter->name,
                 'source' => 'inspection',
             ],
+            [
+                [
+                    'action' => 'triage',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'triage_summary' => 'Welding defect confirmed. Assign to production for root cause analysis and containment. Check gas flow settings and wire batch.',
+                        'severity' => 'major',
+                        'classification' => 'welding_defect',
+                    ],
+                ],
+                [
+                    'action' => 'assign',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'current_owner_department' => 'Production',
+                        'assignment_comment' => 'Please investigate welding parameters, gas flow rate, and operator certification for the night shift on 2026-03-18.',
+                        'assignment_due_at' => Carbon::now()->addDays(5),
+                    ],
+                ],
+                [
+                    'action' => 'capa_update',
+                    'payload' => [
+                        'investigation_result' => 'Assigned to production for welding parameter investigation. Suspected gas flow drift on Station WS-03.',
+                    ],
+                ],
+            ],
         );
-
-        $ncrService->triage($ncr, Actor::forUser($qualityMgr), [
-            'triage_summary' => 'Welding defect confirmed. Assign to production for root cause analysis and containment. Check gas flow settings and wire batch.',
-            'severity' => 'major',
-            'classification' => 'welding_defect',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->assign($ncr, Actor::forUser($qualityMgr), [
-            'current_owner_department' => 'Production',
-            'assignment_comment' => 'Please investigate welding parameters, gas flow rate, and operator certification for the night shift on 2026-03-18.',
-            'assignment_due_at' => Carbon::now()->addDays(5),
-        ]);
-
-        $ncr->capa?->update([
-            'investigation_result' => 'Assigned to production for welding parameter investigation. Suspected gas flow drift on Station WS-03.',
-        ]);
     }
 
     /**
@@ -211,55 +276,59 @@ class DevNcrSeeder extends DevSeeder
      */
     private function seedUnderReviewNcrs(NcrService $ncrService, Company $company, User $reporter, User $qualityMgr, User $prodMgr): void
     {
-        $title = 'Label misprint on export shipment cartons';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Label misprint on export shipment cartons',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'major',
                 'summary' => 'Shipping labels on 80 cartons show wrong destination port code. Discovered during pre-shipment audit. Shipment EX-2026-0023.',
                 'product_name' => 'Export Carton Label',
                 'product_code' => 'LB-EX-001',
                 'quantity_affected' => '80.0000',
                 'uom' => 'pcs',
-                'reported_by_name' => $reporter->name,
-                'source' => 'manual',
+            ],
+            [
+                [
+                    'action' => 'triage',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'triage_summary' => 'Label error confirmed. Assign to shipping/logistics for immediate containment and re-labeling.',
+                        'severity' => 'major',
+                        'classification' => 'labeling_error',
+                    ],
+                ],
+                [
+                    'action' => 'assign',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'current_owner_department' => 'Logistics',
+                        'assignment_comment' => 'Contain all cartons from EX-2026-0023. Re-label with correct port code before shipment.',
+                    ],
+                ],
+                [
+                    'action' => 'submit_response',
+                    'actor' => $prodMgr,
+                    'payload' => [
+                        'containment_action' => 'All 80 cartons quarantined in staging area. Re-labeling completed within 4 hours of discovery.',
+                        'root_cause_occurred' => 'Label template was updated on 2026-03-10 but the old template file was not archived. Operator selected the wrong version from the shared drive.',
+                        'root_cause_leakage' => 'No version control on label templates. Pre-shipment audit is manual and relies on checker experience.',
+                        'corrective_action_occurred' => 'Implement label template version control with date-stamped filenames. Old templates moved to archive folder with read-only access.',
+                        'corrective_action_leakage' => 'Add port code validation step to pre-shipment checklist. Barcode scan verification for destination codes.',
+                    ],
+                ],
+                [
+                    'action' => 'capa_update',
+                    'payload' => [
+                        'investigation_result' => 'Label template version error. Operator used outdated template. No version control system in place.',
+                        'response_by_user_id' => $prodMgr->id,
+                        'responded_at' => Carbon::now(),
+                    ],
+                ],
             ],
         );
-
-        $ncrService->triage($ncr, Actor::forUser($qualityMgr), [
-            'triage_summary' => 'Label error confirmed. Assign to shipping/logistics for immediate containment and re-labeling.',
-            'severity' => 'major',
-            'classification' => 'labeling_error',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->assign($ncr, Actor::forUser($qualityMgr), [
-            'current_owner_department' => 'Logistics',
-            'assignment_comment' => 'Contain all cartons from EX-2026-0023. Re-label with correct port code before shipment.',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->submitResponse($ncr, Actor::forUser($prodMgr), [
-            'containment_action' => 'All 80 cartons quarantined in staging area. Re-labeling completed within 4 hours of discovery.',
-            'root_cause_occurred' => 'Label template was updated on 2026-03-10 but the old template file was not archived. Operator selected the wrong version from the shared drive.',
-            'root_cause_leakage' => 'No version control on label templates. Pre-shipment audit is manual and relies on checker experience.',
-            'corrective_action_occurred' => 'Implement label template version control with date-stamped filenames. Old templates moved to archive folder with read-only access.',
-            'corrective_action_leakage' => 'Add port code validation step to pre-shipment checklist. Barcode scan verification for destination codes.',
-        ]);
-
-        $ncr->capa?->update([
-            'investigation_result' => 'Label template version error. Operator used outdated template. No version control system in place.',
-            'response_by_user_id' => $prodMgr->id,
-            'responded_at' => Carbon::now(),
-        ]);
     }
 
     /**
@@ -267,72 +336,83 @@ class DevNcrSeeder extends DevSeeder
      */
     private function seedClosedNcrs(NcrService $ncrService, Company $company, User $reporter, User $qualityMgr, User $prodMgr): void
     {
-        $title = 'Incoming raw material hardness out of spec';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Incoming raw material hardness out of spec',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'major',
                 'summary' => 'Incoming inspection on steel bar batch SB-2026-0055 showed Rockwell hardness at HRC 48 vs spec HRC 40-45. 2 tonnes affected.',
                 'product_name' => 'Steel Bar Grade 4140',
                 'product_code' => 'RM-4140',
                 'quantity_affected' => '2000.0000',
                 'uom' => 'kg',
-                'reported_by_name' => $reporter->name,
                 'source' => 'inspection',
                 'is_supplier_related' => true,
             ],
+            [
+                [
+                    'action' => 'triage',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'triage_summary' => 'Material hardness confirmed out of spec. Quarantine batch. Coordinate with procurement for supplier notification.',
+                        'severity' => 'major',
+                        'classification' => 'incoming_material_defect',
+                    ],
+                ],
+                [
+                    'action' => 'assign',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'current_owner_department' => 'QAC/QC',
+                        'assignment_comment' => 'Investigate supplier heat treatment records. Coordinate return or re-heat-treatment if feasible.',
+                    ],
+                ],
+                [
+                    'action' => 'submit_response',
+                    'actor' => $prodMgr,
+                    'payload' => [
+                        'containment_action' => 'Batch SB-2026-0055 quarantined in reject bay. All downstream WIP using this batch recalled — 45 pcs identified and segregated.',
+                        'root_cause_occurred' => 'Supplier heat treatment cycle was shortened due to furnace scheduling conflict. Mill test certificate shows correct chemistry but hardness test was skipped at supplier end.',
+                        'corrective_action_occurred' => 'Supplier agreed to re-heat-treat the batch at their cost. Updated supplier QA agreement to mandate hardness testing on every heat.',
+                        'effective_date_occurred' => Carbon::now()->subDays(3),
+                    ],
+                ],
+                [
+                    'action' => 'capa_update',
+                    'payload' => [
+                        'investigation_result' => 'Supplier heat treatment process deviation confirmed. Mill cert chemistry OK but hardness not tested at source.',
+                        'response_by_user_id' => $prodMgr->id,
+                        'responded_at' => Carbon::now()->subDays(5),
+                    ],
+                ],
+                [
+                    'action' => 'review',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'approved' => true,
+                        'quality_review_comment' => 'Root cause and corrective action accepted. Supplier re-heat-treatment completed and verification test passed. Close case.',
+                    ],
+                ],
+                [
+                    'action' => 'capa_update',
+                    'payload' => [
+                        'verification_result' => 'effective',
+                        'verified_by_user_id' => $qualityMgr->id,
+                        'verified_at' => Carbon::now()->subDays(1),
+                    ],
+                ],
+                [
+                    'action' => 'close',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'comment' => 'Corrective action verified effective. Supplier agreed to updated QA protocol. Case closed.',
+                    ],
+                ],
+            ],
         );
-
-        $ncrService->triage($ncr, Actor::forUser($qualityMgr), [
-            'triage_summary' => 'Material hardness confirmed out of spec. Quarantine batch. Coordinate with procurement for supplier notification.',
-            'severity' => 'major',
-            'classification' => 'incoming_material_defect',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->assign($ncr, Actor::forUser($qualityMgr), [
-            'current_owner_department' => 'QAC/QC',
-            'assignment_comment' => 'Investigate supplier heat treatment records. Coordinate return or re-heat-treatment if feasible.',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->submitResponse($ncr, Actor::forUser($prodMgr), [
-            'containment_action' => 'Batch SB-2026-0055 quarantined in reject bay. All downstream WIP using this batch recalled — 45 pcs identified and segregated.',
-            'root_cause_occurred' => 'Supplier heat treatment cycle was shortened due to furnace scheduling conflict. Mill test certificate shows correct chemistry but hardness test was skipped at supplier end.',
-            'corrective_action_occurred' => 'Supplier agreed to re-heat-treat the batch at their cost. Updated supplier QA agreement to mandate hardness testing on every heat.',
-            'effective_date_occurred' => Carbon::now()->subDays(3),
-        ]);
-
-        $ncr->capa?->update([
-            'investigation_result' => 'Supplier heat treatment process deviation confirmed. Mill cert chemistry OK but hardness not tested at source.',
-            'response_by_user_id' => $prodMgr->id,
-            'responded_at' => Carbon::now()->subDays(5),
-        ]);
-
-        $ncr->refresh();
-        $ncrService->review($ncr, Actor::forUser($qualityMgr), [
-            'approved' => true,
-            'quality_review_comment' => 'Root cause and corrective action accepted. Supplier re-heat-treatment completed and verification test passed. Close case.',
-        ]);
-
-        $ncr->refresh();
-        $ncr->capa?->update([
-            'verification_result' => 'effective',
-            'verified_by_user_id' => $qualityMgr->id,
-            'verified_at' => Carbon::now()->subDays(1),
-        ]);
-
-        $ncrService->close($ncr, Actor::forUser($qualityMgr), [
-            'comment' => 'Corrective action verified effective. Supplier agreed to updated QA protocol. Case closed.',
-        ]);
     }
 
     /**
@@ -340,32 +420,30 @@ class DevNcrSeeder extends DevSeeder
      */
     private function seedRejectedNcr(NcrService $ncrService, Company $company, User $reporter, User $qualityMgr): void
     {
-        $title = 'Cosmetic mark on sample — not a defect';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Cosmetic mark on sample — not a defect',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'observation',
                 'summary' => 'Operator reported a faint tool mark on sample piece from CNC run. Mark is within cosmetic acceptance criteria per drawing note 4.',
                 'product_name' => 'CNC Sample Part',
                 'product_code' => 'SP-9900',
                 'quantity_affected' => '1.0000',
                 'uom' => 'pcs',
-                'reported_by_name' => $reporter->name,
-                'source' => 'manual',
+            ],
+            [
+                [
+                    'action' => 'reject',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'reject_reason' => 'Mark is within acceptable cosmetic tolerance per drawing note 4. Not a nonconformance. Operator advised on acceptance criteria.',
+                    ],
+                ],
             ],
         );
-
-        $ncrService->reject($ncr, Actor::forUser($qualityMgr), [
-            'reject_reason' => 'Mark is within acceptable cosmetic tolerance per drawing note 4. Not a nonconformance. Operator advised on acceptance criteria.',
-        ]);
     }
 
     /**
@@ -377,50 +455,54 @@ class DevNcrSeeder extends DevSeeder
         Company $company,
         User $reporter,
         User $qualityMgr,
-        User $prodMgr,
     ): void {
-        $title = 'Supplier delivered wrong grade fasteners';
-
-        if (Ncr::query()->where('title', $title)->where('company_id', $company->id)->exists()) {
-            return;
-        }
-
-        $ncr = $ncrService->open(
-            Actor::forUser($reporter),
+        $ncr = $this->seedNcrScenario(
+            $ncrService,
+            $company,
+            $reporter,
+            'Supplier delivered wrong grade fasteners',
             [
-                'company_id' => $company->id,
                 'ncr_kind' => 'internal',
-                'title' => $title,
                 'severity' => 'critical',
                 'summary' => 'Incoming inspection on PO-2026-1200 found Grade 8.8 bolts delivered instead of Grade 10.9 as ordered. 500 pcs affected. Used in safety-critical assembly.',
                 'product_name' => 'Hex Bolt M12x50',
                 'product_code' => 'HB-1250',
                 'quantity_affected' => '500.0000',
                 'uom' => 'pcs',
-                'reported_by_name' => $reporter->name,
                 'source' => 'inspection',
                 'is_supplier_related' => true,
             ],
+            [
+                [
+                    'action' => 'triage',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'triage_summary' => 'Critical: wrong grade fasteners in safety-critical application. Immediate containment required. SCAR to be issued to supplier.',
+                        'severity' => 'critical',
+                        'classification' => 'wrong_material_supplied',
+                    ],
+                ],
+                [
+                    'action' => 'assign',
+                    'actor' => $qualityMgr,
+                    'payload' => [
+                        'current_owner_department' => 'Procurement',
+                        'assignment_comment' => 'Quarantine all fasteners from PO-2026-1200. Issue SCAR to Borneo Logistics for wrong grade delivery. Check if any Grade 8.8 bolts were already used in production.',
+                        'assignment_due_at' => Carbon::now()->addDays(3),
+                    ],
+                ],
+                [
+                    'action' => 'capa_update',
+                    'payload' => [
+                        'investigation_result' => 'Wrong grade fasteners confirmed via hardness and marking check. SCAR required for supplier accountability.',
+                    ],
+                ],
+            ],
         );
 
-        $ncrService->triage($ncr, Actor::forUser($qualityMgr), [
-            'triage_summary' => 'Critical: wrong grade fasteners in safety-critical application. Immediate containment required. SCAR to be issued to supplier.',
-            'severity' => 'critical',
-            'classification' => 'wrong_material_supplied',
-        ]);
-
-        $ncr->refresh();
-        $ncrService->assign($ncr, Actor::forUser($qualityMgr), [
-            'current_owner_department' => 'Procurement',
-            'assignment_comment' => 'Quarantine all fasteners from PO-2026-1200. Issue SCAR to Borneo Logistics for wrong grade delivery. Check if any Grade 8.8 bolts were already used in production.',
-            'assignment_due_at' => Carbon::now()->addDays(3),
-        ]);
-
-        $ncr->capa?->update([
-            'investigation_result' => 'Wrong grade fasteners confirmed via hardness and marking check. SCAR required for supplier accountability.',
-        ]);
-
-        $ncr->refresh();
+        if (! $ncr) {
+            return;
+        }
 
         // Create linked SCAR
         $scar = $scarService->create(
