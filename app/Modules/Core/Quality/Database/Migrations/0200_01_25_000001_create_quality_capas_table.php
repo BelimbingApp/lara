@@ -23,12 +23,15 @@ return new class extends Migration
             $table->string('assigned_department')->nullable();
             $table->string('assigned_supplier_name')->nullable();
             $table->text('assignment_comment')->nullable();
+            $table->text('investigation_result')->nullable();
             $table->timestamp('assignment_due_at')->nullable();
             $table->foreignId('assigned_by_user_id')->nullable()->constrained('users');
             $table->timestamp('assigned_at')->nullable();
             $table->string('approval_state')->nullable(); // pending, approved, returned, not_justified
             $table->foreignId('approved_by_user_id')->nullable()->constrained('users');
             $table->timestamp('approved_at')->nullable();
+            $table->foreignId('response_by_user_id')->nullable()->constrained('users');
+            $table->timestamp('responded_at')->nullable();
             $table->text('rework_reason')->nullable();
             $table->text('containment_action')->nullable();
             $table->text('correction')->nullable();

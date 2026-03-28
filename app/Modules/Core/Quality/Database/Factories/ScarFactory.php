@@ -33,6 +33,7 @@ class ScarFactory extends Factory
             'ncr_id' => Ncr::factory(),
             'scar_no' => 'SCAR-'.fake()->unique()->numerify('######'),
             'status' => 'draft',
+            'dimension' => fake()->randomElement(['100x50mm', '200x100mm', '50x50x25mm', null]),
             'supplier_name' => fake()->company(),
             'supplier_contact_name' => fake()->name(),
             'supplier_contact_email' => fake()->safeEmail(),

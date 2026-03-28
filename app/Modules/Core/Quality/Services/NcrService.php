@@ -152,7 +152,7 @@ class NcrService
      *
      * @param  Ncr  $ncr  The NCR to assign
      * @param  Actor  $actor  The principal performing assignment
-     * @param  array{current_owner_user_id?: int|null, current_owner_department?: string|null, assigned_department?: string|null, assigned_supplier_name?: string|null, assignment_comment?: string|null, assignment_due_at?: Carbon|null, comment?: string|null, metadata?: array<string, mixed>|null}  $data
+     * @param  array{current_owner_user_id?: int|null, current_owner_department?: string|null, assigned_department?: string|null, assigned_supplier_name?: string|null, assignment_comment?: string|null, assignment_due_at?: Carbon|null, investigation_result?: string|null, comment?: string|null, metadata?: array<string, mixed>|null}  $data
      */
     public function assign(Ncr $ncr, Actor $actor, array $data = []): TransitionResult
     {
@@ -183,6 +183,7 @@ class NcrService
                 'assigned_supplier_name' => $data['assigned_supplier_name'] ?? null,
                 'assignment_comment' => $data['assignment_comment'] ?? null,
                 'assignment_due_at' => $data['assignment_due_at'] ?? null,
+                'investigation_result' => $data['investigation_result'] ?? null,
                 'assigned_by_user_id' => $actor->id,
                 'assigned_at' => $now,
                 'workflow_status' => 'assigned',
@@ -230,7 +231,7 @@ class NcrService
      *
      * @param  Ncr  $ncr  The NCR with investigation response
      * @param  Actor  $actor  The principal submitting the response
-     * @param  array{containment_action?: string|null, correction?: string|null, root_cause_occurred?: string|null, root_cause_leakage?: string|null, corrective_action_occurred?: string|null, effective_date_occurred?: Carbon|string|null, corrective_action_leakage?: string|null, effective_date_leakage?: Carbon|string|null, comment?: string|null, metadata?: array<string, mixed>|null}  $data
+     * @param  array{containment_action?: string|null, correction?: string|null, root_cause_occurred?: string|null, root_cause_leakage?: string|null, corrective_action_occurred?: string|null, effective_date_occurred?: Carbon|string|null, corrective_action_leakage?: string|null, effective_date_leakage?: Carbon|string|null, investigation_result?: string|null, comment?: string|null, metadata?: array<string, mixed>|null}  $data
      */
     public function submitResponse(Ncr $ncr, Actor $actor, array $data = []): TransitionResult
     {
@@ -268,6 +269,9 @@ class NcrService
                 'effective_date_occurred' => $data['effective_date_occurred'] ?? null,
                 'corrective_action_leakage' => $data['corrective_action_leakage'] ?? null,
                 'effective_date_leakage' => $data['effective_date_leakage'] ?? null,
+                'investigation_result' => $data['investigation_result'] ?? null,
+                'response_by_user_id' => $actor->id,
+                'responded_at' => Carbon::now(),
                 'workflow_status' => 'response_submitted',
             ], fn ($v) => $v !== null);
 

@@ -37,7 +37,7 @@ class ScarService
      *
      * @param  Actor  $actor  The principal creating the SCAR
      * @param  Ncr  $ncr  The parent NCR
-     * @param  array{supplier_name: string, supplier_site?: string|null, supplier_contact_name?: string|null, supplier_contact_email?: string|null, supplier_contact_phone?: string|null, po_do_invoice_no?: string|null, product_name?: string|null, product_code?: string|null, detected_area?: string|null, request_type?: string|null, severity?: string|null, claim_quantity?: string|null, uom?: string|null, claim_value?: string|null, problem_description?: string|null, acknowledgement_due_at?: Carbon|null, containment_due_at?: Carbon|null, response_due_at?: Carbon|null, verification_due_at?: Carbon|null, metadata?: array<string, mixed>|null}  $data
+     * @param  array{supplier_name: string, supplier_site?: string|null, supplier_contact_name?: string|null, supplier_contact_email?: string|null, supplier_contact_phone?: string|null, po_do_invoice_no?: string|null, product_name?: string|null, product_code?: string|null, detected_area?: string|null, dimension?: string|null, request_type?: string|null, severity?: string|null, claim_quantity?: string|null, uom?: string|null, claim_value?: string|null, problem_description?: string|null, acknowledgement_due_at?: Carbon|null, containment_due_at?: Carbon|null, response_due_at?: Carbon|null, verification_due_at?: Carbon|null, metadata?: array<string, mixed>|null}  $data
      */
     public function create(Actor $actor, Ncr $ncr, array $data): Scar
     {
@@ -57,6 +57,7 @@ class ScarService
                         'product_name' => $data['product_name'] ?? null,
                         'product_code' => $data['product_code'] ?? null,
                         'detected_area' => $data['detected_area'] ?? null,
+                        'dimension' => $data['dimension'] ?? null,
                         'issued_by' => $actor->attributes['name'] ?? null,
                         'request_type' => $data['request_type'] ?? null,
                         'severity' => $data['severity'] ?? null,

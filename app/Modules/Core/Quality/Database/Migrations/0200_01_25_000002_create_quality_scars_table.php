@@ -32,6 +32,7 @@ return new class extends Migration
             $table->string('product_name')->nullable();
             $table->string('product_code')->nullable();
             $table->string('detected_area')->nullable();
+            $table->string('dimension')->nullable();
             $table->string('issued_by')->nullable();
             $table->date('issuing_date')->nullable();
             $table->string('request_type')->nullable(); // corrective_action, corrective_action_and_compensation
@@ -48,6 +49,8 @@ return new class extends Migration
             $table->text('containment_response')->nullable();
             $table->text('root_cause_response')->nullable();
             $table->text('corrective_action_response')->nullable();
+            $table->text('review_comment')->nullable();
+            $table->string('verification_result')->nullable(); // effective, partially_effective, ineffective
             $table->timestamp('supplier_response_submitted_at')->nullable();
             $table->string('commercial_resolution_type')->nullable();
             $table->decimal('commercial_resolution_amount', 14, 2)->nullable();
