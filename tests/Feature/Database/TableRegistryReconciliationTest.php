@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 
 const TABLE_REGISTRY_RECONCILIATION_USER_MODULE_PATH = 'app/Modules/Core/User';
+const TABLE_REGISTRY_RECONCILIATION_EXT_DIR = 'extensions/test-vendor/test-mod/Database/Migrations';
 
 uses(RefreshDatabase::class);
 
@@ -88,4 +89,46 @@ test('database table show redirects to registry when an orphaned entry is reques
 
     expect(session('warning'))->toContain('Removed orphaned registry entry for ghost_table_view because the relation no longer exists.')
         ->and(TableRegistry::query()->where('table_name', 'ghost_table_view')->exists())->toBeFalse();
+});
+
+test('reconciliation discovers tables from extension migration files', function (): void {
+    $dir = base_path(TABLE_REGISTRY_RECONCILIATION_EXT_DIR);
+    $file = $dir.'/2099_01_01_000000_create_test_vendor_ext_table.php';
+
+    if (! is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+
+    file_put_contents($file, <<<'PHP'
+<?php
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    public function up(): void
+    {
+        Schema::create('test_vendor_ext', function (Blueprint $table): void {
+            $table->id();
+        });
+    }
+};
+PHP);
+
+    try {
+        TableRegistry::reconcile();
+
+        $entry = TableRegistry::query()->where('table_name', 'test_vendor_ext')->first();
+
+        expect($entry)->not()->toBeNull()
+            ->and($entry->module_name)->toBe('test-mod')
+            ->and($entry->module_path)->toBe('extensions/test-vendor/test-mod')
+            ->and($entry->migration_file)->toBe('2099_01_01_000000_create_test_vendor_ext_table.php');
+    } finally {
+        @unlink($file);
+        @rmdir($dir);
+        @rmdir(dirname($dir));
+        @rmdir(dirname($dir, 2));
+        @rmdir(dirname($dir, 3));
+    }
 });
