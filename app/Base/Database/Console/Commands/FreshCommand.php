@@ -9,6 +9,7 @@ use App\Base\Database\Console\Concerns\PrintsTableUnstableUsage;
 use App\Base\Database\Models\TableRegistry;
 use Illuminate\Console\Command;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Database\Connection;
 use Illuminate\Database\Console\Migrations\FreshCommand as IlluminateFreshCommand;
 use Illuminate\Database\Events\DatabaseRefreshed;
 use Illuminate\Support\Facades\DB;
@@ -175,9 +176,11 @@ class FreshCommand extends IlluminateFreshCommand
     /**
      * Drop the given tables, handling FK constraints per driver.
      *
-     * PostgreSQL: uses DROP TABLE … CASCADE because its
-     * disableForeignKeyConstraints() (SET CONSTRAINTS ALL DEFERRED) only
-     * affects constraints declared DEFERRABLE — standard FKs are not.
+     * PostgreSQL: explicitly drops FK constraints that reference any of the
+     * tables being dropped, then drops the tables. This avoids CASCADE which
+     * would silently remove constraints on preserved/stable tables too.
+     * Laravel's disableForeignKeyConstraints() (SET CONSTRAINTS ALL DEFERRED)
+     * only works for constraints declared DEFERRABLE — standard FKs are not.
      *
      * Other drivers: uses disableForeignKeyConstraints() which fully
      * suppresses FK checks for the session (e.g. MySQL SET FOREIGN_KEY_CHECKS=0).
@@ -189,9 +192,11 @@ class FreshCommand extends IlluminateFreshCommand
         $connection = Schema::getConnection();
 
         if ($connection->getDriverName() === 'pgsql') {
+            $this->dropForeignKeysReferencingTables($connection, $tables);
+
             $grammar = $connection->getQueryGrammar();
             $wrapped = array_map(fn (string $t) => $grammar->wrapTable($t), $tables);
-            $connection->statement('DROP TABLE IF EXISTS '.implode(', ', $wrapped).' CASCADE');
+            $connection->statement('DROP TABLE IF EXISTS '.implode(', ', $wrapped));
 
             return;
         }
@@ -204,6 +209,47 @@ class FreshCommand extends IlluminateFreshCommand
             }
         } finally {
             Schema::enableForeignKeyConstraints();
+        }
+    }
+
+    /**
+     * Drop all FK constraints that reference any of the given tables.
+     *
+     * Queries pg_constraint to find every FK whose referenced table is in the
+     * drop set, then issues ALTER TABLE … DROP CONSTRAINT for each. This
+     * removes inter-drop-set FKs and any FKs from preserved tables that point
+     * into the drop set, without touching unrelated constraints.
+     *
+     * @param  Connection  $connection
+     * @param  array<string>  $tables  Table names being dropped
+     */
+    private function dropForeignKeysReferencingTables($connection, array $tables): void
+    {
+        if ($tables === []) {
+            return;
+        }
+
+        $bindings = implode(', ', array_fill(0, count($tables), '?'));
+
+        $fks = $connection->select(
+            "SELECT con.conname AS constraint_name, cl.relname AS table_name
+             FROM pg_constraint con
+             JOIN pg_class cl ON cl.oid = con.conrelid
+             JOIN pg_class ref ON ref.oid = con.confrelid
+             JOIN pg_namespace ns ON ns.oid = cl.relnamespace
+             WHERE con.contype = 'f'
+               AND ns.nspname = 'public'
+               AND ref.relname IN ({$bindings})",
+            array_values($tables),
+        );
+
+        $grammar = $connection->getQueryGrammar();
+
+        foreach ($fks as $fk) {
+            $connection->statement(
+                'ALTER TABLE '.$grammar->wrapTable($fk->table_name)
+                .' DROP CONSTRAINT '.$grammar->wrap($fk->constraint_name),
+            );
         }
     }
 
